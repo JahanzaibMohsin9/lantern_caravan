@@ -17,6 +17,10 @@ test("relights the dark wharf with a relief haul from upriver, then sells spare 
     await expect(button("Review buy")).toBeVisible();
   };
   await page.goto("/");
+  await expect(page).toHaveTitle("Lantern Caravan");
+  await expect(page.getByRole("heading", { name: "Lantern Caravan", exact: true })).toBeVisible();
+  await expect(page.locator('meta[name="description"]')).toHaveAttribute("content", /Lantern Caravan.*Lantern Row/);
+  await expect(page.locator(".brand")).toContainText("LANTERN ROW");
   await expect(button("Enter the Row")).toBeEnabled();
   await page.evaluate(() => document.fonts.ready);
   await page.context().setOffline(true);

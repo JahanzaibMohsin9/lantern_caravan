@@ -18,7 +18,7 @@ export default defineConfig({
     { name: "firefox", use: { browserName: "firefox" } },
   ],
   webServer: [{
-    command: `npm run build -w @lantern/web && npm exec -w @lantern/web -- vite preview --host 127.0.0.1 --port ${webPort} --strictPort`,
+    command: `npm run build -w @lantern/web -- --outDir dist-e2e && npm exec -w @lantern/web -- vite preview --outDir dist-e2e --host 127.0.0.1 --port ${webPort} --strictPort`,
     url: `http://127.0.0.1:${webPort}`,
     env: { VITE_SERVER_URL: api },
     reuseExistingServer: false,

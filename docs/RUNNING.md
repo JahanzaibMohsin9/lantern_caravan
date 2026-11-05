@@ -1,4 +1,4 @@
-# Running Lantern Row
+# Running Lantern Caravan
 
 Install Node.js 24, then run `npm ci` from the repository root. Use the URL printed by Vite.
 
@@ -8,14 +8,17 @@ Install Node.js 24, then run `npm ci` from the repository root. Use the URL prin
 | `npm run dev:server` | Dev API on port 4318 and Vite client with a live title background |
 | `npm run build` | Type-check source, tools, and tests, then build `apps/web/dist` |
 | `npm test` | Rules, golden cases, campaign bot, server settlement, and accelerated live loop |
-| `npx playwright install chromium firefox` | Install browsers for browser tests |
-| `npm run test:e2e` | Build and drive the game in Chromium and Firefox |
+| `$env:LANTERN_CHROME_CHANNEL = "chrome"` | PowerShell: select installed system Chrome; no browser download |
+| `npm run test:e2e -- --project=chrome` | Build and drive the game in system Chrome |
+| `npm run test:e2e -- --project=firefox` | Optional Firefox check when already installed |
 | `npm run simulate -- --nights 2000 --seed 42 --traders 3 --check` | Headless balance check, with JSON and CSV in `sim-output/` |
 | `npm run schema` | Regenerate the shared JSON Schema bundle |
 
 The Playwright config builds the client and starts its own preview on port 4499 and test API on port 4418. It never reuses a running server, so a preview from another checkout cannot be tested by mistake; if either port is busy, the run stops with an error. Override the ports with `LANTERN_E2E_WEB_PORT` and `LANTERN_E2E_API_PORT`. Set `LANTERN_CHROME_CHANNEL=chrome` to use an installed Chrome instead of bundled Chromium. Set `LANTERN_RECORD=1` to keep playthrough recordings. The dev client exposes `window.__lantern` and a `?debug=1` overlay with phase, FPS, seed, revision, and time controls.
 
 ## Static client and dev server
+
+Browser tests build into `apps/web/dist-e2e`, separate from the ordinary `dist` output. This keeps a concurrent production build from overwriting the test API URL.
 
 Serve `apps/web/dist` over HTTP on localhost or over HTTPS. Set `VITE_SERVER_URL` at build time to point the static client at the API. Set `VITE_BACKEND=server` for the live title background and `VITE_AUTH=dev` for the reference sign-in. The local campaign remains available in both builds.
 

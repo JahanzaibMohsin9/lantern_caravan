@@ -1,5 +1,9 @@
 # Known issues and scope
 
+## Current work-package verification (5 November 2026)
+
+System Chrome is the browser used for this session. Firefox, real touch devices, a human new-player usability run, and a full manual playthrough have not been verified in this session. Historical browser claims below describe earlier work. The checked-in media predates the Lantern Caravan rename.
+
 - The three-night campaign runs offline. River Run unlocks on Night 2, where the harbor's relief haul can relight the Oil Wharf. The new Night 3 (Pirates on the Reach), the fourth campaign night and its guided tutorial copy are scheduled for M4.
 - Shared rooms support River Runs with the same intents. The Watch river strip and public river history are scheduled for M5.
 - Reloading during an offline run returns its reserved goods and contract escrow. A fresh run can start from The Landing.

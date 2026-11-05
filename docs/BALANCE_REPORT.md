@@ -1,4 +1,6 @@
-# River Run balance report
+# Lantern Caravan · River Run balance report
+
+W0 verification (5 November 2026): all five rows below were reproduced in this session. The CLI now fails `--check` for a dark streak above **one** night (previously five), matching §16.2. No economy or balance values changed.
 
 Each checked run used three autonomous traders over 2,000 nights. Run `npm run simulate -- --nights 2000 --seed <seed> --check` to reproduce a row. The CLI writes the summary and per-tick CSV under `sim-output/`.
 

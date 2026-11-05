@@ -109,5 +109,5 @@ report.invariantErrors += invalidGoodsOps;
 const json = JSON.stringify(report, null, 2);
 await writeFile(`sim-output/${seed}.json`, json + "\n");
 console.log(json);
-if (values.check && (report.invariantErrors || report.maxDarkStreak > 5 || report.stableNights / nights < .95 ||
+if (values.check && (report.invariantErrors || report.maxDarkStreak > 1 || report.stableNights / nights < .95 ||
     report.merchantCoinMin < 50 || report.merchantCoinMax > 500)) process.exitCode = 1;

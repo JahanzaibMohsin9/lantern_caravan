@@ -373,7 +373,7 @@ export function App() {
       live={online} low={lowGraphics} volume={volume * effectsLevel}/>}
     <div className="row-layer" inert={!!riverRun}>
     <header className="topbar">
-      <div className="brand"><span className="brand-mark"><LanternMark/></span><div><strong>Lantern Row</strong><span>RIVERSIDE NIGHT MARKET</span></div></div>
+      <div className="brand"><span className="brand-mark"><LanternMark/></span><div><strong>Lantern Caravan</strong><span>LANTERN ROW · NIGHT MARKET</span></div></div>
       <div className="night-tag"><MoonStar size={16}/><span>{nightLabel(snapshot.night).toUpperCase()}</span><span className="divider"/><b>{snapshot.nightName}</b></div>
       <div className="hud">
         {snapshot.spectator ? <span className="meter" title="Spectator"><Eye size={18}/><b>Watch</b></span>
@@ -399,7 +399,7 @@ export function App() {
       <div className="vignette" aria-hidden="true"/>
       {!entered && !panel && <div className="hero">
         <div className="eyebrow hero-kicker"><span/> A RIVERSIDE TRADING GAME</div>
-        <h1>Lantern <em>Row</em></h1>
+        <h1>Lantern <em>Caravan</em></h1>
         <p>Trade by lanternlight.</p>
         <div className="hero-actions">
           <button className="primary enter" disabled={!ready || busy} onClick={() => void openMarket()}>

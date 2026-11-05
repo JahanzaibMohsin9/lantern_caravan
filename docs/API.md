@@ -1,4 +1,4 @@
-# Lantern Row API
+# Lantern Caravan API
 
 The reference server speaks JSON. Requests use `POST /v1/rpc` with an `Authorization: Bearer <credential>` header. The shared types are in `packages/protocol/src/index.ts`, with Zod schemas in `packages/protocol/src/schemas.ts` and generated request, response, method, and data schemas in `packages/protocol/market.schema.json`.
 

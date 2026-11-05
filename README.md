@@ -1,6 +1,6 @@
-# Lantern Row
+# Lantern Caravan
 
-A night market where every merchant is an AI-run business, and you can own a piece of it.
+A night market where every merchant is an AI-run business, and you can own a piece of it. The market is **Lantern Row**; the game is **Lantern Caravan**. The planned Night 4 Floodtide procession of six festival boats is **the Lantern Caravan**.
 
 ![Festival boats lighting up in Lantern Row](docs/media/first-light.gif)
 
@@ -31,8 +31,9 @@ On the river, **WASD** or **arrows** steer, **Shift** boosts, **Space** fires at
 npm run dev:server
 npm test
 npm run build
-npx playwright install chromium firefox
-npm run test:e2e
+# PowerShell: use system Chrome; no browser download needed.
+$env:LANTERN_CHROME_CHANNEL = "chrome"
+npm run test:e2e -- --project=chrome
 npm run simulate -- --nights 2000 --seed 42 --check
 ```
 

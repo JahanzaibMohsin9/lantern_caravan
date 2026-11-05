@@ -7,6 +7,19 @@ import type { Intent, RunManifest, RunReport } from "@lantern/protocol";
 import { apply } from "../packages/game-core/src/ledger";
 import { get, move, player, shop, type World } from "../packages/game-core/src/model";
 import { harvest, refreshContracts, scheduleFreight, startRivalHaul } from "../packages/game-core/src/river";
+import { items } from "@lantern/content";
+
+test("a run reservation and empty return conserve every good", () => {
+  const world = prepared();
+  const supply = (state: World) => Object.fromEntries(Object.keys(items).map(item =>
+    [item, Object.values(state.ledger).reduce((total, account) => total + (account[item] ?? 0), 0)]));
+  const before = supply(world);
+  const started = submit(world, { type: "start_run", barge_plan: [] }, "conservation");
+  expect(supply(started)).toEqual(before);
+  const run = snapshotFor(started, "test").river.myRun!.manifest;
+  const home = submit(started, { type: "finish_run", run_id: run.id, report: empty(run) }, "home", 40_000);
+  expect(supply(home)).toEqual(before);
+});
 
 const empty = (run: RunManifest): RunReport => ({ run_id: run.id, seed: run.seed, durationMs: 40_000,
   bought: [], soldBack: [], delivered: {}, lost: {}, flaresUsed: 0, pirates: [], boomsBroken: [],

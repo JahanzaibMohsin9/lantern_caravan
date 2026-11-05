@@ -1,4 +1,24 @@
-# Lantern Row handoff
+# Lantern Caravan handoff
+
+## Work packages · 5 November 2026
+
+### W0 · Lantern Caravan naming
+
+Renamed the title screen, header, browser title, meta description, README and documentation. Lantern Row remains the market name; the planned Night 4 six-boat Floodtide procession is the Lantern Caravan. Package names, repository and save identifiers are unchanged. Added a run-reservation/return goods-conservation test and title assertions to the real-control offline river path. Tightened the simulator's dark-streak failure threshold from five to one; no economy tuning.
+
+Commands run in this session:
+
+- `npm run schema` — passed; no schema changes.
+- `npm run build` — passed twice; existing Vite bundle-size and Zod annotation warnings.
+- `npm test` — passed twice, 86 tests in 7 files.
+- `$env:LANTERN_CHROME_CHANNEL='chrome'; npm run test:e2e -- --project=chrome` — first run: 2 passed, 2 live-page failures. A simultaneous ordinary build overwrote `dist/index.html` with the default API URL (4318). Fixed the harness to build and preview `dist-e2e`, independently of production `dist`. Re-run: all 4 Chrome tests passed, including live contention and Watch/History on 4499/4418. Never run the two builds into the same output directory.
+- `npm run simulate -- --nights 2000 --seed 17 --check` — passed, longest dark streak 1, zero invariant errors.
+- `npm run simulate -- --nights 2000 --seed 42 --check` — passed, longest dark streak 1, zero invariant errors.
+- `npm run simulate -- --nights 2000 --seed 93 --check` — passed, longest dark streak 1, zero invariant errors.
+- `npm run simulate -- --nights 2000 --seed 166 --check` — passed, longest dark streak 1, zero invariant errors.
+- `npm run simulate -- --nights 2000 --seed 271 --check` — passed, longest dark streak 1, zero invariant errors.
+
+The automated title → Night 2 → first River Run → oil sale path passed in 72 seconds in the final W0 run, using Playwright's clock for the river portion. This is not a human new-player usability result. Firefox and real touch devices were not run. The sections below record historical implementation and verification.
 
 ## Tier 1 · Local campaign
 
