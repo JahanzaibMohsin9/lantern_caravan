@@ -115,3 +115,12 @@
   .summary-grid { grid-template-columns: repeat(2, 1fr); }
   .river-notice { max-width: 80%; width: max-content; }
 }
+.stop-choices { display: grid; gap: 8px; margin: 10px 0; }
+.stop-choice { display: grid; gap: 2px; text-align: left; padding: 10px 12px; }
+.stop-choice small { opacity: .8; }
+.landing-wrecks { display: grid; gap: 6px; margin: 10px 0; }
+.landing-wreck { display: flex; align-items: center; gap: 8px; padding: 8px 10px; border-radius: 10px;
+  background: rgba(133, 221, 204, .08); border: 1px solid rgba(133, 221, 204, .28); }
+.landing-wreck i { width: 10px; height: 10px; transform: rotate(45deg); background: #85ddcc; flex: none; }
+.landing-wreck span { display: grid; }
+.landing-wreck small { opacity: .75; }

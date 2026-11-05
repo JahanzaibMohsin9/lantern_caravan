@@ -1,6 +1,6 @@
-import { landing, pirateRoles, reaches, trimFor, villages, type ReachId, type VillageId } from "@lantern/content/river";
+import { landing, pirateRoles, reaches, riverStops, trimFor, villages, type ReachId, type VillageId } from "@lantern/content/river";
 import { items, type ItemId } from "@lantern/content";
-import { distance, objective, targetedPirate, type Point, type River, type RiverEffect } from "@lantern/river-sim";
+import { distance, objective, targetedPirate, type Point, type River, type RiverEffect, type StopSite, type WreckSite } from "@lantern/river-sim";
 import type { Snapshot } from "@lantern/protocol";
 import type { RiverCue } from "../world/sound";
 import { bankWidth, bounds, drawTerrain, hash, onWater, riverInfo, type Terrain } from "./terrain";
@@ -148,7 +148,7 @@ function handle(scene: Scene, state: River, e: RiverEffect, cue: (cue: RiverCue,
       scene.whiteout = Math.max(scene.whiteout, .32);
       cue("flare", true); break;
     case "pickup": {
-      const text = ["+30 fuel", "+40 shot", "+30 hull"][e.amount ?? 0]!;
+      const text = e.label || ["+30 fuel", "+40 shot", "+30 hull"][e.amount ?? 0]!;
       const color = ["#ffb35c", "#ffe1a6", "#8fe3a8"][e.amount ?? 0]!;
       ring(scene, e.x, e.y, 10, 70, color, .6, 3);
       spray(scene, e.x, e.y, 12, color, 120, "glint", .7, 2.6);
@@ -530,6 +530,72 @@ function floating(ctx: Ink, scene: Scene, state: River) {
   }
 }
 
+const stopColor = { fisher: "#9fd8ff", shed: "#ffcf8a", punt: "#c8e6a0" } as const;
+
+/** A half-sunk hull with crates spilling from the hold; it glows teal while it still holds cargo. */
+function wreckSite(ctx: Ink, scene: Scene, wreck: WreckSite, near: boolean) {
+  const left = Object.values(wreck.cargo).reduce((a, b) => a + b, 0);
+  const bob = Math.sin(scene.time * 1.4 + wreck.angle) * 2;
+  if (left) glow(ctx, wreck.x, wreck.y, near ? 150 : 110, "#85ddcc", near ? .45 : .28);
+  ctx.save(); ctx.translate(wreck.x, wreck.y + bob); ctx.rotate(wreck.angle);
+  ctx.fillStyle = "rgba(6,12,16,.45)"; ctx.beginPath(); ctx.ellipse(6, 8, 58, 22, 0, 0, tau); ctx.fill();
+  ctx.fillStyle = "#3b2a1f"; ctx.beginPath(); ctx.moveTo(-50, -14); ctx.lineTo(38, -18); ctx.quadraticCurveTo(58, 0, 38, 18); ctx.lineTo(-50, 14); ctx.closePath(); ctx.fill();
+  ctx.strokeStyle = "#6b4b33"; ctx.lineWidth = 2; ctx.stroke();
+  ctx.fillStyle = "rgba(40,90,110,.55)"; ctx.beginPath(); ctx.moveTo(-50, 2); ctx.lineTo(10, 6); ctx.lineTo(-50, 14); ctx.closePath(); ctx.fill();
+  ctx.strokeStyle = "#7a5b40"; ctx.lineWidth = 3; ctx.beginPath(); ctx.moveTo(-8, -2); ctx.lineTo(-30, -46); ctx.stroke();
+  ctx.restore();
+  const crates = Math.min(5, left);
+  for (let i = 0; i < crates; i++) {
+    const a = wreck.angle + i * 1.3, r = 34 + (i % 2) * 16, cb = Math.sin(scene.time * 2 + i) * 3;
+    ctx.fillStyle = "#8a6239"; ctx.fillRect(wreck.x + Math.cos(a) * r - 6, wreck.y + Math.sin(a) * r - 6 + cb, 12, 12);
+    ctx.strokeStyle = "#c79a5b"; ctx.lineWidth = 1.2; ctx.strokeRect(wreck.x + Math.cos(a) * r - 6, wreck.y + Math.sin(a) * r - 6 + cb, 12, 12);
+  }
+  if (!left) return;
+  ctx.strokeStyle = "#85ddcc"; ctx.globalAlpha = .45; ctx.lineWidth = 2;
+  ctx.beginPath(); ctx.arc(wreck.x, wreck.y, 64 + (scene.time * 20) % 26, 0, tau); ctx.stroke(); ctx.globalAlpha = 1;
+  ctx.font = "800 13px Manrope, sans-serif"; ctx.textAlign = "center";
+  const line = "WRECK · " + Object.entries(wreck.cargo).map(([item, qty]) => qty + " " + items[item as ItemId].name.toLowerCase()).join(", ");
+  ctx.fillStyle = "#0a0c10"; ctx.fillText(line, wreck.x + 1, wreck.y - 63);
+  ctx.fillStyle = "#a9f0e2"; ctx.fillText(line, wreck.x, wreck.y - 64);
+}
+
+/** A riverside stop: a lantern-lit jetty, shed or punt. It dims once its one choice is taken. */
+function stopSite(ctx: Ink, scene: Scene, stop: StopSite, near: boolean) {
+  const color = stopColor[stop.kind], done = !!stop.choice;
+  ctx.globalAlpha = done ? .45 : 1;
+  if (!done) glow(ctx, stop.x, stop.y - 10, near ? 140 : 100, color, near ? .4 : .26);
+  ctx.save(); ctx.translate(stop.x, stop.y);
+  if (stop.kind === "punt") {
+    ctx.rotate(.5);
+    ctx.fillStyle = "#4a3324"; ctx.beginPath(); ctx.ellipse(0, 0, 34, 12, 0, 0, tau); ctx.fill();
+    ctx.strokeStyle = "#a07a52"; ctx.lineWidth = 2; ctx.stroke();
+    ctx.strokeStyle = "#7fa860"; ctx.lineWidth = 2;
+    for (let i = -3; i <= 3; i++) { ctx.beginPath(); ctx.moveTo(i * 9, 16); ctx.lineTo(i * 9 + 4, 34 + Math.sin(scene.time * 2 + i) * 3); ctx.stroke(); }
+  } else {
+    ctx.fillStyle = "#5c3f2a"; ctx.fillRect(-36, -6, 72, 12);
+    for (const x of [-30, -6, 18]) { ctx.fillStyle = "#3a281b"; ctx.fillRect(x, 6, 5, 14); }
+    if (stop.kind === "shed") {
+      ctx.fillStyle = "#4b3a2c"; ctx.fillRect(-24, -38, 40, 32);
+      ctx.fillStyle = "#7a3f2a"; ctx.beginPath(); ctx.moveTo(-30, -38); ctx.lineTo(-4, -56); ctx.lineTo(22, -38); ctx.closePath(); ctx.fill();
+      ctx.fillStyle = done ? "#3a3026" : "#ffcf8a"; ctx.fillRect(-12, -28, 10, 10);
+    } else {
+      ctx.fillStyle = "#3f4c58"; ctx.beginPath(); ctx.ellipse(26, 18, 22, 8, -.3, 0, tau); ctx.fill();
+      ctx.strokeStyle = "#cfe8f2"; ctx.lineWidth = 1; ctx.globalAlpha *= .7;
+      for (let i = 0; i < 4; i++) { ctx.beginPath(); ctx.moveTo(-34 + i * 8, -6); ctx.lineTo(-40 + i * 10, 22); ctx.stroke(); }
+      ctx.globalAlpha = done ? .45 : 1;
+      ctx.fillStyle = "#e9d6b8"; ctx.beginPath(); ctx.arc(-14, -14, 6, 0, tau); ctx.fill();
+    }
+  }
+  ctx.restore();
+  const flicker = .75 + Math.sin(scene.time * 7 + stop.x) * .25;
+  if (!done) { glow(ctx, stop.x + 30, stop.y - 22, 36, "#ffcf7a", .5 * flicker); dot(ctx, stop.x + 30, stop.y - 22, 3, "#fff1c9"); }
+  ctx.font = "800 13px Manrope, sans-serif"; ctx.textAlign = "center";
+  const line = (done ? "VISITED · " : "") + riverStops[stop.kind].name.toUpperCase();
+  ctx.fillStyle = "#0a0c10"; ctx.fillText(line, stop.x + 1, stop.y - 67);
+  ctx.fillStyle = color; ctx.fillText(line, stop.x, stop.y - 68);
+  ctx.globalAlpha = 1;
+}
+
 function updateFx(scene: Scene, dt: number) {
   for (const p of scene.particles) {
     p.life -= dt;
@@ -639,6 +705,8 @@ function indicators(ctx: Ink, state: River, view: { x: number; y: number; scale:
   };
   for (const pirate of state.pirates) if (distance(pirate, p) < 1100) edge(pirate, pirateRoles[pirate.role].color, undefined, 10);
   for (const barrel of state.barrels) if (!barrel.taken && distance(barrel, p) < 900) edge(barrel, "#8fe3a8", undefined, 8);
+  for (const wreck of state.wrecks) if (Object.keys(wreck.cargo).length && distance(wreck, p) < 1800) edge(wreck, "#85ddcc", "Wreck", 11);
+  for (const stop of state.stops) if (!stop.choice && distance(stop, p) < 1200) edge(stop, stopColor[stop.kind], undefined, 9);
   edge(target, "#ffd28d", Math.round(distance(target, p) / 100) * 100 + " m", 16);
 }
 
@@ -665,6 +733,8 @@ export function drawRiver(ctx: Ink, scene: Scene, state: River, villageState: Sn
   }
   if (scene.smokeTimer <= 0) scene.smokeTimer = .9;
   lampPosts(ctx, scene, state, world);
+  for (const stop of state.stops) if (distance(stop, p) < 1500) stopSite(ctx, scene, stop, distance(stop, p) < 95);
+  for (const wreck of state.wrecks) if (distance(wreck, p) < 1500) wreckSite(ctx, scene, wreck, distance(wreck, p) < 85);
   floating(ctx, scene, state);
   for (const b of state.boats.filter(b => b.active)) wake(ctx, scene, "b" + b.id, b, b.angle, 120, 10);
   for (const pirate of state.pirates) wake(ctx, scene, "p" + pirate.id, pirate, pirate.angle, 110, pirate.heavy ? 14 : 9);
@@ -750,6 +820,15 @@ export function drawMap(ctx: Ink, state: River, villageState: Snapshot["villages
   for (const boat of state.boats.filter(b => b.active)) dot(ctx, x(boat.x), y(boat.y), labels ? 3.5 : 2, "#8fd3e6");
   for (const pirate of state.pirates) if (distance(pirate, state.player) < 1600) dot(ctx, x(pirate.x), y(pirate.y), labels ? 3.5 : 2, pirateRoles[pirate.role].color);
   for (const barrel of state.barrels) if (!barrel.taken) dot(ctx, x(barrel.x), y(barrel.y), labels ? 2.5 : 1.3, "#8fe3a8");
+  for (const stop of state.stops) if (!stop.choice) {
+    const s = labels ? 4 : 2.2;
+    ctx.fillStyle = stopColor[stop.kind]; ctx.fillRect(x(stop.x) - s, y(stop.y) - s, s * 2, s * 2);
+  }
+  for (const wreck of state.wrecks) if (Object.keys(wreck.cargo).length) {
+    const s = labels ? 6 : 3.5, cx = x(wreck.x), cy = y(wreck.y);
+    ctx.fillStyle = "#85ddcc"; ctx.beginPath(); ctx.moveTo(cx, cy - s); ctx.lineTo(cx + s, cy); ctx.lineTo(cx, cy + s); ctx.lineTo(cx - s, cy); ctx.closePath(); ctx.fill();
+    if (labels) { ctx.font = "600 11px Manrope, sans-serif"; ctx.textAlign = "left"; ctx.fillStyle = "#a9f0e2"; ctx.fillText("Wreck", cx + 10, cy + 4); }
+  }
   const target = objective(state);
   ctx.strokeStyle = "#ffd28d"; ctx.lineWidth = 1.5; ctx.beginPath(); ctx.arc(x(target.x), y(target.y), labels ? 11 : 6, 0, tau); ctx.stroke();
   const p = state.player;

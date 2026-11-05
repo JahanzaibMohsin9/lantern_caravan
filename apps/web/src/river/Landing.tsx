@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { Anchor, Bell, Coins, Flame, LifeBuoy } from "lucide-react";
 import { items, merchants, type ItemId, type StallId } from "@lantern/content";
-import { bargeTrims, bargeUpgrades, routeDistance, villages, type BargeTrimId, type VillageId } from "@lantern/content/river";
+import { bargeTrims, bargeUpgrades, reaches, routeDistance, villages, type BargeTrimId, type ReachId, type VillageId } from "@lantern/content/river";
 import { routeLead } from "@lantern/river-sim";
 import type { Intent, Snapshot } from "@lantern/protocol";
 import { cargoColor } from "./render";
@@ -72,6 +72,15 @@ export function Landing({ snapshot, busy, submit, castOff }: { snapshot: Snapsho
       </div>
       {leads.length > 0 && <div className="landing-leads"><small>Best spot hauls</small>
         {leads.map(lead => <span key={lead.item + lead.stall}><Flame size={12}/>{items[lead.item as ItemId].name}: {lead.port} {lead.buy} → {merchants[lead.stall as StallId].name} {lead.sell}</span>)}
+      </div>}
+      {snapshot.river.wrecks.length > 0 && <div className="landing-wrecks" aria-label="Wrecks on the river">
+        <small>Wrecks on the river</small>
+        {snapshot.river.wrecks.map(wreck => <div className="landing-wreck" key={wreck.id}><i/>
+          <span><strong>Wreck of {wreck.name} on {reaches[wreck.reach as ReachId].name}</strong>
+            <small>{Object.entries(wreck.cargo).map(([item, qty]) => qty + " " + items[item as ItemId].name.toLowerCase()).join(", ")} · {
+              !wreck.open ? "the harbor marks it at the next dusk" : wreck.claimed ? "another barge is salvaging it"
+                : wreck.nightsLeft === 1 ? "breaks up after tonight" : wreck.nightsLeft + " nights left"}</small></span>
+        </div>)}
       </div>}
       {canCast && <button className="primary wide" disabled={busy} onClick={depart}>
         Cast off <small>{mine ? mine.kind === "escort" ? "escort" : "contract" : snapshot.barge.hold + "-unit hold"}</small><Anchor size={16}/>

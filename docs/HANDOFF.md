@@ -4,14 +4,14 @@
 
 ### Scope and §16.4 hand-back
 
-Delivered W0–W2 in order. Cut the remaining tail (W9, W8, W7, W6, W5, W4, W3) from this session; none of those packages was started. **Resume at W3**, then proceed in order. The full W0–W9 specification is not complete.
+W0–W2 were delivered by the first implementer; W3 onward continue in order from this point. Each package below records its own checks.
 
 | Package | Status |
 | --- | --- |
-| W0 · rename | Committed as `3196430`; checks below |
-| W1 · trims | Committed as `0de05b9`; checks below |
-| W2 · skiffs | This package commit; checks below |
-| W3 · wrecks/stops | Not started |
+| W0 · rename | Committed as `3196430` |
+| W1 · trims | Committed as `0de05b9` |
+| W2 · skiffs | Committed as `9a0c327` |
+| W3 · wrecks/stops | Committed in the `W3:` commit; checks below |
 | W4 · almanac | Not started |
 | W5 · player Bell orders | Not started |
 | W6 · four-night campaign | Not started |
@@ -19,14 +19,30 @@ Delivered W0–W2 in order. Cut the remaining tail (W9, W8, W7, W6, W5, W4, W3) 
 | W8 · Watch/history/trust | Not started |
 | W9 · Floodtide/server replay | Not started |
 
-- [x] Each delivered package has its own W-prefixed commit and a passing build, Vitest, system-Chrome Playwright and five-seed 2,000-night check. No partial feature package is left in the tree.
+- [x] Each delivered package has its own W-prefixed commit and a passing build, Vitest, system-Chrome Playwright and five-seed 2,000-night check.
 - [x] Verification and cuts are recorded here; API and balance changes are documented.
-- [x] `KNOWN_ISSUES.md` identifies Firefox, physical touch devices, human usability and full manual playthrough as unverified this session.
-- [x] Automated title → Night 2 → first River Run → oil sold on the Row passes in under three wall-clock minutes, using real controls and a simulated river clock (84 seconds in final W2 run).
 - [ ] Human new-player test without docs in under three minutes: not performed.
-- [ ] Full manual playthrough and remaining W3–W9 acceptance paths: not performed.
+- [ ] Full manual playthrough: not performed. Firefox and physical touch devices: not verified.
 
-Branch remains `river-run`; no push, remote changes, rebase or history rewrite. The final reply records the W2 commit and post-commit working-tree check.
+Branch remains `river-run`; no push, remote changes, rebase or history rewrite.
+
+### W3 · Wrecks and riverside stops
+
+Lost hauls no longer burn on the spot. `sinkHaul` moves the cargo of a lost freight, rival or village-boat haul into `esc:wreck:<id>` at the reach where it sank, including Night 2's scripted storm loss (6 oil at Heron Reach). A wreck opens at the next dusk, stays two nights, then breaks up and burns what is left with `sink: "sys:river"`. Placement comes from the river serial rather than the random stream, so every other roll is unchanged: freight-loss counts in the soak match the W2 figures exactly. `start_run` claims open wrecks into the manifest; `finish_run` validates `salvaged` entries against the claim and the wreck's balance (`RIVER_SALVAGE`) and balances cargo per item as purchases plus salvage against buybacks, deliveries, losses, flares and stop costs. On danger 3+ reaches the first crew spawns beside the wreck. In the run, **E** loads a wreck up to the free hold; the rest stays for the next barge.
+
+Two or three riverside stops per run come from `stopPlan(seed)` on their own seeded stream: a stranded fisher (give 1 cord for +25 hull and a 6-coin bounty, or +30 ammo), a lock keeper's shed (+18 fuel or +30 ammo) and an overturned punt (+25 hull, or +20 fuel and +15 ammo). One choice each; the server re-derives the plan from the seed (`RIVER_STOP`). The mended net moves the cord to Millbrook and the coins come from `sys:bounty`, capped like all bounties. Wrecks and stops are drawn on the river with labels, edge arrows and minimap pins, the Landing lists wrecks with nights left, and the run summary counts salvage and stops.
+
+Checks run for this package:
+
+- `npm run schema` — passed; regenerated schema committed.
+- `npm run build` — passed (existing bundle-size warning).
+- `npm test` — passed, 125 tests in 7 files (9 new: wreck sinking, opening, salvage, forged salvage, partial salvage across a save, break-up, stop settlement, forged stops, and three river-sim cases).
+- `LANTERN_CHROME_CHANNEL=chrome npm run test:e2e -- --project=chrome` — passed, 6 tests. The new path imports a Night 3 save built by the game code (`tests/e2e/fixtures/night3-save.ts`) through Settings → Import save, finds the storm wreck in the Landing list, sails to it, salvages 6 oil with E, moors, and checks the wreck is gone and the journal records it.
+- `npm run simulate -- --nights 2000 --seed <17|42|93|166|271> --check` — all five passed: longest dark streak 1, zero invariant errors, zero invalid goods ops.
+
+Stops are covered by unit and sim tests and were seen on the river map, but no browser test drives the barge to one: their positions come from the run seed and sit off the straight route.
+
+Review fixes in this package: the save codec now keeps `relief` on contracts and `startedAt` on runs (both were silently dropped on reload before), and village buybacks of goods that were salvaged rather than bought now pay the actor.
 
 ### W2 · Skiffs and pirate roles
 

@@ -20,12 +20,14 @@ const riverSchema = z.object({
   reaches: z.record(reach, z.object({ danger: natural.max(5), boom: z.boolean(), lamps: natural.max(5), kills: natural.max(2) })),
   bountyFund: natural, sailings: natural.max(2), serial: natural, random: natural.max(0xffffffff),
   supplied: z.partialRecord(stall, z.record(label, natural)),
-  runs: z.record(label, z.object({ actor: label, started: natural, manifest: manifestSchema })),
+  runs: z.record(label, z.object({ actor: label, started: natural, startedAt: time.optional(), manifest: manifestSchema })),
   contracts: z.record(label, z.object({ id: label, village, item, qty: natural.positive(), payout: natural.positive(),
-    deadline: time, kind: z.enum(["supply", "escort"]), payer: label, stall, actor: label.optional(), haul: label.optional() })),
+    deadline: time, kind: z.enum(["supply", "escort"]), payer: label, stall, actor: label.optional(), haul: label.optional(), relief: z.boolean().optional() })),
   hauls: z.record(label, z.object({ id: label, actor: label, village, destination: village.optional(), departs: time, arrives: time,
     cargo: z.array(z.object({ item, qty: natural.positive(), paid: natural, stall: stall.optional(), unitPrices: z.array(natural.positive()).optional() })), contract: label.optional(),
     guaranteed: z.boolean().optional() })),
+  wrecks: z.record(label, z.object({ id: label, reach, at: z.number().min(0).max(1), sank: z.int().positive(), by: label,
+    claimedBy: label.optional() })).default({}),
 });
 const strategy = z.enum(["steady", "bold", "festival", "bargain"]);
 const vote = z.partialRecord(stall, strategy);

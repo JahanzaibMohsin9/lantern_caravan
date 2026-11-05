@@ -1,4 +1,5 @@
-import { bargeTier, landing, pirateCap, pirateRoleAt, pirateRoles, runMs, trimFor, villageStrategy, villages, type PirateRole, type ReachId, type VillageId } from "@lantern/content/river";
+import { bargeTier, landing, pirateCap, pirateRoleAt, pirateRoles, reaches, riverStops, runMs, stopChoice, stopPlan, trimFor, villageStrategy, villages,
+  type PirateRole, type ReachId, type StopKind, type VillageId } from "@lantern/content/river";
 import { items, type ItemId } from "@lantern/content";
 import { tradePrice } from "@lantern/game-core/pricing";
 import type { RunManifest, RunReport } from "@lantern/protocol";
@@ -20,10 +21,17 @@ type Bullet = Point & { vx: number; vy: number; life: number; damage: number; fr
 type Drop = Point & { life: number; ammo: number; cargo?: Cargo };
 /** Floating supplies: drift in the shallows and refill fuel, ammo or hull when collected. */
 export type Barrel = Point & { id: number; kind: "fuel" | "ammo" | "repair"; taken: boolean };
+/** A sunk haul from the manifest. Its cargo can be loaded with E, up to the free hold. */
+export type WreckSite = Point & { id: string; name: string; reach: ReachId; cargo: Cargo; angle: number };
+/** An optional riverside stop: one choice, once. */
+export type StopSite = Point & { id: string; kind: StopKind; reach: ReachId; choice?: string };
+export const wreckRadius = 85, stopRadius = 95;
 export type EffectKind = "shot" | "eshot" | "hit" | "splash" | "sink" | "boom" | "coin" | "flare" | "pickup" | "trade" | "spill";
-export type RiverEffect = { kind: EffectKind; x: number; y: number; frame: number; amount?: number; target?: "player" | "pirate" | "boom" | "boat"; heavy?: boolean };
+export type RiverEffect = { kind: EffectKind; x: number; y: number; frame: number; amount?: number; target?: "player" | "pirate" | "boom" | "boat"; heavy?: boolean;
+  /** Overrides a pickup's floating label, for salvage and riverside stops. */
+  label?: string };
 type Input = { x?: number; y?: number; boost?: boolean; fire?: boolean; aim?: Point; flare?: boolean; moor?: boolean; floodtide?: boolean;
-  trade?: { village: string; item: string; side: "buy" | "sell"; quantity: number } };
+  trade?: { village: string; item: string; side: "buy" | "sell"; quantity: number }; salvage?: string; stop?: { id: string; choice: string } };
 export type RiverInput = Input;
 export { beginFloodtide };
 type Recorded = { frame: number; input: Input };
@@ -39,6 +47,7 @@ export type River = {
   floodtide?: { gates: Point[]; next: number; deadline: number };
   rescueAt?: number; outcome?: RunReport["outcome"]; notice: string; log: Recorded[];
   effects: RiverEffect[]; barrels: Barrel[]; serial: number;
+  wrecks: WreckSite[]; stops: StopSite[]; salvaged: Record<string, Cargo>; stopsTaken: { stop_id: string; choice: string }[];
 };
 
 export function createRiver(manifest: RunManifest): River {
@@ -49,7 +58,77 @@ export function createRiver(manifest: RunManifest): River {
     bought: {}, sold: {}, lost: {}, flaresUsed: 0, flareCooldown: 0, kills: {}, roleKills: {}, spawned: {},
     booms: createBooms(manifest), broken: [], pirates: [], bullets: [], drops: [], boats: createBoats(manifest),
     savedBoats: [], escort: "active", escortOutside: 0, escortJoined: false, notice: "", effects: [], log: [],
-    barrels: createBarrels(manifest.seed), serial: 0 };
+    barrels: createBarrels(manifest.seed), serial: 0, wrecks: createWrecks(manifest), stops: createStops(manifest.seed),
+    salvaged: {}, stopsTaken: [] };
+}
+
+/** A point beside a reach's center line: positive sides are to the right of the downstream direction. */
+function beside(reach: ReachId, at: number, offset: number): Point {
+  const { from, to } = reaches[reach], center = along(reach, at);
+  const length = Math.hypot(to.x - from.x, to.y - from.y);
+  return { x: center.x - (to.y - from.y) / length * offset, y: center.y + (to.x - from.x) / length * offset };
+}
+function createWrecks(manifest: RunManifest): WreckSite[] {
+  return (manifest.wrecks ?? []).map((wreck, i) => {
+    const reach = wreck.reach as ReachId, point = beside(reach, wreck.at, (i % 2 ? -1 : 1) * 50);
+    keepInChannel(point, 70);
+    return { ...point, id: wreck.id, name: wreck.name, reach, cargo: { ...wreck.cargo }, angle: wreck.at * 9 };
+  });
+}
+function createStops(seed: number): StopSite[] {
+  return stopPlan(seed).map(stop => {
+    const point = beside(stop.reach, stop.at, stop.side * 230);
+    keepInChannel(point, 40);
+    return { ...point, id: stop.id, kind: stop.kind, reach: stop.reach };
+  });
+}
+export const nearWreck = (state: River) => state.wrecks.find(wreck => count(wreck.cargo) && distance(wreck, state.player) < wreckRadius);
+export const nearStop = (state: River) => state.stops.find(stop => !stop.choice && distance(stop, state.player) < stopRadius);
+
+function loadWreck(state: River, id: string) {
+  const wreck = state.wrecks.find(entry => entry.id === id), p = state.player;
+  if (!wreck || distance(wreck, p) >= wreckRadius) return;
+  const free = state.manifest.hold - count(p.cargo);
+  if (free <= 0) { state.notice = "Your hold is full. Sell or deliver cargo before salvaging."; return; }
+  let room = free, loaded = 0;
+  for (const item of Object.keys(wreck.cargo).sort()) {
+    const units = Math.min(room, wreck.cargo[item]!);
+    if (!units) continue;
+    wreck.cargo[item]! -= units;
+    if (!wreck.cargo[item]) delete wreck.cargo[item];
+    p.cargo[item] = (p.cargo[item] ?? 0) + units;
+    const record = state.salvaged[id] ??= {};
+    record[item] = (record[item] ?? 0) + units;
+    room -= units; loaded += units;
+  }
+  effect(state, "pickup", wreck, { amount: 2, label: "+" + loaded + " salvage" });
+  state.notice = "Salvaged " + loaded + " from the wreck of " + wreck.name + (count(wreck.cargo) ? ". The rest won't fit." : ".");
+}
+
+function takeStop(state: River, order: NonNullable<Input["stop"]>) {
+  const stop = state.stops.find(entry => entry.id === order.id), p = state.player;
+  const choice = stop && stopChoice(stop.kind, order.choice);
+  if (!stop || !choice || stop.choice || distance(stop, p) >= stopRadius) return;
+  if (Object.entries(choice.cost ?? {}).some(([item, qty]) => (p.cargo[item] ?? 0) < qty!)) {
+    state.notice = "You need " + Object.entries(choice.cost ?? {}).map(([item, qty]) => qty + " " + items[item as ItemId].name.toLowerCase()).join(", ") + " aboard.";
+    return;
+  }
+  for (const [item, qty] of Object.entries(choice.cost ?? {})) {
+    p.cargo[item]! -= qty!;
+    if (!p.cargo[item]) delete p.cargo[item];
+  }
+  stop.choice = choice.id;
+  state.stopsTaken.push({ stop_id: stop.id, choice: choice.id });
+  p.hp = Math.min(p.maxHp, p.hp + (choice.hull ?? 0));
+  p.fuel = Math.min(100, p.fuel + (choice.fuel ?? 0));
+  p.ammo = Math.min(200, p.ammo + (choice.ammo ?? 0));
+  const pay = Math.min(choice.coins ?? 0, state.bounty);
+  state.bounty -= pay;
+  p.wallet += pay;
+  if (pay) effect(state, "coin", stop, { amount: pay });
+  effect(state, "pickup", stop, { amount: choice.hull ? 2 : choice.fuel ? 0 : 1,
+    label: [choice.hull && "+" + choice.hull + " hull", choice.fuel && "+" + choice.fuel + " fuel", choice.ammo && "+" + choice.ammo + " shot"].filter(Boolean).join(" ") });
+  state.notice = riverStops[stop.kind].name + " · " + choice.label.replace(/^[^:]*: /, "");
 }
 
 /** Barrel placement uses its own seeded stream, so it never shifts pirate spawns or replays. */
@@ -165,7 +244,10 @@ function combat(state: River, input: Input) {
     const cap = pirateCap(reach.danger, state.frame / hz);
     const spawned = state.spawned[id] ?? 0;
     if (spawned >= cap) continue;
-    const point = along(id, .22 + rng(state) * .58);
+    const roll = .22 + rng(state) * .58;
+    // On dangerous reaches the first crew is picking over a wreck when the barge arrives.
+    const guarded = reach.danger >= 3 && !spawned ? state.wrecks.find(wreck => wreck.reach === id) : undefined;
+    const point = guarded ? { x: guarded.x + 60, y: guarded.y - 40 } : along(id, roll);
     const role = pirateRoleAt(reach.danger, spawned), heavy = role === "gunboat", hp = pirateRoles[role].hp;
     state.pirates.push({ ...point, id: ++state.serial, reach: id, role, breakoff: 0, hp, maxHp: hp, heavy, cooldown: 1, phase: rng(state) * 6, angle: 0, stun: 0 });
     state.spawned[id] = spawned + 1;
@@ -344,6 +426,8 @@ export function stepRiver(state: River, input: Input = {}, record = true) {
     return;
   }
   if (input.trade && state.rescueAt === undefined) trade(state, input.trade);
+  if (input.salvage && state.rescueAt === undefined) loadWreck(state, input.salvage);
+  if (input.stop && state.rescueAt === undefined) takeStop(state, input.stop);
   if (nearVillage(state)) state.player.visited = true;
   if (input.moor && state.rescueAt === undefined && distance(state.player, landing) < harborRadius) {
     state.outcome = "moored"; return;

@@ -1,8 +1,8 @@
 import { useEffect, useRef, useState, type PointerEvent as ReactPointerEvent } from "react";
 import { Anchor, Bell, Compass, Crosshair, Flame, Fuel, Map as MapIcon, Pause, Play, Shield, Target, Zap } from "lucide-react";
 import { items, merchants, type ItemId, type StallId } from "@lantern/content";
-import { bargeTier, landing, pirateRoles, reaches, runMs, trimFor, villages, type ReachId } from "@lantern/content/river";
-import { createRiver, distance, harborRadius, hz, marketQuote, nearVillage, objective, stepRiver, targetedPirate,
+import { bargeTier, landing, pirateRoles, reaches, riverStops, runMs, trimFor, villages, type ReachId } from "@lantern/content/river";
+import { createRiver, distance, harborRadius, hz, marketQuote, nearStop, nearVillage, nearWreck, objective, stepRiver, targetedPirate,
   type Point, type RiverInput } from "@lantern/river-sim";
 import { runReport } from "@lantern/river-sim/report";
 import type { RunManifest, RunReport, Snapshot } from "@lantern/protocol";
@@ -12,7 +12,7 @@ import { createTerrain, riverInfo, warmTerrain } from "./terrain";
 import { routeLeads } from "./Landing";
 import "./river.css";
 
-type Overlay = "village" | "map" | "bell" | "pause";
+type Overlay = "village" | "stop" | "map" | "bell" | "pause";
 const clock = (frame: number, limitMs: number) => {
   const seconds = Math.max(0, Math.ceil(limitMs / 1000 - frame / hz));
   return Math.floor(seconds / 60) + ":" + String(seconds % 60).padStart(2, "0");
@@ -74,6 +74,8 @@ export function RiverRun({ manifest, snapshot, finish, busy, reduced, live = fal
     if (river.outcome) return;
     if (river.rescueAt !== undefined || distance(river.player, landing) < harborRadius) queued.current.moor = true;
     else if (nearVillage(river)) show(overlayRef.current === "village" ? undefined : "village");
+    else if (nearWreck(river)) queued.current.salvage = nearWreck(river)!.id;
+    else if (nearStop(river)) show(overlayRef.current === "stop" ? undefined : "stop");
   }
 
   useEffect(() => {
@@ -109,7 +111,7 @@ export function RiverRun({ manifest, snapshot, finish, busy, reduced, live = fal
           stepRiver(river, input);
           accumulator -= 1 / hz;
         }
-        if (active === "village" && !nearVillage(river)) show();
+        if ((active === "village" && !nearVillage(river)) || (active === "stop" && !nearStop(river))) show();
       }
       last = now;
       absorb(scene, river, cue);
@@ -137,7 +139,7 @@ export function RiverRun({ manifest, snapshot, finish, busy, reduced, live = fal
         if (key === "escape") { show(panel ? undefined : live ? undefined : "pause"); return; }
         if (key === "m" && panel !== "pause") { show(panel === "map" ? undefined : "map"); return; }
         if (key === "j" && panel !== "pause") { show(panel === "bell" ? undefined : "bell"); return; }
-        if (key === "e" && (!panel || panel === "village")) { interact(); return; }
+        if (key === "e" && (!panel || panel === "village" || panel === "stop")) { interact(); return; }
         if (key === "q" && !panel) queued.current.flare = true;
       }
       if (!panel) keys.current.add(key);
@@ -175,6 +177,8 @@ export function RiverRun({ manifest, snapshot, finish, busy, reduced, live = fal
   }
 
   const port = nearVillage(river), dock = distance(river.player, landing) < harborRadius;
+  const wreck = !port && !dock ? nearWreck(river) : undefined, stop = !port && !dock && !wreck ? nearStop(river) : undefined;
+  const salvagedUnits = Object.values(river.salvaged).reduce((sum, cargo) => sum + Object.values(cargo).reduce((a, b) => a + b, 0), 0);
   const p = river.player, cargo = Object.values(p.cargo).reduce((a, b) => a + b, 0);
   const target = objective(river);
   const lots = manifest.items.filter(lot => lot.village === port);
@@ -229,8 +233,9 @@ export function RiverRun({ manifest, snapshot, finish, busy, reduced, live = fal
       </div>
     </div>
     {!overlay && !river.outcome && <div className="river-controls">
-      {(port || dock || river.rescueAt !== undefined) && <button className="primary river-action" onClick={interact}><Anchor size={16}/>
-        {river.rescueAt !== undefined ? "Call the tow" : dock ? "Moor at The Landing" : "Trade at " + villages[port!].name} <kbd>E</kbd></button>}
+      {(port || dock || wreck || stop || river.rescueAt !== undefined) && <button className="primary river-action" onClick={interact}><Anchor size={16}/>
+        {river.rescueAt !== undefined ? "Call the tow" : dock ? "Moor at The Landing" : port ? "Trade at " + villages[port].name
+          : wreck ? "Salvage the wreck" : "Visit the " + riverStops[stop!.kind].name.toLowerCase()} <kbd>E</kbd></button>}
       {!touch && river.frame < 25 * hz && <div className="river-card river-hint"><small>WASD / arrows steer · Shift boost · Space auto-aim · Mouse fire · Q flare · M map</small></div>}
     </div>}
     {touch && !overlay && !river.outcome && <>
@@ -247,7 +252,8 @@ export function RiverRun({ manifest, snapshot, finish, busy, reduced, live = fal
     </>}
     {river.notice && <div className="river-notice" role="status">{river.notice}</div>}
     {overlay && !river.outcome && <div className="river-overlay">
-      <div className="river-dialog" role="dialog" aria-modal="true" aria-label={overlay === "village" ? "Village market" : overlay === "map" ? "River map" : overlay === "bell" ? "Harbor Bell" : "River Run paused"}>
+      <div className="river-dialog" role="dialog" aria-modal="true" aria-label={overlay === "village" ? "Village market" : overlay === "stop" ? "Riverside stop"
+        : overlay === "map" ? "River map" : overlay === "bell" ? "Harbor Bell" : "River Run paused"}>
         <div className="eyebrow">RIVER RUN{live ? " · THE ROW KEEPS TRADING" : ""}</div>
         {overlay === "village" && port && <>
           <div className="village-head" style={{ ["--village" as string]: villages[port].color }}>
@@ -280,9 +286,27 @@ export function RiverRun({ manifest, snapshot, finish, busy, reduced, live = fal
           })}
           {!lots.length && <p>This village has nothing left to sell tonight.</p>}
         </>}
+        {overlay === "stop" && stop && <>
+          <h2>{riverStops[stop.kind].name}</h2>
+          <p>{riverStops[stop.kind].description}</p>
+          <p className="hint">Choose one. Hull {Math.ceil(p.hp)} / {p.maxHp} · Fuel {Math.ceil(p.fuel)}% · Ammo {p.ammo} · {river.bounty} coins left in the bounty fund</p>
+          <div className="stop-choices">
+            {riverStops[stop.kind].choices.map(choice => {
+              const short = Object.entries(choice.cost ?? {}).find(([item, qty]) => (p.cargo[item] ?? 0) < qty!);
+              const gains = [choice.hull && Math.min(choice.hull, p.maxHp - Math.ceil(p.hp)) + " hull",
+                choice.fuel && Math.min(choice.fuel, 100 - Math.ceil(p.fuel)) + " fuel", choice.ammo && Math.min(choice.ammo, 200 - p.ammo) + " ammo",
+                choice.coins && Math.min(choice.coins, river.bounty) + " coins"].filter(Boolean).join(", ");
+              return <button key={choice.id} className="subtle stop-choice" disabled={!!short}
+                onClick={() => { queued.current.stop = { id: stop.id, choice: choice.id }; show(); }}>
+                <strong>{choice.label}</strong>
+                <small>{short ? "Needs " + short[1] + " " + items[short[0] as ItemId].name.toLowerCase() + " aboard" : "You gain " + (gains || "nothing more right now")}</small>
+              </button>;
+            })}
+          </div>
+        </>}
         {overlay === "map" && <><h2>River map</h2>
           <canvas className="river-full-map" width={600} height={520} ref={el => { if (el) drawMap(el.getContext("2d")!, river, snapshot.villages, el.width, el.height, true); }}/>
-          <small>Red reaches have pirates. Crosses mark toll booms. Green dots are floating supplies.</small></>}
+          <small>Red reaches have pirates. Crosses mark toll booms. Green dots are floating supplies, teal diamonds are wrecks you can salvage, and squares are riverside stops.</small></>}
         {overlay === "bell" && <><h2>Harbor Bell</h2>
           <p>{contract ? contract.kind === "escort" ? "Stay near the marked boat until it arrives." :
             (contract.relief ? "Relief haul: " : "") + "Deliver " + contract.quantity + " " + items[contract.item as ItemId].name + " at The Landing." : "Spot haul. Sell what you bring at any stall on the Row."}</p>
@@ -302,6 +326,8 @@ export function RiverRun({ manifest, snapshot, finish, busy, reduced, live = fal
         <span><b>{Object.values(river.kills).reduce((a, b) => a + (b ?? 0), 0)}</b>pirates sunk</span>
         <span><b>{river.broken.length}</b>booms broken</span>
         <span><b>{manifest.bounty - river.bounty}</b>bounty earned</span>
+        {salvagedUnits > 0 && <span><b>{salvagedUnits}</b>salvaged</span>}
+        {river.stopsTaken.length > 0 && <span><b>{river.stopsTaken.length}</b>stops visited</span>}
       </div>
       <button className="primary" disabled={busy} onClick={() => finish(runReport(river))}>{busy ? "Settling cargo…" : "Settle cargo"}</button>
     </div></div>}

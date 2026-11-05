@@ -1,5 +1,5 @@
 import "fake-indexeddb/auto";
-import { afterEach, expect, test, vi } from "vitest";
+import { afterEach, describe, expect, test, vi } from "vitest";
 import { LocalBackend } from "../apps/web/src/backend/local";
 import { pack } from "../apps/web/src/backend/saves";
 import { addTrader, advanceClock, closeNight, commit, commitFor, createWorld, newNight, openNight, quote, quoteFor, snapshotFor } from "@lantern/game-core";
@@ -9,7 +9,7 @@ import { get, move, player, shop, type World } from "../packages/game-core/src/m
 import { harvest, refreshContracts, scheduleFreight, startRivalHaul } from "../packages/game-core/src/river";
 import { items } from "@lantern/content";
 import { decodeWorld, encodeWorld } from "@lantern/game-core/codec";
-import type { BargeTrimId } from "@lantern/content/river";
+import { stopPlan, type BargeTrimId } from "@lantern/content/river";
 
 test.each<BargeTrimId>(["balanced", "runner", "ironclad", "gunner"])("%s is free, manifest-bound, saved across nights, and conserves goods", trim => {
   const world = createWorld("endless");
@@ -329,4 +329,126 @@ test("shared rooms allow River Runs on wall-clock time and reserve only half of 
   const early = quoteFor.bind(null, started, "p:ari", { type: "finish_run", run_id: run.id, report: { ...empty(run), durationMs: 50_000 } }, "early");
   expect(() => early(1_010_000)).toThrow("RIVER_TIME");
   expect(() => early(1_050_000)).not.toThrow();
+});
+
+describe("wrecks", () => {
+  const supply = (state: World, item: string) => Object.values(state.ledger).reduce((sum, account) => sum + (account[item] ?? 0), 0);
+  function sunk() {
+    let world = withOilShortage();
+    world.river.reaches.heron_reach.danger = 5;
+    world.river.random = 1972;
+    world = { ...world, river: { ...world.river, hauls: {} }, ledger: apply(world.ledger,
+      [move(shop("paper_mill"), "sys:fixture", "oil", 4, "Test no wholesale stock")]) };
+    const freight = scheduleFreight(world);
+    return { freight, arrival: advanceClock(openNight(freight), 60) };
+  }
+
+  test("a lost haul sinks into an escrowed wreck that opens at the next dusk", () => {
+    const { freight, arrival } = sunk();
+    const view = snapshotFor(arrival, "test").river.wrecks;
+    expect(view).toHaveLength(1);
+    expect(view[0]).toMatchObject({ reach: "heron_reach", name: "the freight barge", open: false, nightsLeft: 3 });
+    const units = Number(view[0]!.cargo.oil);
+    expect(units).toBeGreaterThan(0);
+    expect(get(arrival, "esc:wreck:" + view[0]!.id, "oil")).toBe(units);
+    // Sinking is a transfer: the freight barge's whole oil load is now in the wreck.
+    const shipped = Object.values(freight.river.hauls).flatMap(haul => haul.cargo).filter(leg => leg.item === "oil")
+      .reduce((sum, leg) => sum + leg.qty, 0);
+    expect(units).toBe(shipped);
+    expect(get(arrival, "r:freight", "oil")).toBe(0);
+    const started = submit(arrival, { type: "start_run", barge_plan: [] }, "too-early", 0);
+    expect(snapshotFor(started, "test").river.myRun!.manifest.wrecks).toEqual([]);
+  });
+
+  test("salvage moves the wreck's goods to the barge exactly once and rejects forged reports", () => {
+    const { arrival } = sunk();
+    const next = newNight(closeNight(arrival));
+    const [wreck] = snapshotFor(next, "test").river.wrecks;
+    expect(wreck).toMatchObject({ open: true, nightsLeft: 2, claimed: false });
+    const units = Number(wreck!.cargo.oil);
+    const started = submit(next, { type: "start_run", barge_plan: [] }, "salvage-run");
+    const run = snapshotFor(started, "test").river.myRun!.manifest;
+    expect(run.wrecks).toEqual([expect.objectContaining({ id: wreck!.id, cargo: { oil: units } })]);
+    expect(snapshotFor(started, "test").river.wrecks[0]!.claimed).toBe(true);
+    const report: RunReport = { ...empty(run), salvaged: [{ wreck_id: wreck!.id, item_id: "oil", quantity: units }], delivered: { oil: units } };
+    for (const forged of <RunReport[]>[
+      { ...report, salvaged: [{ wreck_id: wreck!.id, item_id: "oil", quantity: units + 1 }], delivered: { oil: units + 1 } },
+      { ...report, salvaged: [{ wreck_id: "wreck-9-99", item_id: "oil", quantity: 1 }], delivered: { oil: 1 } },
+      { ...report, salvaged: [{ wreck_id: wreck!.id, item_id: "paper", quantity: 1 }], delivered: { paper: 1 } },
+    ]) expect(() => quote(started, { type: "finish_run", run_id: run.id, report: forged }, "forged", 40_000)).toThrow("RIVER_SALVAGE");
+    expect(() => quote(started, { type: "finish_run", run_id: run.id, report: { ...report, delivered: { oil: units + 2 } } },
+      "unbalanced", 40_000)).toThrow("RIVER_CARGO");
+    const home = submit(started, { type: "finish_run", run_id: run.id, report }, "salvage-home", 40_000);
+    expect(get(home, player, "oil") - get(started, player, "oil")).toBe(units);
+    expect(get(home, "esc:wreck:" + wreck!.id, "oil")).toBe(0);
+    expect(snapshotFor(home, "test").river.wrecks).toEqual([]);
+    expect(supply(home, "oil")).toBe(supply(started, "oil"));
+    expect(home.activity.some(entry => /salvaged \d+ lamp oil from the wreck of the freight barge on Heron Reach/.test(entry.line))).toBe(true);
+  });
+
+  test("a partial salvage releases the claim and leaves the rest for the next barge, across a save", () => {
+    const { arrival } = sunk();
+    const next = newNight(closeNight(arrival));
+    const [wreck] = snapshotFor(next, "test").river.wrecks;
+    const started = submit(next, { type: "start_run", barge_plan: [] }, "partial-run");
+    const run = snapshotFor(started, "test").river.myRun!.manifest;
+    const home = submit(started, { type: "finish_run", run_id: run.id, report: { ...empty(run),
+      salvaged: [{ wreck_id: wreck!.id, item_id: "oil", quantity: 1 }], delivered: { oil: 1 } } }, "partial-home", 40_000);
+    expect(snapshotFor(home, "test").river.wrecks[0]).toMatchObject({ claimed: false, cargo: { oil: String(Number(wreck!.cargo.oil) - 1) } });
+    const decoded = decodeWorld(encodeWorld(home));
+    expect(snapshotFor(decoded, "test").river.wrecks).toEqual(snapshotFor(home, "test").river.wrecks);
+  });
+
+  test("unsalvaged wrecks break up after two nights and burn to the river", () => {
+    const { arrival } = sunk();
+    const id = snapshotFor(arrival, "test").river.wrecks[0]!.id;
+    const units = get(arrival, "esc:wreck:" + id, "oil");
+    const one = newNight(closeNight(arrival)), two = newNight(closeNight(openNight(one)));
+    expect(get(two, "esc:wreck:" + id, "oil")).toBe(units);
+    expect(snapshotFor(two, "test").river.wrecks[0]).toMatchObject({ open: true, nightsLeft: 1 });
+    const three = newNight(closeNight(openNight(two)));
+    expect(get(three, "esc:wreck:" + id, "oil")).toBe(0);
+    expect(snapshotFor(three, "test").river.wrecks).toEqual([]);
+    expect(three.activity.some(entry => entry.line === "The wreck of the freight barge on Heron Reach broke up.")).toBe(true);
+  });
+});
+
+describe("riverside stops", () => {
+  function fisherRun() {
+    for (let seed = 1; seed < 300; seed++) {
+      const world = createWorld("endless", seed);
+      const started = submit(world, { type: "start_run", barge_plan: [] }, "stop-run");
+      const run = snapshotFor(started, "test").river.myRun!.manifest;
+      const fisher = stopPlan(run.seed).find(stop => stop.kind === "fisher");
+      if (fisher && run.items.some(lot => lot.item === "cord")) return { world, started, run, fisher };
+    }
+    throw new Error("No seed with a fisher stop.");
+  }
+
+  test("mending a net moves the cord to Millbrook and pays the bounty from the fund", () => {
+    const { started, run, fisher } = fisherRun();
+    const cord = run.items.find(lot => lot.item === "cord")!;
+    const report: RunReport = { ...empty(run), bought: [{ village_id: "millbrook", item_id: "cord", quantity: 1, paid: cord.prices[0]! }],
+      stops: [{ stop_id: fisher.id, choice: "mend" }] };
+    const deal = quote(started, { type: "finish_run", run_id: run.id, report }, "mend", 40_000);
+    expect(deal.effects).toContainEqual(move(player, "v:millbrook", "cord", 1, "Mended a fisher's net"));
+    expect(deal.effects).toContainEqual(move("sys:bounty", player, "coin", 6, "River bounty"));
+    const home = commit(started, deal, 40_000);
+    expect(home.activity.some(entry => entry.line.endsWith("mended a stranded fisher's net."))).toBe(true);
+    for (const item of Object.keys(items)) {
+      const total = (state: World) => Object.values(state.ledger).reduce((sum, account) => sum + (account[item] ?? 0), 0);
+      expect(total(home)).toBe(total(started));
+    }
+  });
+
+  test("stops can't be repeated, invented or taken without the cord", () => {
+    const { started, run, fisher } = fisherRun();
+    const cord = run.items.find(lot => lot.item === "cord")!;
+    const bought = [{ village_id: "millbrook", item_id: "cord", quantity: 1, paid: cord.prices[0]! }];
+    const finish = (report: RunReport) => quote(started, { type: "finish_run", run_id: run.id, report }, "stop", 40_000);
+    expect(() => finish({ ...empty(run), bought, stops: [{ stop_id: fisher.id, choice: "mend" }, { stop_id: fisher.id, choice: "strip" }] })).toThrow("RIVER_STOP");
+    expect(() => finish({ ...empty(run), stops: [{ stop_id: "stop-9", choice: "mend" }] })).toThrow("RIVER_STOP");
+    expect(() => finish({ ...empty(run), stops: [{ stop_id: fisher.id, choice: "fuel" }] })).toThrow("RIVER_STOP");
+    expect(() => finish({ ...empty(run), stops: [{ stop_id: fisher.id, choice: "mend" }] })).toThrow("RIVER_CARGO");
+  });
 });

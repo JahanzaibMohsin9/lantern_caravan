@@ -347,3 +347,62 @@ describe("skiffs and role bounties", () => {
     }
   });
 });
+
+describe("wrecks and riverside stops", () => {
+  const wrecked = () => manifest({ wrecks: [{ id: "wreck-1-3", reach: "heron_reach", at: .5, name: "the freight barge", cargo: { oil: 9, paper: 7 } }] });
+
+  test("a wreck loads up to the free hold with E, records the salvage, and keeps the rest aboard the wreck", () => {
+    const state = createRiver(wrecked());
+    const wreck = state.wrecks[0]!;
+    expect(distance(wreck, state.player)).toBeGreaterThan(300);
+    stepRiver(state, { salvage: wreck.id });
+    expect(state.salvaged).toEqual({});
+    steer(state, wreck, 40);
+    stepRiver(state, { salvage: wreck.id });
+    expect(Object.values(state.player.cargo).reduce((a, b) => a + b, 0)).toBe(12);
+    expect(state.salvaged[wreck.id]).toEqual({ oil: 9, paper: 3 });
+    expect(wreck.cargo).toEqual({ paper: 4 });
+    stepRiver(state, { salvage: wreck.id });
+    expect(state.notice).toMatch(/hold is full/);
+    state.outcome = "moored";
+    const report = runReport(state);
+    expect(report.salvaged).toEqual([{ wreck_id: wreck.id, item_id: "oil", quantity: 9 }, { wreck_id: wreck.id, item_id: "paper", quantity: 3 }]);
+    expect(report.delivered).toEqual({ oil: 9, paper: 3 });
+  });
+
+  test("the first crew on a dangerous reach guards its wreck", () => {
+    const reachesAt = reachIds.map(id => ({ id, danger: id === "heron_reach" ? 3 : 0, boom: false }));
+    const guarded = createRiver({ ...wrecked(), reaches: reachesAt });
+    advance(guarded, 3);
+    expect(distance(guarded.pirates[0]!, guarded.wrecks[0]!)).toBeLessThan(140);
+    const open = createRiver(manifest({ reaches: reachesAt }));
+    advance(open, 3);
+    // Without a wreck the same seed spawns along the reach exactly as before.
+    expect(open.pirates[0]!.reach).toBe("heron_reach");
+    expect(open.seed).toBe(guarded.seed);
+  });
+
+  test("each stop takes one choice; the fisher needs cord and pays from the bounty fund", () => {
+    let state: River | undefined;
+    for (let seed = 1; seed < 200 && !state; seed++) {
+      const candidate = createRiver(manifest({ seed,
+        items: [{ village: "millbrook", item: "cord", stock: 16, target: 16, coins: 40, discount: false, prices: [2, 2, 2] }] }));
+      if (candidate.stops.some(stop => stop.kind === "fisher")) state = candidate;
+    }
+    const fisher = state!.stops.find(stop => stop.kind === "fisher")!;
+    expect(state!.stops.length).toBeGreaterThanOrEqual(2);
+    Object.assign(state!.player, { x: fisher.x, y: fisher.y, hp: 50 });
+    stepRiver(state!, { stop: { id: fisher.id, choice: "mend" } });
+    expect(fisher.choice).toBeUndefined();
+    expect(state!.notice).toMatch(/1 cord aboard/);
+    state!.player.cargo.cord = 1;
+    stepRiver(state!, { stop: { id: fisher.id, choice: "mend" } });
+    expect(fisher.choice).toBe("mend");
+    expect(state!.player.cargo.cord).toBeUndefined();
+    expect(state!.player.hp).toBe(75);
+    expect(state!.player.wallet).toBe(36);
+    expect(state!.bounty).toBe(30);
+    stepRiver(state!, { stop: { id: fisher.id, choice: "strip" } });
+    expect(state!.stopsTaken).toEqual([{ stop_id: fisher.id, choice: "mend" }]);
+  });
+});

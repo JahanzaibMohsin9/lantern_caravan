@@ -19,11 +19,13 @@ Click a location or use **1–8** to walk there. **A/D** or **←/→** walks ma
 
 From Night 2 onward, visit **The Landing** to cast off on a River Run, before the market opens or during the night. The **Harbor Bell** lists supply contracts, escorts and relief hauls: on The Dark Wharf, haul oil from Ember Falls to relight the wharf, or pledge shares to rescue it. Upriver, buy freely at any village, fight off pirates and armored gunboats, break toll booms, and collect floating fuel, shot and repair barrels. Moor at The Landing to settle, then sell your haul on the Row or use it at the Workshop. Leaving during the night costs night time; shared rooms keep trading while you're away.
 
-On the river, **WASD** or **arrows** steer, **Shift** boosts, **Space** fires at the nearest threat, and the **mouse** aims and fires manually. **E** trades or moors, **Q** spends one oil on a flare, **M** opens the map, **J** opens the Harbor Bell, and **Esc** pauses outside shared rooms. On touchscreens, use the steering stick and the fire, boost and flare buttons. Each run has a 2:30 timer, shorter when you leave late in the night.
+On the river, **WASD** or **arrows** steer, **Shift** boosts, **Space** fires at the nearest threat, and the **mouse** aims and fires manually. **E** trades, moors, salvages a wreck or visits a riverside stop, **Q** spends one oil on a flare, **M** opens the map, **J** opens the Harbor Bell, and **Esc** pauses outside shared rooms. On touchscreens, use the steering stick and the fire, boost and flare buttons. Each run has a 2:30 timer, shorter when you leave late in the night.
 
 At The Landing's **Barge** tab, choose Balanced, Runner, Ironclad or Gunner trim. Switching is free and takes effect when you cast off; the HUD names your trim. Trims unlock on campaign Night 3 and are always available in Endless and live rooms.
 
 Gold **skiffs** ram your barge and spill cargo: recover it within 20 seconds. Coral **raiders** patrol at medium range; purple **gunboats** fire twin shots from farther away. Bounties are 6, 8 and 14 coins respectively, while the harbor fund lasts.
+
+Hauls that pirates sink become **wrecks**: their cargo stays in the water and opens for salvage at the next dusk, for two nights, before the river takes it. The Landing lists every wreck. Two or three optional **riverside stops** appear on each run (a stranded fisher, a lock keeper's shed, an overturned punt), each offering one choice of hull, fuel or ammo.
 
 | First Light | The Dark Wharf | Festival of Lights |
 | --- | --- | --- |

@@ -536,6 +536,20 @@
                     "$ref": "#/$defs/__schema0"
                   }
                 },
+                "salvaged": {
+                  "maxItems": 12,
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/$defs/__schema9"
+                  }
+                },
+                "stops": {
+                  "maxItems": 3,
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/$defs/__schema10"
+                  }
+                },
                 "outcome": {
                   "type": "string",
                   "enum": [
@@ -828,6 +842,42 @@
           "required": [
             "reach",
             "count"
+          ],
+          "additionalProperties": false
+        },
+        "__schema9": {
+          "type": "object",
+          "properties": {
+            "wreck_id": {
+              "$ref": "#/$defs/__schema0"
+            },
+            "item_id": {
+              "$ref": "#/$defs/__schema0"
+            },
+            "quantity": {
+              "$ref": "#/$defs/__schema4"
+            }
+          },
+          "required": [
+            "wreck_id",
+            "item_id",
+            "quantity"
+          ],
+          "additionalProperties": false
+        },
+        "__schema10": {
+          "type": "object",
+          "properties": {
+            "stop_id": {
+              "$ref": "#/$defs/__schema0"
+            },
+            "choice": {
+              "$ref": "#/$defs/__schema0"
+            }
+          },
+          "required": [
+            "stop_id",
+            "choice"
           ],
           "additionalProperties": false
         }
@@ -1130,6 +1180,20 @@
                       "type": "array",
                       "items": {
                         "$ref": "#/$defs/__schema0"
+                      }
+                    },
+                    "salvaged": {
+                      "maxItems": 12,
+                      "type": "array",
+                      "items": {
+                        "$ref": "#/$defs/__schema9"
+                      }
+                    },
+                    "stops": {
+                      "maxItems": 3,
+                      "type": "array",
+                      "items": {
+                        "$ref": "#/$defs/__schema10"
                       }
                     },
                     "outcome": {
@@ -1546,6 +1610,42 @@
           "required": [
             "reach",
             "count"
+          ],
+          "additionalProperties": false
+        },
+        "__schema9": {
+          "type": "object",
+          "properties": {
+            "wreck_id": {
+              "$ref": "#/$defs/__schema0"
+            },
+            "item_id": {
+              "$ref": "#/$defs/__schema0"
+            },
+            "quantity": {
+              "$ref": "#/$defs/__schema4"
+            }
+          },
+          "required": [
+            "wreck_id",
+            "item_id",
+            "quantity"
+          ],
+          "additionalProperties": false
+        },
+        "__schema10": {
+          "type": "object",
+          "properties": {
+            "stop_id": {
+              "$ref": "#/$defs/__schema0"
+            },
+            "choice": {
+              "$ref": "#/$defs/__schema0"
+            }
+          },
+          "required": [
+            "stop_id",
+            "choice"
           ],
           "additionalProperties": false
         }
@@ -2224,6 +2324,13 @@
                       "type": "integer",
                       "minimum": 10000,
                       "maximum": 150000
+                    },
+                    "wrecks": {
+                      "maxItems": 6,
+                      "type": "array",
+                      "items": {
+                        "$ref": "#/$defs/__schema14"
+                      }
                     }
                   },
                   "required": [
@@ -2248,6 +2355,47 @@
                 "manifest"
               ],
               "additionalProperties": false
+            },
+            "wrecks": {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "properties": {
+                  "id": {
+                    "$ref": "#/$defs/__schema0"
+                  },
+                  "reach": {
+                    "$ref": "#/$defs/__schema0"
+                  },
+                  "name": {
+                    "$ref": "#/$defs/__schema0"
+                  },
+                  "cargo": {
+                    "$ref": "#/$defs/__schema4"
+                  },
+                  "open": {
+                    "type": "boolean"
+                  },
+                  "nightsLeft": {
+                    "type": "integer",
+                    "minimum": 0,
+                    "maximum": 3
+                  },
+                  "claimed": {
+                    "type": "boolean"
+                  }
+                },
+                "required": [
+                  "id",
+                  "reach",
+                  "name",
+                  "cargo",
+                  "open",
+                  "nightsLeft",
+                  "claimed"
+                ],
+                "additionalProperties": false
+              }
             },
             "upriver": {
               "type": "array",
@@ -2275,6 +2423,7 @@
           "required": [
             "reaches",
             "contracts",
+            "wrecks",
             "upriver",
             "bountyFund"
           ],
@@ -2746,6 +2895,44 @@
             "id",
             "danger",
             "boom"
+          ],
+          "additionalProperties": false
+        },
+        "__schema14": {
+          "type": "object",
+          "properties": {
+            "id": {
+              "$ref": "#/$defs/__schema8"
+            },
+            "reach": {
+              "$ref": "#/$defs/__schema8"
+            },
+            "at": {
+              "type": "number",
+              "minimum": 0,
+              "maximum": 1
+            },
+            "name": {
+              "$ref": "#/$defs/__schema8"
+            },
+            "cargo": {
+              "type": "object",
+              "propertyNames": {
+                "$ref": "#/$defs/__schema8"
+              },
+              "additionalProperties": {
+                "type": "integer",
+                "minimum": 1,
+                "maximum": 40
+              }
+            }
+          },
+          "required": [
+            "id",
+            "reach",
+            "at",
+            "name",
+            "cargo"
           ],
           "additionalProperties": false
         }
@@ -3882,6 +4069,13 @@
                         "type": "integer",
                         "minimum": 10000,
                         "maximum": 150000
+                      },
+                      "wrecks": {
+                        "maxItems": 6,
+                        "type": "array",
+                        "items": {
+                          "$ref": "#/$defs/__schema14"
+                        }
                       }
                     },
                     "required": [
@@ -3906,6 +4100,47 @@
                   "manifest"
                 ],
                 "additionalProperties": false
+              },
+              "wrecks": {
+                "type": "array",
+                "items": {
+                  "type": "object",
+                  "properties": {
+                    "id": {
+                      "$ref": "#/$defs/__schema0"
+                    },
+                    "reach": {
+                      "$ref": "#/$defs/__schema0"
+                    },
+                    "name": {
+                      "$ref": "#/$defs/__schema0"
+                    },
+                    "cargo": {
+                      "$ref": "#/$defs/__schema4"
+                    },
+                    "open": {
+                      "type": "boolean"
+                    },
+                    "nightsLeft": {
+                      "type": "integer",
+                      "minimum": 0,
+                      "maximum": 3
+                    },
+                    "claimed": {
+                      "type": "boolean"
+                    }
+                  },
+                  "required": [
+                    "id",
+                    "reach",
+                    "name",
+                    "cargo",
+                    "open",
+                    "nightsLeft",
+                    "claimed"
+                  ],
+                  "additionalProperties": false
+                }
               },
               "upriver": {
                 "type": "array",
@@ -3933,6 +4168,7 @@
             "required": [
               "reaches",
               "contracts",
+              "wrecks",
               "upriver",
               "bountyFund"
             ],
@@ -4406,6 +4642,44 @@
               "boom"
             ],
             "additionalProperties": false
+          },
+          "__schema14": {
+            "type": "object",
+            "properties": {
+              "id": {
+                "$ref": "#/$defs/__schema8"
+              },
+              "reach": {
+                "$ref": "#/$defs/__schema8"
+              },
+              "at": {
+                "type": "number",
+                "minimum": 0,
+                "maximum": 1
+              },
+              "name": {
+                "$ref": "#/$defs/__schema8"
+              },
+              "cargo": {
+                "type": "object",
+                "propertyNames": {
+                  "$ref": "#/$defs/__schema8"
+                },
+                "additionalProperties": {
+                  "type": "integer",
+                  "minimum": 1,
+                  "maximum": 40
+                }
+              }
+            },
+            "required": [
+              "id",
+              "reach",
+              "at",
+              "name",
+              "cargo"
+            ],
+            "additionalProperties": false
           }
         }
       }
@@ -4711,6 +4985,20 @@
                         "type": "array",
                         "items": {
                           "$ref": "#/$defs/__schema1"
+                        }
+                      },
+                      "salvaged": {
+                        "maxItems": 12,
+                        "type": "array",
+                        "items": {
+                          "$ref": "#/$defs/__schema10"
+                        }
+                      },
+                      "stops": {
+                        "maxItems": 3,
+                        "type": "array",
+                        "items": {
+                          "$ref": "#/$defs/__schema11"
                         }
                       },
                       "outcome": {
@@ -5020,6 +5308,42 @@
               "count"
             ],
             "additionalProperties": false
+          },
+          "__schema10": {
+            "type": "object",
+            "properties": {
+              "wreck_id": {
+                "$ref": "#/$defs/__schema1"
+              },
+              "item_id": {
+                "$ref": "#/$defs/__schema1"
+              },
+              "quantity": {
+                "$ref": "#/$defs/__schema5"
+              }
+            },
+            "required": [
+              "wreck_id",
+              "item_id",
+              "quantity"
+            ],
+            "additionalProperties": false
+          },
+          "__schema11": {
+            "type": "object",
+            "properties": {
+              "stop_id": {
+                "$ref": "#/$defs/__schema1"
+              },
+              "choice": {
+                "$ref": "#/$defs/__schema1"
+              }
+            },
+            "required": [
+              "stop_id",
+              "choice"
+            ],
+            "additionalProperties": false
           }
         }
       },
@@ -5320,6 +5644,20 @@
                         "type": "array",
                         "items": {
                           "$ref": "#/$defs/__schema0"
+                        }
+                      },
+                      "salvaged": {
+                        "maxItems": 12,
+                        "type": "array",
+                        "items": {
+                          "$ref": "#/$defs/__schema9"
+                        }
+                      },
+                      "stops": {
+                        "maxItems": 3,
+                        "type": "array",
+                        "items": {
+                          "$ref": "#/$defs/__schema10"
                         }
                       },
                       "outcome": {
@@ -5738,6 +6076,42 @@
               "count"
             ],
             "additionalProperties": false
+          },
+          "__schema9": {
+            "type": "object",
+            "properties": {
+              "wreck_id": {
+                "$ref": "#/$defs/__schema0"
+              },
+              "item_id": {
+                "$ref": "#/$defs/__schema0"
+              },
+              "quantity": {
+                "$ref": "#/$defs/__schema4"
+              }
+            },
+            "required": [
+              "wreck_id",
+              "item_id",
+              "quantity"
+            ],
+            "additionalProperties": false
+          },
+          "__schema10": {
+            "type": "object",
+            "properties": {
+              "stop_id": {
+                "$ref": "#/$defs/__schema0"
+              },
+              "choice": {
+                "$ref": "#/$defs/__schema0"
+              }
+            },
+            "required": [
+              "stop_id",
+              "choice"
+            ],
+            "additionalProperties": false
           }
         }
       }
@@ -6118,6 +6492,20 @@
                             "type": "array",
                             "items": {
                               "$ref": "#/$defs/__schema0"
+                            }
+                          },
+                          "salvaged": {
+                            "maxItems": 12,
+                            "type": "array",
+                            "items": {
+                              "$ref": "#/$defs/__schema9"
+                            }
+                          },
+                          "stops": {
+                            "maxItems": 3,
+                            "type": "array",
+                            "items": {
+                              "$ref": "#/$defs/__schema10"
                             }
                           },
                           "outcome": {
@@ -6550,6 +6938,42 @@
             "required": [
               "reach",
               "count"
+            ],
+            "additionalProperties": false
+          },
+          "__schema9": {
+            "type": "object",
+            "properties": {
+              "wreck_id": {
+                "$ref": "#/$defs/__schema0"
+              },
+              "item_id": {
+                "$ref": "#/$defs/__schema0"
+              },
+              "quantity": {
+                "$ref": "#/$defs/__schema4"
+              }
+            },
+            "required": [
+              "wreck_id",
+              "item_id",
+              "quantity"
+            ],
+            "additionalProperties": false
+          },
+          "__schema10": {
+            "type": "object",
+            "properties": {
+              "stop_id": {
+                "$ref": "#/$defs/__schema0"
+              },
+              "choice": {
+                "$ref": "#/$defs/__schema0"
+              }
+            },
+            "required": [
+              "stop_id",
+              "choice"
             ],
             "additionalProperties": false
           }
@@ -7405,6 +7829,13 @@
                         "type": "integer",
                         "minimum": 10000,
                         "maximum": 150000
+                      },
+                      "wrecks": {
+                        "maxItems": 6,
+                        "type": "array",
+                        "items": {
+                          "$ref": "#/$defs/__schema14"
+                        }
                       }
                     },
                     "required": [
@@ -7429,6 +7860,47 @@
                   "manifest"
                 ],
                 "additionalProperties": false
+              },
+              "wrecks": {
+                "type": "array",
+                "items": {
+                  "type": "object",
+                  "properties": {
+                    "id": {
+                      "$ref": "#/$defs/__schema0"
+                    },
+                    "reach": {
+                      "$ref": "#/$defs/__schema0"
+                    },
+                    "name": {
+                      "$ref": "#/$defs/__schema0"
+                    },
+                    "cargo": {
+                      "$ref": "#/$defs/__schema4"
+                    },
+                    "open": {
+                      "type": "boolean"
+                    },
+                    "nightsLeft": {
+                      "type": "integer",
+                      "minimum": 0,
+                      "maximum": 3
+                    },
+                    "claimed": {
+                      "type": "boolean"
+                    }
+                  },
+                  "required": [
+                    "id",
+                    "reach",
+                    "name",
+                    "cargo",
+                    "open",
+                    "nightsLeft",
+                    "claimed"
+                  ],
+                  "additionalProperties": false
+                }
               },
               "upriver": {
                 "type": "array",
@@ -7456,6 +7928,7 @@
             "required": [
               "reaches",
               "contracts",
+              "wrecks",
               "upriver",
               "bountyFund"
             ],
@@ -7927,6 +8400,44 @@
               "id",
               "danger",
               "boom"
+            ],
+            "additionalProperties": false
+          },
+          "__schema14": {
+            "type": "object",
+            "properties": {
+              "id": {
+                "$ref": "#/$defs/__schema8"
+              },
+              "reach": {
+                "$ref": "#/$defs/__schema8"
+              },
+              "at": {
+                "type": "number",
+                "minimum": 0,
+                "maximum": 1
+              },
+              "name": {
+                "$ref": "#/$defs/__schema8"
+              },
+              "cargo": {
+                "type": "object",
+                "propertyNames": {
+                  "$ref": "#/$defs/__schema8"
+                },
+                "additionalProperties": {
+                  "type": "integer",
+                  "minimum": 1,
+                  "maximum": 40
+                }
+              }
+            },
+            "required": [
+              "id",
+              "reach",
+              "at",
+              "name",
+              "cargo"
             ],
             "additionalProperties": false
           }

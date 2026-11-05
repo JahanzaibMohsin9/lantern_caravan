@@ -22,6 +22,8 @@ export const runReportSchema = z.object({
   boomsBroken: z.array(id).max(4),
   escort: z.object({ id, completed: z.boolean() }).optional(),
   savedBoats: z.array(id).max(5).optional(),
+  salvaged: z.array(z.object({ wreck_id: id, item_id: id, quantity: units })).max(12).optional(),
+  stops: z.array(z.object({ stop_id: id, choice: id })).max(3).optional(),
   outcome: z.enum(["moored", "towed", "sunk"]), inputLogHash: z.string().max(120),
 });
 export type RunReport = z.infer<typeof runReportSchema>;
@@ -38,6 +40,8 @@ export const manifestSchema = z.object({
     kind: z.enum(["supply", "escort"]), haul: id.optional(), relief: z.boolean().optional() }).optional(),
   upgrades: z.array(id), bounty: coins, glow: z.number().min(0).max(1),
   limitMs: z.int().min(10_000).max(150_000).optional(),
+  wrecks: z.array(z.object({ id, reach: id, at: z.number().min(0).max(1), name: id,
+    cargo: z.record(id, z.int().min(1).max(40)) })).max(6).optional(),
 });
 export type RunManifest = z.infer<typeof manifestSchema>;
 
@@ -104,6 +108,7 @@ export type Snapshot = {
     contracts: { id: string; stall: string; village: string; item: string; quantity: string; payout: string;
       deadline: number; mine: boolean; taken: boolean; kind: "supply" | "escort"; relief?: boolean }[];
     myRun?: { id: string; deadline: number; manifest: RunManifest };
+    wrecks: { id: string; reach: string; name: string; cargo: Record<string, string>; open: boolean; nightsLeft: number; claimed: boolean }[];
     upriver: { actor: string; name: string }[];
     bountyFund: string;
   };

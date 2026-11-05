@@ -55,6 +55,48 @@ export const pirateRoles = {
 export type PirateRole = keyof typeof pirateRoles;
 export const pirateRoleAt = (danger: number, index: number): PirateRole =>
   danger >= 3 && index % 3 === 2 ? "gunboat" : danger >= 2 && index % 3 === 1 ? "skiff" : "raider";
+/** A sunk haul becomes salvageable at the next dusk and breaks up after this many nights. */
+export const wreckNights = 2;
+
+type StopChoice = { id: string; label: string; cost?: Partial<Record<ItemId, number>>; coins?: number; hull?: number; fuel?: number; ammo?: number };
+export const riverStops = {
+  fisher: { name: "Stranded fisher", description: "A fisher is drifting with a torn net. Mend it and they'll patch your hull and share the catch money, or strip their wrecked skiff for shot.",
+    choices: [
+      { id: "mend", label: "Give 1 cord: +25 hull and a 6-coin bounty", cost: { cord: 1 }, hull: 25, coins: 6 },
+      { id: "strip", label: "Strip the skiff: +30 ammo", ammo: 30 },
+    ] as StopChoice[] },
+  shed: { name: "Lock keeper's shed", description: "The keeper is away. One store cupboard is unlocked; the other is rusted shut once you open the first.",
+    choices: [
+      { id: "fuel", label: "Take the fuel cans: +18 fuel", fuel: 18 },
+      { id: "ammo", label: "Take the shot crate: +30 ammo", ammo: 30 },
+    ] as StopChoice[] },
+  punt: { name: "Overturned punt", description: "A capsized punt is caught on the reeds. There's time to strip one thing before it slides under.",
+    choices: [
+      { id: "patch", label: "Cut its planks for a patch: +25 hull", hull: 25 },
+      { id: "supplies", label: "Grab its stores: +20 fuel and +15 ammo", fuel: 20, ammo: 15 },
+    ] as StopChoice[] },
+};
+export type StopKind = keyof typeof riverStops;
+export type StopPlan = { id: string; kind: StopKind; reach: ReachId; at: number; side: number };
+export const stopChoice = (kind: StopKind, choice: string) => riverStops[kind].choices.find(entry => entry.id === choice);
+
+/** Two or three optional riverside stops, placed from the run seed on their own stream so pirates and replays never shift. */
+export function stopPlan(seed: number): StopPlan[] {
+  let value = (seed ^ 0x51ed2701) >>> 0;
+  const next = () => (value = (Math.imul(value, 1664525) + 1013904223) >>> 0) / 0x100000000;
+  const kinds: StopKind[] = ["fisher", "shed", "punt"];
+  for (let i = kinds.length - 1; i > 0; i--) {
+    const j = Math.floor(next() * (i + 1));
+    [kinds[i], kinds[j]] = [kinds[j]!, kinds[i]!];
+  }
+  const count = next() < .5 ? 2 : 3;
+  const branches: ReachId[] = ["ember_cut", "mill_race", "marsh_bend"];
+  const first = branches[Math.floor(next() * branches.length)]!;
+  const route: ReachId[] = ["heron_reach", first, branches[(branches.indexOf(first) + 1) % branches.length]!];
+  return kinds.slice(0, count).map((kind, i) => ({ id: "stop-" + i, kind, reach: route[i]!,
+    at: .3 + next() * .45, side: next() < .5 ? -1 : 1 }));
+}
+
 export function pirateRoleCaps(danger: number, seconds: number): Record<PirateRole, number> {
   const roles = { skiff: 0, raider: 0, gunboat: 0 };
   for (let i = 0; i < pirateCap(danger, seconds); i++) roles[pirateRoleAt(danger, i)]++;

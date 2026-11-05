@@ -1,3 +1,5 @@
+import { execFileSync } from "node:child_process";
+import { join } from "node:path";
 import { expect, test } from "@playwright/test";
 
 test("relights the dark wharf with a relief haul from upriver, then sells spare oil on the Row", async ({ page }) => {
@@ -123,4 +125,60 @@ test("fits each free trim at the Landing and sees it on the live barge HUD", asy
     await expect(page.getByRole("combobox", { name: "Barge trim" })).toHaveValue(trim);
     await page.keyboard.press("Escape");
   }
+});
+
+test("salvages the oil the Night 2 storm sank at Heron Reach", async ({ page }) => {
+  test.setTimeout(150_000);
+  const errors: string[] = [];
+  page.on("pageerror", error => errors.push(error.message));
+  const button = (name: string) => page.getByRole("button", { name, exact: true });
+  await page.goto("/");
+  await button("Enter the Row").click();
+  // A save at the start of Night 3, built by the game code, goes in through the real Import save control.
+  const save = execFileSync(process.execPath, [join("node_modules", "tsx", "dist", "cli.mjs"), join("tests", "e2e", "fixtures", "night3-save.ts")]);
+  page.on("dialog", dialog => void dialog.accept());
+  await button("Pause").click();
+  await button("Settings").click();
+  await page.locator('input[type="file"]').setInputFiles({ name: "night3.json", mimeType: "application/json", buffer: save });
+  await expect(page.getByText("NIGHT 03")).toBeVisible();
+  await page.clock.install();
+  await page.keyboard.press("Escape");
+  await button("The Landing").click();
+  await button("Barge").click();
+  const wrecks = page.getByLabel("Wrecks on the river");
+  await expect(wrecks).toContainText("Wreck of the freight barge on Heron Reach");
+  await expect(wrecks).toContainText("6 lamp oil");
+  await page.getByRole("button", { name: /^Cast off/ }).click();
+  const river = page.getByRole("region", { name: "River Run" });
+  await expect(river).toBeVisible();
+  const salvage = river.getByRole("button", { name: /Salvage the wreck/ });
+  await page.keyboard.down("w");
+  for (let i = 0; i < 120 && !(await salvage.isVisible()); i++) await page.clock.runFor(150);
+  await page.keyboard.up("w");
+  await expect(salvage).toBeVisible();
+  const capture = async (name: string) => {
+    if (process.env.LANTERN_CAPTURE_DIR) await page.screenshot({ path: join(process.env.LANTERN_CAPTURE_DIR, name + ".png") });
+  };
+  await capture("river-wreck");
+  await page.keyboard.press("m");
+  await capture("river-map-wrecks-stops");
+  await page.keyboard.press("Escape");
+  await page.keyboard.press("e");
+  await page.clock.runFor(150);
+  await expect(river.getByText("Lamp oil × 6")).toBeVisible();
+  await expect(river.getByRole("status").filter({ hasText: "Salvaged 6 from the wreck of the freight barge" })).toBeVisible();
+  await page.keyboard.down("s");
+  for (let i = 0; i < 160 && !(await river.getByRole("button", { name: /Moor at The Landing/ }).isVisible()); i++) await page.clock.runFor(150);
+  await page.keyboard.up("s");
+  await page.keyboard.press("e");
+  await page.clock.runFor(400);
+  await expect(river).toHaveCount(0);
+  await page.keyboard.press("Escape");
+  await button("The Landing").click();
+  await button("Barge").click();
+  await expect(page.getByLabel("Wrecks on the river")).toHaveCount(0);
+  await page.keyboard.press("Escape");
+  await button("Journal").click();
+  await expect(page.getByText(/salvaged 6 lamp oil from the wreck of the freight barge on Heron Reach/).first()).toBeVisible();
+  expect(errors).toEqual([]);
 });

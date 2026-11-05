@@ -16,5 +16,7 @@ export function runReport(state: River): RunReport {
     pirates: Object.entries(state.kills).map(([reach, count]) => ({ reach, count, roles: state.roleKills[reach as keyof typeof state.roleKills] })), boomsBroken: [...state.broken],
     escort: state.manifest.contract?.kind === "escort"
       ? { id: state.manifest.contract.id, completed: state.escort === "completed" } : undefined,
-    savedBoats: [...state.savedBoats], outcome: state.outcome, inputLogHash: (hash >>> 0).toString(16) };
+    savedBoats: [...state.savedBoats],
+    salvaged: Object.entries(state.salvaged).flatMap(([wreck_id, cargo]) => Object.entries(cargo).map(([item_id, quantity]) => ({ wreck_id, item_id, quantity }))),
+    stops: [...state.stopsTaken], outcome: state.outcome, inputLogHash: (hash >>> 0).toString(16) };
 }

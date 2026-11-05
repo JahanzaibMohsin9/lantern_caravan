@@ -41,6 +41,8 @@ export const snapshotSchema = z.object({
     contracts: z.array(z.object({ id: text, stall: text, village: text, item: text, quantity: amount, payout: amount,
       deadline: seconds, mine: z.boolean(), taken: z.boolean(), kind: z.enum(["supply", "escort"]), relief: z.boolean().optional() })),
     myRun: z.object({ id: text, deadline: time, manifest: manifestSchema }).optional(),
+    wrecks: z.array(z.object({ id: text, reach: text, name: text, cargo: amounts, open: z.boolean(),
+      nightsLeft: z.int().min(0).max(3), claimed: z.boolean() })),
     upriver: z.array(z.object({ actor: text, name: text })),
     bountyFund: amount,
   }),
