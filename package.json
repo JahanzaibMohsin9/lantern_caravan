@@ -14,7 +14,7 @@
     "dev": "npm run dev -w @lantern/web",
     "build": "tsc --noEmit && npm run build -w @lantern/web",
     "test": "vitest run",
-    "test:e2e": "npm run build && playwright test",
+    "test:e2e": "tsc --noEmit && playwright test",
     "dev:server": "tsx tools/dev-server.ts",
     "simulate": "tsx tools/simulate/index.ts",
     "schema": "tsx tools/protocol-schema.ts"

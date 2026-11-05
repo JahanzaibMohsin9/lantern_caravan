@@ -19,13 +19,15 @@ const applyEffects = (world: World, effects: LedgerOp[]): World =>
 type Contract = {
   id: string; village: VillageId; item: ItemId; qty: number; payout: number; deadline: number;
   kind: "supply" | "escort"; payer: string; stall: StallId; actor?: string; haul?: string;
+  /** Posted by the harbor for a stall that ran out of cash; delivery relights it. */
+  relief?: boolean;
 };
 type CargoLeg = { item: ItemId; qty: number; paid: number; stall?: StallId; unitPrices?: number[] };
 type Haul = {
   id: string; actor: string; village: VillageId; destination?: VillageId; cargo: CargoLeg[];
   departs: number; arrives: number; contract?: string; guaranteed?: boolean;
 };
-type ActiveRun = { actor: string; started: number; manifest: RunManifest };
+type ActiveRun = { actor: string; started: number; startedAt?: number; manifest: RunManifest };
 export type RiverState = {
   reaches: Record<ReachId, { danger: number; boom: boolean; lamps: number; kills: number }>;
   bountyFund: number; runs: Record<string, ActiveRun>; contracts: Record<string, Contract>;
@@ -55,18 +57,19 @@ const normal = (stall: StallId, item: ItemId) => ask(items[item].price, stockTar
 const harvestMint = (to: string, item: string, qty: number): LedgerOp => ({ ...mint(to, item, qty, "Harvest"), source: "sys:harvest" });
 const goodsEntries = (id: VillageId) => Object.entries(villageGoods(id)) as [ItemId, number][];
 
-export function harvest(world: World) {
+export function harvest(world: World, goodsOnly = false) {
   const effects: LedgerOp[] = [];
   for (const id of villageIds) {
     const account = village(id), cash = get(world, account, "coin");
-    if (!cash) effects.push(mint(account, "coin", 40, "Village float"));
-    const upkeep = Math.min(Math.max(0, cash - 24), 3 + Math.floor(Math.max(0, cash - 44) / 3));
+    if (!cash && !goodsOnly) effects.push(mint(account, "coin", 40, "Village float"));
+    const upkeep = goodsOnly ? 0 : Math.min(Math.max(0, cash - 24), 3 + Math.floor(Math.max(0, cash - 44) / 3));
     if (upkeep && world.mode !== "campaign") effects.push(move(account, freightSink, "coin", upkeep, "Village upkeep"));
     for (const [item, target] of goodsEntries(id)) {
       const qty = target - stock(world, id, item);
       if (qty > 0) effects.push(harvestMint(account, item, qty));
     }
   }
+  if (goodsOnly) return applyEffects(world, effects);
   const pay = 36 - get(world, bounty, "coin");
   if (pay > 0) effects.push(mint(bounty, "coin", pay, "Night bounty fund"));
   const float = 70 - get(world, freight, "coin");
@@ -121,7 +124,10 @@ export function beginRiverNight(world: World) {
       move(village(sourceFor(item)!), "sys:provisions", item, slots * 2, "Opening dock provisions")));
   }
   if (world.mode === "campaign" || world.night === 1) state = authoredFreight(state);
-  if (world.mode === "campaign") return world.night >= 2 ? scheduleAmbient(state) : state;
+  // The opening night ships a whole harvest to stock the Row; the villages bring in a second one so the
+  // barge has something to buy upriver from the very first evening.
+  if (world.night === 1) state = harvest(state, true);
+  if (world.mode === "campaign") return world.night >= 2 ? scheduleAmbient(refreshRelief(state)) : state;
   state = refreshContracts(state);
   if (state.mode === "endless") {
     const actor = Object.keys(state.traders).find(id => id.startsWith("r:"));
@@ -202,9 +208,74 @@ const dangerOnRoute = (state: World, id: VillageId) =>
 const routeRisk = (state: World, id: VillageId) => dangerOnRoute(state, id) * .6 +
   [state.river.reaches.heron_reach, state.river.reaches[villages[id].reach]].filter(reach => reach.boom).length * 2;
 
-export function refreshContracts(world: World) {
-  if (world.mode === "campaign") return world;
+const rescueFund = "sys:rescue";
+/** Matches the overnight Harbor relief: a relit stall needs enough cash above its 10-coin haul reserve to restock. */
+const reliefFloat = 20;
+/** Coins the harbor adds so a relit stall can trade again. */
+export const restartFloat = (world: World, stall: StallId) => Math.max(0, reliefFloat - get(world, shop(stall), "coin"));
+
+/**
+ * A stall that has run out of cash or stock goes dark. Besides the rescue offering, the harbor posts a
+ * relief contract from the dock fund: haul the goods it lacks and the harbor pays the hauler and tops the
+ * stall up with a restart float, which relights it.
+ */
+export function refreshRelief(world: World) {
   let state = world;
+  for (const stall of merchantIds) {
+    // Dark for lack of cash, or closed for lack of stock with too little cash to pay a hauler: either way the
+    // harbor pays for the haul, so the stall can't get stuck waiting for supply it can't afford.
+    const coins = get(state, shop(stall), "coin");
+    const dark = cashBand(coins) === "dark" || !!state.market[stall].stockClosed;
+    if (!dark || state.market[stall].rescued) continue;
+    if (Object.values(state.river.contracts).some(contract => contract.relief && contract.stall === stall)) continue;
+    const needs = (Object.entries(stockTargets(stall)) as [ItemId, number][])
+      .map(([item]) => ({ item, shortage: shortage(state, stall, item) }))
+      .sort((a, b) => b.shortage - a.shortage)[0];
+    if (!needs || needs.shortage < 3) continue;
+    // The harbor pays the village's current price plus a hauling premium, so the haul is worth taking even
+    // when the source is scarce, and asks only for what the village can actually sell.
+    const id = sourceFor(needs.item)!;
+    const budget = get(state, rescueFund, "coin") - 4;
+    const pay = (n: number) => cost(state, id, needs.item, n) + 2 + Math.ceil(n / 2);
+    let qty = Math.min(8, needs.shortage, stock(state, id, needs.item));
+    while (qty >= 3 && pay(qty) > budget) qty--;
+    if (qty < 3) continue;
+    state = postContract(state, { village: id, item: needs.item, qty, payout: pay(qty), payer: rescueFund,
+      stall, deadline: plan(world).duration, kind: "supply", relief: true });
+    state = addActivity(state, "The harbor rang the bell: " + qty + " " + items[needs.item].name.toLowerCase() + " will relight " +
+      merchants[stall].name + ".");
+  }
+  return state;
+}
+
+/** Ledger effects that relight a stall when a relief contract is delivered. */
+export function reliefEffects(world: World, contract: Contract): LedgerOp[] {
+  const float = restartFloat(world, contract.stall);
+  // Like the overnight Harbor relief, the restart float is new harbor money rather than a transfer.
+  const effects: LedgerOp[] = float ? [mint(shop(contract.stall), "coin", float, "Harbor restart float")] : [];
+  for (const offer of Object.values(world.offers).filter(offer => offer.stall === contract.stall && offer.kind === "rescue")) {
+    for (const [actor, shares] of Object.entries(offer.contributions)) {
+      if (shares) effects.push(move("esc:offer:" + offer.id, actor, "coin", shares * offer.price, "Offering refund"));
+    }
+  }
+  return effects;
+}
+
+/** World state changes that follow a relief delivery's ledger effects. */
+export function relightStall(world: World, stall: StallId, actor: string) {
+  const offers = Object.fromEntries(Object.entries(world.offers).filter(([, offer]) => !(offer.stall === stall && offer.kind === "rescue")));
+  const name = world.traders[actor]?.name ?? "Freight";
+  const trader = world.traders[actor];
+  const traders = trader && !actor.startsWith("r:") ? { ...world.traders, [actor]: { ...trader,
+    rescuedTonight: [...new Set([...trader.rescuedTonight, stall])], rescued: trader.rescued + 1 } } : world.traders;
+  const state: World = { ...world, offers, traders, market: { ...world.market, [stall]: { ...world.market[stall], rescued: true,
+    stockClosed: false, thinking: "Relit by " + name + "’s relief haul. The lights are back." } } };
+  return addActivity(state, name + " relit " + merchants[stall].name + " with a relief haul!", name);
+}
+
+export function refreshContracts(world: World) {
+  let state = refreshRelief(world);
+  if (world.mode === "campaign") return state;
   const inputs = new Set<ItemId>(plan(world).orders.flatMap(order => Object.values(recipes).filter(recipe => recipe.output === order.item)
     .flatMap(recipe => [...recipe.inputs])));
   for (const stall of merchantIds) {
@@ -310,8 +381,10 @@ function resolveHaul(world: World, haul: Haul) {
       const account = shop(stall);
       const available = Math.max(0, get(state, account, "coin") - 10);
       if (contract && state.elapsed <= contract.deadline) {
-        state = applyEffects(state, [move(haul.actor, account, item, qty, "Supply delivery")]);
+        state = applyEffects(state, [move(haul.actor, account, item, qty, "Supply delivery"),
+          ...(contract.relief ? reliefEffects(state, contract) : [])]);
         state = recordSupply(removeContract(state, contract, haul.actor), stall, item, haul.actor, qty, contract.payout);
+        if (contract.relief) state = relightStall(state, stall, haul.actor);
       } else {
         const normalAsk = ask(items[item].price, stockTargets(stall)[item]!, stockTargets(stall)[item]!, ratio(state, stall)).price;
         const freightCost = (n: number) => unitPrices?.slice(0, n).reduce((sum, price) => sum + price, 0) ?? Math.ceil(paid * n / qty);
@@ -395,35 +468,36 @@ function runManifest(world: World, actor: string, intent: Extract<RiverIntent, {
   const contract = requested ? availableContract(world, actor, requested) : undefined;
   if ((intent.escort_id && contract?.kind !== "escort") || (intent.contract_id && contract?.kind !== "supply"))
     throw new Error("RIVER_CONTRACT_UNAVAILABLE · The contract type does not match the request.");
-  let orders = intent.barge_plan;
-  if (contract?.kind === "supply") {
-    const matching = orders.filter(order => order.item_id === contract.item && order.village_id === contract.village);
-    const explicit = matching.reduce((sum, order) => Math.min(hold, sum + Number(order.quantity)), 0);
-    orders = [{ village_id: contract.village, item_id: contract.item, quantity: String(Math.max(contract.qty, explicit)) },
-      ...orders.filter(order => !matching.includes(order))];
-  }
-  const reserved = new Map<ItemId, number>();
-  let room = hold;
-  for (const order of orders) {
-    const item = order.item_id as ItemId, id = sourceFor(item);
+  for (const order of intent.barge_plan) {
+    const id = sourceFor(order.item_id as ItemId);
     if (!id || id !== order.village_id) throw new Error("RIVER_PLAN · This village does not grow that item.");
-    const qty = Math.min(Number(order.quantity), room, stock(world, id, item) - (reserved.get(item) ?? 0));
-    if (qty) reserved.set(item, (reserved.get(item) ?? 0) + qty);
-    room -= qty;
+  }
+  // Every village good is open to the barge, up to a full hold of each, so players can trade freely upriver.
+  // Shared rooms reserve at most half a village's stock so other traders keep access during the run.
+  const reserved = new Map<ItemId, number>();
+  for (const id of villageIds) {
+    for (const [item] of goodsEntries(id)) {
+      const count = stock(world, id, item);
+      let qty = Math.min(hold, world.mode === "live" ? Math.ceil(count / 2) : count);
+      if (contract?.kind === "supply" && contract.item === item) qty = Math.max(qty, Math.min(hold, contract.qty, count));
+      if (qty > 0) reserved.set(item, qty);
+    }
   }
   if (contract?.kind === "supply" && (reserved.get(contract.item) ?? 0) < contract.qty)
     throw new Error("RIVER_PLAN · The village is short on stock for that contract.");
+  const remaining = plan(world).duration - world.elapsed;
+  const limitMs = world.phase === "open" ? Math.min(runMs, Math.floor((remaining - 5) * 1000)) : runMs;
   const boats = Object.values(world.river.hauls).map(haul => ({
     id: haul.id, village: haul.village, destination: haul.destination,
     name: world.traders[haul.actor]?.name ?? (haul.destination ? "Village boat" : "Freight"),
     ambient: !!haul.destination, departs: haul.departs - world.elapsed, arrives: haul.arrives - world.elapsed,
   }));
   const manifest: RunManifest = { id, seed: (world.river.random ^ Math.imul(world.revision + 1, 0x45d9f3b)) >>> 0,
-    deadline: now + runMs, wallet: get(world, actor, "coin"), hold, upgrades, boats, bounty: get(world, bounty, "coin"),
+    deadline: now + limitMs, limitMs, wallet: get(world, actor, "coin"), hold, upgrades, boats, bounty: get(world, bounty, "coin"),
     glow: rowGlow(world),
     reaches: reachIds.map(id => ({ id, danger: world.river.reaches[id].danger, boom: world.river.reaches[id].boom })),
     contract: contract && { id: contract.id, village: contract.village, item: contract.item, quantity: contract.qty,
-      payout: contract.payout, kind: contract.kind, haul: contract.haul },
+      payout: contract.payout, kind: contract.kind, haul: contract.haul, relief: contract.relief },
     items: [...reserved].map(([item, qty]) => {
       const id = sourceFor(item)!, target = villageGoods(id)[item]!, count = stock(world, id, item);
       return { village: id, item, stock: count, target, coins: get(world, village(id), "coin"),
@@ -443,9 +517,13 @@ function finishRun(world: World, actor: string, id: string, report: RunReport, n
   const manifest = run.manifest;
   if (!runReportSchema.safeParse(report).success || report.run_id !== id || report.seed !== manifest.seed)
     reject("RIVER_REPORT", "The report does not match this run.");
-  if (now - run.started < report.durationMs * .9 || report.durationMs > runMs ||
-    (report.outcome === "towed" && report.durationMs !== runMs))
+  const limit = manifest.limitMs ?? runMs;
+  if (now - run.started < report.durationMs * .9 || report.durationMs > limit ||
+    (report.outcome === "towed" && report.durationMs !== limit))
     reject("RIVER_TIME", "The run timer does not match.");
+  // Runs from preparation finish before the night clock starts. Open-night runs arrive after their trip: local
+  // nights pause while the barge is out and shared rooms keep running, so take whichever is later.
+  const arrival = run.startedAt === undefined ? world.elapsed : Math.max(world.elapsed, run.startedAt + report.durationMs / 1000);
   const reserved = new Set(manifest.items.map(lot => lot.item));
   if (!unique(report.bought.map(entry => entry.item_id)) || !unique(report.soldBack.map(entry => entry.item_id)) ||
     ![...Object.keys(report.delivered), ...Object.keys(report.lost), ...report.bought.map(entry => entry.item_id),
@@ -488,7 +566,7 @@ function finishRun(world: World, actor: string, id: string, report: RunReport, n
     if (flare) effects.push(lostCargo(actor, "oil", flare, "Flare"));
     if (lot.prices.length > bought) effects.push(move(source, account, lot.item, lot.prices.length - bought, "Unused run reservation"));
   }
-  const deliveredContract = contract && contract.actor === actor && world.elapsed < contract.deadline &&
+  const deliveredContract = contract && contract.actor === actor && arrival <= contract.deadline &&
     ((contract.kind === "supply" && report.outcome === "moored" && (report.delivered[contract.item] ?? 0) >= contract.qty) ||
       (contract.kind === "escort" && report.escort?.completed));
   const delta = effects.reduce((coins, op) => coins + (op.op === "transfer" && op.asset === "coin"
@@ -499,6 +577,7 @@ function finishRun(world: World, actor: string, id: string, report: RunReport, n
     if (payout && contract.kind === "supply") effects.push(move(actor, shop(contract.stall), contract.item, contract.qty, "Supply contract delivery"));
     effects.push(move(contractEscrow(contract.id), payout ? actor : contract.payer, "coin", contract.payout,
       payout ? "Harbor Bell payout" : "Harbor Bell refund"));
+    if (payout && contract.relief) effects.push(...reliefEffects(world, contract));
   }
   const tow = report.outcome === "moored" ? 0 : Math.min(2, get(world, actor, "coin") + delta + payout);
   if (tow) effects.push(move(actor, freightSink, "coin", tow, "River tow"));
@@ -509,9 +588,10 @@ function finishRun(world: World, actor: string, id: string, report: RunReport, n
 }
 
 export function riverQuote(world: World, actor: string, intent: RiverIntent, id: string, now: number) {
-  if (world.mode === "live") throw new Error("River Run is available in local profiles.");
-  if (world.phase !== "preparation") throw new Error("Cast off during preparation.");
+  if (world.phase === "results" && intent.type !== "finish_run") throw new Error("The river is closed until the next evening.");
   if (world.mode === "campaign" && world.night === 1) throw new Error("The barge is under repair until Night 2.");
+  if (intent.type === "start_run" && world.phase === "open" && plan(world).duration - world.elapsed < 45)
+    throw new Error("RIVER_LATE · Too late to cast off tonight. Try again during preparation.");
   if (Object.values(world.river.runs).some(run => run.actor === actor) && intent.type !== "finish_run")
     throw new Error("Your barge is already upriver.");
   if (intent.type === "accept_contract") {
@@ -544,7 +624,7 @@ export function commitRiver(prior: World, world: World, actor: string, intent: R
   if (intent.type === "start_run") {
     const manifest = runManifest(prior, actor, intent, id, now);
     const contract = manifest.contract && world.river.contracts[manifest.contract.id];
-    return withRiver(world, { runs: { ...world.river.runs, [id]: { actor, started: now, manifest } },
+    return withRiver(world, { runs: { ...world.river.runs, [id]: { actor, started: now, startedAt: prior.phase === "open" ? prior.elapsed : undefined, manifest } },
       ...(contract ? { contracts: { ...world.river.contracts, [contract.id]: { ...contract, actor } } } : {}) });
   }
   const { run, contract, payout } = finishRun(prior, actor, intent.run_id, intent.report, now);
@@ -574,7 +654,8 @@ export function commitRiver(prior: World, world: World, actor: string, intent: R
     if (payout && contract.kind === "supply") {
       befriend(contract.village);
       state = recordSupply(state, contract.stall, contract.item, actor, contract.qty, payout);
-      state = addActivity(state, trader.name + " filled a supply contract for " + merchants[contract.stall].name + ".", trader.name);
+      state = contract.relief ? relightStall(state, contract.stall, actor)
+        : addActivity(state, trader.name + " filled a supply contract for " + merchants[contract.stall].name + ".", trader.name);
     }
     const haul = contract.haul && state.river.hauls[contract.haul];
     if (payout && haul) {
@@ -582,7 +663,7 @@ export function commitRiver(prior: World, world: World, actor: string, intent: R
       state = addActivity(state, trader.name + " escorted " + world.traders[haul.actor]?.name + " safely to The Landing.", trader.name);
     }
   }
-  return { ...state, traders: { ...state.traders, [actor]: { ...trader, relationship, lastStop: "shed" } } };
+  return { ...state, traders: { ...state.traders, [actor]: { ...state.traders[actor]!, relationship, lastStop: "shed" } } };
 }
 
 export function riverSnapshot(world: World, actor: string): Pick<Snapshot, "villages" | "river" | "barge"> {
@@ -603,7 +684,8 @@ export function riverSnapshot(world: World, actor: string): Pick<Snapshot, "vill
       bountyFund: String(get(world, bounty, "coin")),
       contracts: Object.values(world.river.contracts).map(contract => ({ id: contract.id, stall: contract.stall,
         village: contract.village, item: contract.item, quantity: String(contract.qty), payout: String(contract.payout),
-        deadline: contract.deadline, kind: contract.kind, mine: contract.actor === actor, taken: !!contract.actor && contract.actor !== actor })),
+        deadline: contract.deadline, kind: contract.kind, relief: !!contract.relief, mine: contract.actor === actor,
+        taken: !!contract.actor && contract.actor !== actor })),
       myRun: run && { id: run.manifest.id, deadline: run.manifest.deadline, manifest: run.manifest },
       upriver: Object.values(world.river.runs).map(run => ({ actor: run.actor, name: world.traders[run.actor]!.name })),
     },

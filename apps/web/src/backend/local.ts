@@ -195,6 +195,9 @@ export class LocalBackend implements MarketBackend {
     validateQuote(this.world, player, entry.deal, entry.baseline, now);
     const receipt = { id: actionId, label: "Local receipt" };
     this.world = recordAction(commit(this.world, entry.deal, now), player, entry.deal.summary, receipt);
+    // The Row's clock waits while the barge is out on a local night; the trip's time passes when it moors.
+    const trip = entry.deal.intent.type === "finish_run" ? entry.deal.intent.report.durationMs / 1000 : 0;
+    if (trip && this.world.phase === "open") this.world = advanceClock(this.world, this.world.elapsed + trip);
     const status: ActionStatus = { state: "confirmed", receipt };
     this.actions.set(actionId, { quoteId, status });
     this.quotes.delete(quoteId);
@@ -236,6 +239,7 @@ export class LocalBackend implements MarketBackend {
 
   async tick(seconds: number) {
     const previous = this.world;
+    if (Object.values(previous.river.runs).some(run => run.actor === player)) return this.view();
     this.world = advanceClock(previous, previous.elapsed + seconds);
     if (this.world.phase !== previous.phase || (Math.floor(this.world.elapsed / 15) > Math.floor(previous.elapsed / 15))) await this.save();
     return this.view();

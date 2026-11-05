@@ -1,6 +1,6 @@
 import { expect, test } from "@playwright/test";
 
-test("casts off from The Landing, buys oil upriver, and sells it on the Row", async ({ page }) => {
+test("relights the dark wharf with a relief haul from upriver, then sells spare oil on the Row", async ({ page }) => {
   test.setTimeout(100_000);
   const errors: string[] = [];
   page.on("pageerror", error => errors.push(error.message));
@@ -38,10 +38,11 @@ test("casts off from The Landing, buys oil upriver, and sells it on the Row", as
 
   await page.clock.install();
   await button("The Landing").click();
-  await button("Harbor Bell").click();
-  await expect(page.getByText(/Harbor Bell is quiet/)).toBeVisible();
-  await button("Barge").click();
-  await page.getByRole("button", { name: /^Cast off/ }).click();
+  // The dark wharf rings the Harbor Bell for a relief haul of oil.
+  const relief = page.locator(".relief-row").filter({ hasText: "Relight Oil Wharf" });
+  await expect(relief).toBeVisible();
+  await relief.getByRole("button", { name: "Accept" }).click();
+  await page.getByRole("button", { name: /^Cast off for Ember Falls/ }).click();
   const river = page.getByRole("region", { name: "River Run" });
   await expect(river).toBeVisible();
   await page.keyboard.press("m");
@@ -58,10 +59,11 @@ test("casts off from The Landing, buys oil upriver, and sells it on the Row", as
   await page.keyboard.press("e");
   const market = page.getByRole("dialog", { name: "Village market" });
   await expect(market.getByRole("heading", { name: "Ember Falls" })).toBeVisible();
-  await market.getByRole("button", { name: "5", exact: true }).click();
-  await market.getByRole("button", { name: /Buy 5/ }).click();
+  await expect(market.getByText(/Your contract needs 6 lamp oil/)).toBeVisible();
+  await market.getByRole("button", { name: "10", exact: true }).click();
+  await market.getByRole("button", { name: /Buy 10/ }).click();
   await page.clock.runFor(150);
-  await expect(river.getByText("Lamp oil × 5")).toBeVisible();
+  await expect(river.getByText("Lamp oil × 10")).toBeVisible();
   await button("Back to the barge").click();
   await page.keyboard.down("Shift");
   await page.keyboard.down("s");
@@ -74,7 +76,8 @@ test("casts off from The Landing, buys oil upriver, and sells it on the Row", as
   await page.keyboard.press("e");
   await page.clock.runFor(400);
   await expect(river).toHaveCount(0);
-  await expect(page.getByRole("button", { name: "Cart 5 of 6 items" })).toBeVisible();
+  await expect(page.getByText("Oil Wharf relit!")).toBeVisible();
+  await expect(page.getByRole("button", { name: "Cart 4 of 6 items" })).toBeVisible();
   await page.keyboard.press("Escape");
   await button("Open the market").click();
   await visit("Paper Mill");
@@ -82,6 +85,7 @@ test("casts off from The Landing, buys oil upriver, and sells it on the Row", as
   await page.locator(".panel").getByRole("button", { name: /^Lamp oil/i }).click();
   await button("Review sell").click();
   await button("Confirm sell").click();
-  await expect(page.getByRole("button", { name: "Cart 4 of 6 items" })).toBeVisible();
+  await expect(page.getByRole("button", { name: "Cart 3 of 6 items" })).toBeVisible();
+  await expect(page.getByRole("button", { name: /Oil Wharf/ }).first()).not.toContainText("Closed");
   expect(errors).toEqual([]);
 });

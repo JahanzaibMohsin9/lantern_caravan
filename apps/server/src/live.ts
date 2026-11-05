@@ -1,12 +1,15 @@
 import { randomUUID } from "node:crypto";
 import { items } from "@lantern/content";
-import { addActivity, addTrader, advanceClock, commitFor, createWorld, newNight, nightId, nowAt, openNight,
+import { addActivity, addTrader, advanceClock, commitFor, createWorld, isRiverIntent, newNight, nightId, nowAt, openNight,
   quoteFor, recordAction, snapshotFor, validateQuote, type World } from "@lantern/game-core";
 import { decodeWorld, encodeWorld } from "@lantern/game-core/codec";
 import { haggle } from "@lantern/game-core/haggle";
 import { netEffects } from "@lantern/game-core/net-effects";
 import type { ActionStatus, HaggleOffer, HistoryRange, Intent, LedgerOp, PreparedAction,
   Quote, SettlementProvider, StateStore } from "@lantern/protocol";
+
+// River runs are timed in wall-clock milliseconds; market actions use the room clock.
+const clockFor = (world: World, intent: Intent) => isRiverIntent(intent) ? Date.now() : nowAt(world);
 
 type Reservation = { prepared: PreparedAction; deal: Quote; at: number; requestId: string; status: ActionStatus };
 type ReceiptEntry = { actor: string; quoteId: string; night: string; status: ActionStatus };
@@ -223,7 +226,7 @@ export class LiveMarket {
 
   private remember(room: Room, actor: string, deal: Quote, baseline = deal.effects) {
     for (const [id, entry] of room.quotes) {
-      if (entry.deal.expires_at <= nowAt(room.world)) room.quotes.delete(id);
+      if (entry.deal.expires_at <= clockFor(room.world, entry.deal.intent)) room.quotes.delete(id);
     }
     if (room.quotes.size >= 1000) room.quotes.delete(room.quotes.keys().next().value!);
     room.quotes.set(deal.quote_id, { actor, night: nightId(room.world), deal, baseline });
@@ -234,7 +237,7 @@ export class LiveMarket {
     const room = await this.load(roomId);
     await this.update(room);
     this.check(room, actor, night);
-    return this.remember(room, actor, quoteFor(room.world, actor, intent, randomUUID(), nowAt(room.world)));
+    return this.remember(room, actor, quoteFor(room.world, actor, intent, randomUUID(), clockFor(room.world, intent)));
   }
 
   async bargain(roomId: string, actor: string, night: string, offer: HaggleOffer) {
@@ -261,7 +264,7 @@ export class LiveMarket {
     this.check(room, actor, night);
     const entry = room.quotes.get(quoteId);
     if (!entry || entry.actor !== actor || entry.night !== night) throw new Error("Ask for a fresh quote.");
-    const at = nowAt(room.world);
+    const at = clockFor(room.world, entry.deal.intent);
     validateQuote(room.world, actor, entry.deal, entry.baseline, at);
     const prepared: PreparedAction = { actionId: room.id + "/" + key, roomId: room.id, nightId: night, actorId: actor,
       intent: entry.deal.intent, effects: entry.deal.effects, expectedRevision: room.world.revision, kind: "player" };

@@ -17,9 +17,9 @@ Open the URL Vite prints. In **First Light**, your cart starts with two paper an
 
 Click a location or use **1–8** to walk there. **A/D** or **←/→** walks manually, **E** interacts, **I** opens the cart, **J** opens the journal, **H** opens history, and **Esc** closes or pauses. Hover an ingredient for its name or click it to find a stall. A local save is automatic.
 
-From Night 2 onward, open **The Landing** during preparation to plan cargo or check the **Harbor Bell** for contracts and escorts. Cast off, buy your reserved goods at a village, then return to The Landing. Open the market to sell your haul or use it at the Workshop.
+From Night 2 onward, visit **The Landing** to cast off on a River Run, before the market opens or during the night. The **Harbor Bell** lists supply contracts, escorts and relief hauls: on The Dark Wharf, haul oil from Ember Falls to relight the wharf, or pledge shares to rescue it. Upriver, buy freely at any village, fight off pirates and armored gunboats, break toll booms, and collect floating fuel, shot and repair barrels. Moor at The Landing to settle, then sell your haul on the Row or use it at the Workshop. Leaving during the night costs night time; shared rooms keep trading while you're away.
 
-On the river, **WASD** or **arrows** steer, **Shift** boosts, **Space** fires at the nearest threat, and the **mouse** aims and fires manually. **E** trades or moors, **Q** spends one oil on a flare, **M** opens the map, **J** opens the Harbor Bell, and **Esc** pauses. Each run has a 2:30 game timer.
+On the river, **WASD** or **arrows** steer, **Shift** boosts, **Space** fires at the nearest threat, and the **mouse** aims and fires manually. **E** trades or moors, **Q** spends one oil on a flare, **M** opens the map, **J** opens the Harbor Bell, and **Esc** pauses outside shared rooms. On touchscreens, use the steering stick and the fire, boost and flare buttons. Each run has a 2:30 timer, shorter when you leave late in the night.
 
 | First Light | The Dark Wharf | Festival of Lights |
 | --- | --- | --- |

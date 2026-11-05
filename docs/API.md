@@ -34,20 +34,23 @@ Quotes are bound to an actor, room, and night and expire after 15 game seconds. 
 
 ## River Run intents
 
-Milestones 1–3 support the four intents in LocalBackend during preparation. Quotes expire after 15 wall-clock seconds for these intents. Submit and check the receipt as for a Row trade.
+Both LocalBackend and the live server accept the four intents during preparation and during the open night while at least 45 seconds remain (`RIVER_LATE` otherwise). River intents use wall-clock milliseconds for quote expiry (15 seconds) and run timing, on both backends. Submit and check the receipt as for a Row trade.
 
 | Intent | Fields and effects |
 | --- | --- |
-| `start_run` | Up to six `barge_plan` rows with `village_id`, `item_id`, and string `quantity`. Optional `contract_id` or `escort_id`. Submission moves reserved goods to run escrow and exposes the manifest in `snapshot.river.myRun`. |
+| `start_run` | `barge_plan` (may be empty; rows are only checked for a valid producer), optional `contract_id` or `escort_id`. Submission reserves every village good for the barge, up to a full hold of each (half a village's stock at most in shared rooms), moves it to run escrow and exposes the manifest in `snapshot.river.myRun`. Unbought units return when the run settles. |
 | `finish_run` | `run_id` and `report`. Settles bought and returned cargo, losses, flares, bounties, contract or escort payout, and towing. |
 | `accept_contract` | `contract_id`. Claims one already funded Harbor Bell contract. A supply contract adds its cargo reservation automatically at departure. |
 | `buy_barge_upgrade` | `upgrade_id`. Buys a persistent barge tier with coins. Tier II requires tier I. |
 
-The manifest contains the run ID, seed, wallet, hold, reserved item price curves, reach conditions, visible hauls, contract, and nominal deadline. The 150-second game timer excludes time paused in the local scene. A report contains `run_id`, `seed`, `durationMs`, `bought`, `soldBack`, `delivered`, `lost`, `flaresUsed`, `pirates`, `boomsBroken`, optional `escort` and `savedBoats`, `outcome`, and `inputLogHash`. Report quantities and durations are numeric. The hash supports replay debugging. Server replay validation is scheduled for M6.
+The manifest contains the run ID, seed, wallet, hold, reserved item price curves, reach conditions, visible hauls, contract, nominal deadline, and `limitMs`. `limitMs` is 150 seconds, or less for a run that starts late in the open night, so the barge is towed home before the night closes; a towed report must use exactly `limitMs`. The timer excludes time paused in a local scene; shared rooms have no pause. On a local open night the Row clock waits while the barge is out and advances by the trip's duration when it moors. Contract deadlines are checked against the barge's arrival time.
+
+**Relief contracts.** When a stall goes dark, from lack of cash or because it sold out of stock, and lacks at least 3 units of a good, the harbor posts a supply contract with `relief: true`, paid from the `sys:rescue` dock fund: the village's current price for the units plus a hauling premium of 2 coins and one coin per two units, for at most what the village can sell. Delivering it moves the goods to the stall, pays the hauler, mints a harbor restart float that brings the stall to 20 coins (the same level as the overnight Harbor relief, so it can afford to restock), refunds any open rescue offering for that stall, and relights it. Rival haulers can fill relief contracts too. All of these ledger effects are part of the `finish_run` quote. A report contains `run_id`, `seed`, `durationMs`, `bought`, `soldBack`, `delivered`, `lost`, `flaresUsed`, `pirates`, `boomsBroken`, optional `escort` and `savedBoats`, `outcome`, and `inputLogHash`. Report quantities and durations are numeric. The hash supports replay debugging. Server replay validation is scheduled for M6.
 
 | Error prefix | Cause |
 | --- | --- |
 | `RIVER_PLAN` | The route names the wrong producer or lacks stock for the contract. |
+| `RIVER_LATE` | Fewer than 45 seconds of the night remain. |
 | `RIVER_CONTRACT_UNAVAILABLE`, `RIVER_CONTRACT_LIMIT` | The contract expired, belongs to another actor, or conflicts with the actor's existing contract. |
 | `RIVER_RUN_UNKNOWN`, `RIVER_REPORT`, `RIVER_TIME` | Run identity, seed, or elapsed duration failed validation. |
 | `RIVER_CARGO`, `RIVER_PRICE`, `RIVER_FUNDS` | Cargo conservation, manifest price, or coin coverage failed. |

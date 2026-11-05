@@ -22,7 +22,18 @@ Endless unlocks after the campaign, carries the wallet and shares forward, and a
 2. **Offline run.** The Landing opens in preparation from Night 2. Reserve stock, cast off, trade at a village, and moor to settle cargo through the same quote and receipt flow as the Row. The market clock stays at preparation. Reloading mid-run returns the reservation and closes the run.
 3. **Economy.** Village harvests supply the Row. Freight and rivals move real cargo, shared reach danger affects losses, and the Harbor Bell escrows supply and escort rewards. The campaign keeps its existing three-night schedule and authored opening stock. The 2,000-night checks for all five seeds are recorded in the [balance report](BALANCE_REPORT.md).
 
-Campaign tutorial and schedule changes belong to M4. Multiplayer River Runs and public river history belong to M5. Floodtide scheduling, touch controls, the audio pass, and server replay validation belong to M6.
+Campaign tutorial and schedule changes belong to M4. The Watch river strip and public river history belong to M5. Floodtide scheduling and server replay validation belong to M6.
+
+## River Run review fixes
+
+1. **Free trading upriver.** Casting off reserves every village good for the barge, up to a full hold each (half a village's stock in shared rooms), so players decide what to buy at the village instead of at The Landing. The Landing shows a live upriver price board and the best spot hauls.
+2. **Relief hauls relight dark stalls.** A stall that runs out of cash, or sells out without the cash to pay a hauler, gets a harbor relief contract from the dock fund, priced at the village's cost plus a premium. Delivering it relights the stall with a restart float and refunds any open rescue offering. On The Dark Wharf, the Oil Wharf can now be relit by hauling oil from Ember Falls as well as by pledging shares. Rivals can fill relief contracts in endless and shared rooms.
+3. **Runs during the night and in shared rooms.** The barge can leave during the open night while 45 seconds remain, so contracts posted mid-night are reachable. Late runs are shortened to end before closing. Local nights pause while the barge is out and advance by the trip; shared rooms keep trading and time runs on the wall clock.
+4. **Opening-night harvest.** Villages bring in a second harvest after stocking the Row on the first night, so the first evening has goods upriver.
+5. **A richer River Run.** Tiled, higher-resolution terrain with irregular banks, shallows, reeds, lily pads, forests, fields and a landmark at each village; animated water, light reflections, fireflies and lamp posts that relight as reaches are cleared; detailed barges with deck cargo, a bow-lantern beam, turret and wakes; pirate skiffs and new armored gunboats; floating fuel, shot and repair barrels; explosions, splashes, muzzle flashes, damage and bounty numbers, screen shake, hit vignette, event banners, edge indicators, a richer minimap, a run summary, touch controls, synthesized combat and engine audio, and Floodtide rain and lightning.
+6. **Browser tests can't hit a stale server.** Playwright builds the client and serves it on its own ports (4499 and 4418) and never reuses a running server.
+
+Verification for these fixes: `npm test` passed 85 tests, including new tests for relief hauls before and during the night, open-night and late runs, shared-room runs, gunboats, floating supplies and run time limits. The four Chrome Playwright tests passed with an installed Chrome (`LANTERN_CHROME_CHANNEL=chrome`), including the Night 2 relief haul that relights the Oil Wharf. Firefox was not re-run for this pass. The five-seed 2,000-night check passed with a longest dark streak of one night.
 
 ## Verification
 

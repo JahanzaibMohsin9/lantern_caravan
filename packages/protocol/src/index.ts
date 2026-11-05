@@ -32,8 +32,9 @@ export const manifestSchema = z.object({
   reaches: z.array(z.object({ id, danger: z.int().min(0).max(5), boom: z.boolean() })).max(4),
   boats: z.array(z.object({ id, name: id, village: id, destination: id.optional(), departs: z.number(), arrives: z.number(), ambient: z.boolean() })),
   contract: z.object({ id, village: id, item: id, quantity: units, payout: coins,
-    kind: z.enum(["supply", "escort"]), haul: id.optional() }).optional(),
+    kind: z.enum(["supply", "escort"]), haul: id.optional(), relief: z.boolean().optional() }).optional(),
   upgrades: z.array(id), bounty: coins, glow: z.number().min(0).max(1),
+  limitMs: z.int().min(10_000).max(150_000).optional(),
 });
 export type RunManifest = z.infer<typeof manifestSchema>;
 
@@ -98,7 +99,7 @@ export type Snapshot = {
   river: {
     reaches: { id: string; name: string; danger: number; boom: boolean; lamps: number }[];
     contracts: { id: string; stall: string; village: string; item: string; quantity: string; payout: string;
-      deadline: number; mine: boolean; taken: boolean; kind: "supply" | "escort" }[];
+      deadline: number; mine: boolean; taken: boolean; kind: "supply" | "escort"; relief?: boolean }[];
     myRun?: { id: string; deadline: number; manifest: RunManifest };
     upriver: { actor: string; name: string }[];
     bountyFund: string;

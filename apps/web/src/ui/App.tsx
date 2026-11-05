@@ -57,8 +57,8 @@ export function App() {
   const [lowGraphics, setLowGraphics] = useState(() => localPreference("lantern-low", "false") === "true");
   const [largePanels, setLargePanels] = useState(() => localPreference("lantern-large-panels", "false") === "true");
   const previousMarket = useRef<Snapshot | undefined>(undefined);
-  const riverRun = entered && !online ? snapshot.river.myRun : undefined;
-  const landingOpen = entered && !online && snapshot.phase === "preparation";
+  const riverRun = entered && !snapshot.spectator ? snapshot.river.myRun : undefined;
+  const landingOpen = entered && !snapshot.spectator && snapshot.phase === "preparation";
   const nightOpen = entered && snapshot.phase === "open";
   const roaming = nightOpen || (entered && online && snapshot.spectator);
   const paused = panel === "pause" || panel === "settings";
@@ -326,7 +326,7 @@ export function App() {
 
   function castOff(intent: Extract<Intent, { type: "start_run" }>) {
     void run(async () => {
-      await settle(await backend.getQuote(snapshot.session_id, snapshot.night_id, intent));
+      await settle(await active.current.getQuote(snapshot.session_id, snapshot.night_id, intent));
       setPanel(undefined);
     });
   }
@@ -334,7 +334,7 @@ export function App() {
   function finishRiver(report: RunReport) {
     void run(async () => {
       const intent = { type: "finish_run", run_id: report.run_id, report } as const;
-      await settle(await backend.getQuote(snapshot.session_id, snapshot.night_id, intent));
+      await settle(await active.current.getQuote(snapshot.session_id, snapshot.night_id, intent));
       setCurrent("shed");
       setPanel("shed");
     });
@@ -369,7 +369,8 @@ export function App() {
   const job = snapshot.job;
 
   return <main className="game-shell" data-reduced={reduced} data-large-panels={largePanels}>
-    {riverRun && <RiverRun key={riverRun.id} manifest={riverRun.manifest} snapshot={snapshot} finish={finishRiver} busy={busy} reduced={reduced}/>}
+    {riverRun && <RiverRun key={riverRun.id} manifest={riverRun.manifest} snapshot={snapshot} finish={finishRiver} busy={busy} reduced={reduced}
+      live={online} low={lowGraphics} volume={volume * effectsLevel}/>}
     <div className="row-layer" inert={!!riverRun}>
     <header className="topbar">
       <div className="brand"><span className="brand-mark"><LanternMark/></span><div><strong>Lantern Row</strong><span>RIVERSIDE NIGHT MARKET</span></div></div>

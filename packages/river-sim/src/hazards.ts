@@ -12,15 +12,20 @@ function project(point: Point, id: ReachId) {
   const dx = to.x - from.x, dy = to.y - from.y;
   return along(id, clamp(((point.x - from.x) * dx + (point.y - from.y) * dy) / (dx * dx + dy * dy), 0, 1));
 }
-export function keepInChannel(player: River["player"]) {
-  const center = reachIds.map(id => project(player, id)).reduce((a, b) => distance(a, player) <= distance(b, player) ? a : b);
+/** Nearest point on the channel centerline, used by both the barge's collision and the renderer. */
+export function channelCenter(point: Point) {
+  return reachIds.map(id => ({ id, at: project(point, id) }))
+    .reduce((a, b) => distance(a.at, point) <= distance(b.at, point) ? a : b);
+}
+export function keepInChannel(player: Point & { vx?: number; vy?: number }, margin = 22) {
+  const center = channelCenter(player).at;
   const offset = distance(center, player);
-  if (offset <= reachWidth / 2 - 22) return;
-  const scale = (reachWidth / 2 - 22) / offset;
+  if (offset <= reachWidth / 2 - margin) return;
+  const scale = (reachWidth / 2 - margin) / offset;
   player.x = center.x + (player.x - center.x) * scale;
   player.y = center.y + (player.y - center.y) * scale;
-  player.vx *= .65;
-  player.vy *= .65;
+  if (player.vx !== undefined) player.vx *= .65;
+  if (player.vy !== undefined) player.vy *= .65;
 }
 
 export const createBooms = (manifest: River["manifest"]) => manifest.reaches.filter(reach => reach.boom)
@@ -47,6 +52,7 @@ export function flare(state: River) {
   for (const pirate of state.pirates.filter(pirate => distance(pirate, state.player) <= 265)) {
     pirate.stun = 3;
     pirate.hp -= 15;
+    state.effects.push({ kind: "hit", target: "pirate", x: pirate.x, y: pirate.y, frame: state.frame });
   }
   for (const boom of state.booms.filter(boom => boom.hp > 0 && distance(boom, state.player) <= 265)) {
     boom.cooldown = 4;

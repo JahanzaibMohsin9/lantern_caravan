@@ -28,9 +28,73 @@
 .river-trade span { display: grid; gap: 2px; }
 .river-full-map { display: block; width: 100%; border-radius: 8px; }
 .river-notice { position: absolute; left: 50%; top: 110px; transform: translateX(-50%); max-width: 50%; padding: 6px 12px; border-radius: 6px; background: #131d28ed; text-align: center; pointer-events: none; }
+.river-scene .eyebrow { letter-spacing: .14em; font-size: .68rem; color: #e8b980; font-weight: 700; }
+.river-card { backdrop-filter: blur(6px); }
+.river-objective small.relief { color: #ffd28d; font-weight: 700; }
+.river-clock { display: flex; align-items: center; gap: 10px; padding: 8px 14px 8px 8px; }
+.river-clock svg { width: 44px; height: 44px; transform: rotate(-90deg); }
+.river-clock circle { fill: none; stroke: #2a3440; stroke-width: 4; }
+.river-clock circle.progress { stroke: #ffc27e; stroke-dasharray: 119.4; stroke-linecap: round; transition: stroke-dashoffset .1s linear; }
+.river-clock div { display: grid; text-align: left; }
+.river-clock.urgent { border-color: #ff7a63; }
+.river-clock.urgent circle.progress { stroke: #ff7a63; }
+.river-clock.urgent strong { color: #ffb4a4; }
+.river-wallet strong { font-size: 1.15rem; }
+.coin { display: inline-block; width: 15px; height: 15px; border-radius: 50%; background: radial-gradient(circle at 35% 35%, #ffe7a6, #d79a3e); box-shadow: 0 0 10px #ffc66a88; }
+.river-banner { position: absolute; top: 96px; left: 50%; transform: translateX(-50%); display: grid; justify-items: center; gap: 2px;
+  padding: 10px 22px; border-radius: 12px; pointer-events: none; text-align: center; background: linear-gradient(180deg, #151d28f2, #0f151df2);
+  border: 1px solid #7a6658; box-shadow: 0 10px 34px #000a; }
+.river-banner strong { font-family: "Fraunces Variable", Georgia, serif; font-size: 1.45rem; color: #ffe2b7; }
+.river-banner span { font-size: .85rem; color: #d7c3ae; }
+.river-banner.warn { border-color: #c4574a; } .river-banner.warn strong { color: #ffb4a4; }
+.river-banner.good { border-color: #6fbf8d; } .river-banner.good strong { color: #b8f0c8; }
+.river-status { min-width: 230px; gap: 6px; }
+.barge-meter { display: grid; grid-template-columns: 62px 1fr 64px; align-items: center; gap: 8px; font-size: .82rem; }
+.barge-meter-label { display: flex; align-items: center; gap: 4px; color: #d8c4ae; }
+.barge-meter-track { height: 7px; border-radius: 4px; background: #232c36; overflow: hidden; }
+.barge-meter-track i { display: block; height: 100%; border-radius: 4px; transition: width .12s linear; }
+.barge-meter b { text-align: right; font-variant-numeric: tabular-nums; }
+.river-hold { display: flex; justify-content: space-between; gap: 8px; font-size: .82rem; margin-top: 2px; }
+.river-flare { color: #8a95a0; display: flex; align-items: center; gap: 3px; }
+.river-flare.ready { color: #bff4ff; text-shadow: 0 0 8px #7fd9ea; }
+.river-cargo { display: flex; flex-wrap: wrap; gap: 4px 10px; }
+.river-cargo small, .trade-item > i, .river-cargo i { display: inline-flex; align-items: center; gap: 5px; }
+.river-cargo i, .trade-item > i { width: 10px; height: 10px; border-radius: 2px; flex: none; }
+.river-minimap canvas { display: block; }
+.river-action { font-size: 1rem; padding: 10px 18px; box-shadow: 0 0 24px #ffc27e55; }
+.river-hint { opacity: .85; }
+.village-head { display: flex; align-items: center; justify-content: space-between; gap: 10px; border-left: 4px solid var(--village); padding-left: 10px; }
+.band { text-transform: uppercase; font-size: .7rem; letter-spacing: .1em; padding: 3px 8px; border-radius: 999px; background: #2a3440; }
+.band.thriving { background: #2f5a3c; color: #c9f5d5; } .band.healthy { background: #2d4a52; color: #c7eef5; }
+.band.tight { background: #5a4a2b; color: #ffe2a6; } .band.dark { background: #4a2626; color: #ffc0b4; }
+.contract-note { color: #ffd28d; }
+.river-trade .trade-item { display: flex; align-items: center; gap: 9px; }
+.trade-item > span { display: grid; gap: 3px; }
+.stock-bar { display: block; width: 120px; height: 4px; border-radius: 2px; background: #27303a; overflow: hidden; }
+.stock-bar b { display: block; height: 100%; background: #8fd3a6; }
+.river-summary { text-align: center; }
+.summary-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; margin: 14px 0 4px; }
+.summary-grid span { display: grid; gap: 2px; padding: 10px 4px; border-radius: 10px; background: #1a222d; font-size: .78rem; color: #cdb9a6; }
+.summary-grid b { font-size: 1.4rem; color: #ffe2b7; }
+.river-stick { position: absolute; left: 22px; bottom: 150px; width: 128px; height: 128px; border-radius: 50%; border: 2px solid #ffffff33;
+  background: #0d141c88; touch-action: none; display: grid; place-items: center; }
+.river-stick i { width: 54px; height: 54px; border-radius: 50%; background: #ffd28d55; border: 2px solid #ffd28d; }
+.river-touch-buttons { position: absolute; right: 18px; bottom: 190px; display: grid; gap: 10px; }
+.river-touch-buttons button { width: 92px; height: 58px; border-radius: 14px; border: 1px solid #a0806a; background: #1a222dcc; color: #ffe8c8;
+  display: grid; place-items: center; font-weight: 800; font-size: .72rem; touch-action: none; }
+.river-touch-buttons button.fire { height: 78px; background: #5a2a22cc; border-color: #ff8a6a; }
+.river-touch-buttons button:disabled { opacity: .45; }
+.river-scene.touch .river-status { bottom: 8px; }
 .landing { display: grid; gap: 10px; }
-.landing-loads { max-height: 235px; overflow-y: auto; }
-.landing-loads input { width: 4.6rem; padding: .3rem; border-radius: 6px; color: #f5e5d5; background: #1d202d; border: 1px solid #776457; }
+.landing-board { display: grid; gap: 4px; }
+.landing-load { display: grid; grid-template-columns: 10px 1fr auto; align-items: center; gap: 9px; padding: 6px 8px; border-radius: 8px; background: #1b1e29; }
+.landing-load i { width: 10px; height: 10px; border-radius: 2px; }
+.landing-load span { display: grid; }
+.landing-load b { display: flex; align-items: center; gap: 3px; color: #ffd8a0; }
+.landing-leads { display: grid; gap: 3px; font-size: .82rem; color: #e8cfb1; }
+.landing-leads span { display: flex; align-items: center; gap: 5px; }
+.relief-row { border: 1px solid #c99a5a; background: #3a2c1c66; border-radius: 10px; }
+.bell-count { margin-left: 6px; padding: 0 6px; border-radius: 999px; background: #ff9a6a; color: #241510; font-size: .72rem; font-weight: 800; }
 .landing-upgrades summary { color: #e8cfb1; cursor: pointer; padding: 6px 0; }
 .landing-upgrades button { margin: 3px; }
 @media (max-width: 650px) {
@@ -43,5 +107,11 @@
   .river-minimap .river-buttons svg { width: 12px; }
   .river-status { min-width: 86px; }
   .river-controls { bottom: 112px; width: 90%; }
+  .river-banner { top: 74px; max-width: 86%; padding: 6px 12px; }
+  .river-banner strong { font-size: 1.1rem; }
+  .river-status { min-width: 170px; }
+  .barge-meter { grid-template-columns: 48px 1fr 50px; font-size: .72rem; }
+  .river-clock svg { width: 30px; height: 30px; }
+  .summary-grid { grid-template-columns: repeat(2, 1fr); }
   .river-notice { max-width: 80%; width: max-content; }
 }

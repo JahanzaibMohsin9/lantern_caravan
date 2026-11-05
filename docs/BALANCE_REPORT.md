@@ -4,13 +4,13 @@ Each checked run used three autonomous traders over 2,000 nights. Run `npm run s
 
 | Seed | Nights with 3+ open stalls | Stall coins at close | Village coins at sampled ticks | Freight loss entries | Supplier units | Boats lit | Invariant errors |
 | --- | ---: | ---: | ---: | ---: | ---: | ---: | ---: |
-| 17 | 2,000 | 76–302 | 33–245 | 977 | 25,513 | 5,735 | 0 |
-| 42 | 2,000 | 76–230 | 33–208 | 1,113 | 25,426 | 5,681 | 0 |
-| 93 | 2,000 | 66–265 | 33–212 | 1,079 | 25,485 | 5,674 | 0 |
-| 166 | 2,000 | 76–226 | 33–207 | 1,040 | 25,646 | 5,646 | 0 |
-| 271 | 2,000 | 63–233 | 33–216 | 1,053 | 25,494 | 5,619 | 0 |
+| 17 | 2,000 | 74–240 | 30–232 | 722 | 25,409 | 6,004 | 0 |
+| 42 | 2,000 | 73–258 | 30–208 | 895 | 25,325 | 5,809 | 0 |
+| 93 | 2,000 | 75–263 | 30–204 | 774 | 25,504 | 5,984 | 0 |
+| 166 | 2,000 | 59–254 | 30–226 | 806 | 25,369 | 5,887 | 0 |
+| 271 | 2,000 | 59–250 | 30–221 | 808 | 25,698 | 5,783 | 0 |
 
-The longest dark streak was two nights for four seeds and three nights for seed 93. Observed asks were 2–12 coins. The checks cover nonnegative integer balances, price bounds, outstanding shares, permitted goods mints and burns, village balances between 20 and 300, danger from 0 to 5, and empty run and contract escrows at close. Supplier units include stall-to-stall wholesale. A lost sailing with several cargo lines can produce several freight loss entries.
+The longest dark streak was one night for every seed. During the review, two seeds exposed a stall that sold out while holding 10–15 coins: it couldn't pay a hauler above its 10-coin reserve, so it stayed closed for up to 11 nights. The harbor's relief contract now pays for that haul, priced so rivals will take it. The checks cover nonnegative integer balances, price bounds, outstanding shares, permitted goods mints and burns, village balances between 20 and 300, danger from 0 to 5, and empty run and contract escrows at close. Supplier units include stall-to-stall wholesale. A lost sailing with several cargo lines can produce several freight loss entries.
 
 ## Tuned values
 
@@ -23,6 +23,8 @@ The longest dark streak was two nights for four seeds and three nights for seed 
 | Rivals | Preserve the last two retail units of paper and oil for human buyers. Haul route scores use margin, distance, danger, and booms. |
 | Harbor Bell | A supply contract requests 3–8 units. Payout uses the Normal base ask and a route and strategy premium. The stall retains the larger of its reserve and 10 coins. |
 | Barge | 150-second game timer. 12-unit hold, 100 hull and fuel, and 235 cruising speed. Village routes take roughly 29–35 seconds at cruise. |
+| Relief hauls | A stall that is dark from lack of cash or stock, and short at least 3 units, gets a harbor contract from the dock fund: the village price plus 2 coins and one per two units, for 3–8 units the village can sell. Delivery relights it with a restart float to 20 coins. |
+| Opening night | Villages harvest again after stocking the Row on night 1. |
 | Bounties | 36 coins in the nightly fund. Pirate 3, boom 4, saved village boat 1, and tow costs up to 2. |
 
 The authored campaign starts from its existing inventory targets. Those loads come from village harvests delivered through freight. Night 2 records the oil loss from actual freight cargo. Local runs can be taken during preparation, so they use their own clock.

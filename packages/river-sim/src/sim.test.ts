@@ -172,3 +172,36 @@ describe("Caravan Zero escort port", () => {
     expect(left.escort).toBe("failed");
   });
 });
+
+describe("River Run additions", () => {
+  test("dangerous reaches send an armored gunboat with every third crew", () => {
+    const state = createRiver(manifest({ reaches: reachIds.map(id => ({ id, danger: id === "heron_reach" ? 3 : 0, boom: false })) }));
+    advance(state, 40);
+    const crews = [...state.pirates];
+    expect(state.spawned.heron_reach).toBeGreaterThanOrEqual(3);
+    expect(crews.some(pirate => pirate.heavy && pirate.maxHp === 96)).toBe(true);
+    expect(crews.filter(pirate => !pirate.heavy).every(pirate => pirate.maxHp === 42)).toBe(true);
+  });
+
+  test("floating supplies sit inside the channel and refill the barge once", () => {
+    const state = createRiver(manifest());
+    expect(state.barrels).toHaveLength(10);
+    const fuel = state.barrels.find(barrel => barrel.kind === "fuel")!;
+    state.player.fuel = 40;
+    state.player.x = fuel.x; state.player.y = fuel.y;
+    stepRiver(state, {});
+    expect(fuel.taken).toBe(true);
+    expect(state.player.fuel).toBeGreaterThanOrEqual(69);
+    expect(state.effects.some(effect => effect.kind === "pickup")).toBe(true);
+    const before = state.player.fuel;
+    stepRiver(state, {});
+    expect(state.player.fuel).toBeLessThanOrEqual(before);
+  });
+
+  test("a manifest time limit tows the barge early", () => {
+    const state = createRiver(manifest({ limitMs: 30_000 }));
+    advance(state, 31);
+    expect(state.outcome).toBe("towed");
+    expect(runReport(state).durationMs).toBe(30_000);
+  });
+});

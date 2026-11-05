@@ -13,7 +13,7 @@ Install Node.js 24, then run `npm ci` from the repository root. Use the URL prin
 | `npm run simulate -- --nights 2000 --seed 42 --traders 3 --check` | Headless balance check, with JSON and CSV in `sim-output/` |
 | `npm run schema` | Regenerate the shared JSON Schema bundle |
 
-The Playwright config starts its own preview and test server when their ports are free. Stop other Lantern Row processes on ports 4399 and 4318 to exercise the isolated test server. Set `LANTERN_CHROME_CHANNEL=chrome` to use an installed Chrome instead of bundled Chromium. Set `LANTERN_RECORD=1` to keep playthrough recordings. The dev client exposes `window.__lantern` and a `?debug=1` overlay with phase, FPS, seed, revision, and time controls.
+The Playwright config builds the client and starts its own preview on port 4499 and test API on port 4418. It never reuses a running server, so a preview from another checkout cannot be tested by mistake; if either port is busy, the run stops with an error. Override the ports with `LANTERN_E2E_WEB_PORT` and `LANTERN_E2E_API_PORT`. Set `LANTERN_CHROME_CHANNEL=chrome` to use an installed Chrome instead of bundled Chromium. Set `LANTERN_RECORD=1` to keep playthrough recordings. The dev client exposes `window.__lantern` and a `?debug=1` overlay with phase, FPS, seed, revision, and time controls.
 
 ## Static client and dev server
 
