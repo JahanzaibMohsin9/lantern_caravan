@@ -34,6 +34,8 @@ add("rescue-success", [{ type: "buy_offering", offering_id: "2-oil_wharf-1", sha
 add("rescue-share-limit", [{ type: "buy_offering", offering_id: "2-oil_wharf-1", shares: "3" }], undefined, "dark");
 add("rescue-expired", [{ type: "buy_offering", offering_id: "2-oil_wharf-404", shares: "2" }], undefined, "dark");
 add("vote-no-shares", [{ type: "vote_strategy", stall_id: "oil_wharf", strategy_id: "festival" }], undefined, "prepared");
+add("pirates-on-the-reach", [{ type: "start_run", barge_plan: [], trim: "runner" }], undefined, "reach");
+add("festival-night-four", [{ type: "post_bell_order", item_id: "dye", quantity: 2, unit_price: 6 }], undefined, "festival");
 cases.set("quote-expired", { seed: 42, scenario: "first", steps: [{ at: 0, intent: craft(), commitAt: 15000 }] });
 const offer = { side: "buy", stall_id: "oil_wharf", item_id: "oil", quantity: "1", price_per_unit: "5" } as const;
 cases.set("haggle-accept", { seed: 42, scenario: "first", steps: [{ at: 0, offer, accept: true }] });

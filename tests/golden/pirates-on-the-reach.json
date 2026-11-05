@@ -1,0 +1,203 @@
+{
+  "fixture": {
+    "seed": 42,
+    "scenario": "reach",
+    "steps": [
+      {
+        "at": 0,
+        "intent": {
+          "type": "start_run",
+          "barge_plan": [],
+          "trim": "runner"
+        }
+      }
+    ]
+  },
+  "expected": {
+    "statuses": [
+      {
+        "state": "confirmed",
+        "quote": {
+          "quote_id": "quote-0",
+          "intent": {
+            "type": "start_run",
+            "trim": "runner",
+            "barge_plan": []
+          },
+          "summary": "Cast off from The Landing",
+          "effects": [
+            {
+              "op": "transfer",
+              "from": "v:millbrook",
+              "to": "esc:run:quote-0",
+              "asset": "paper",
+              "amount": "12",
+              "memo": "Run reservation"
+            },
+            {
+              "op": "transfer",
+              "from": "v:millbrook",
+              "to": "esc:run:quote-0",
+              "asset": "cord",
+              "amount": "12",
+              "memo": "Run reservation"
+            },
+            {
+              "op": "transfer",
+              "from": "v:ember_falls",
+              "to": "esc:run:quote-0",
+              "asset": "oil",
+              "amount": "12",
+              "memo": "Run reservation"
+            },
+            {
+              "op": "transfer",
+              "from": "v:reedmarsh",
+              "to": "esc:run:quote-0",
+              "asset": "reed",
+              "amount": "12",
+              "memo": "Run reservation"
+            },
+            {
+              "op": "transfer",
+              "from": "v:reedmarsh",
+              "to": "esc:run:quote-0",
+              "asset": "dye",
+              "amount": "12",
+              "memo": "Run reservation"
+            }
+          ],
+          "expires_at": 15000
+        }
+      }
+    ],
+    "night": 3,
+    "name": "Pirates on the Reach",
+    "objective": {
+      "name": "Clear the reach and carry its light",
+      "complete": false,
+      "steps": [
+        {
+          "label": "Boom broken",
+          "count": "0",
+          "target": "1",
+          "icon": "boom"
+        },
+        {
+          "label": "Contract or escort",
+          "count": "0",
+          "target": "1",
+          "icon": "bell"
+        },
+        {
+          "label": "Colored",
+          "count": "0",
+          "target": "2",
+          "icon": "lantern_color"
+        }
+      ]
+    },
+    "orders": [
+      {
+        "id": "boat-0",
+        "name": "The Heron",
+        "opens": 0,
+        "quantity": "2",
+        "payout": "18",
+        "boat": 0,
+        "personal": true,
+        "item": "lantern_color",
+        "remaining": "2",
+        "wishes": [],
+        "wishAuthors": [],
+        "state": "open"
+      },
+      {
+        "id": "boat-1",
+        "name": "The Kingfisher",
+        "opens": 0,
+        "quantity": "2",
+        "payout": "10",
+        "boat": 1,
+        "personal": false,
+        "item": "lantern_paper",
+        "remaining": "2",
+        "wishes": [],
+        "wishAuthors": [],
+        "state": "open"
+      },
+      {
+        "id": "boat-2",
+        "name": "The Swallow",
+        "opens": 50,
+        "quantity": "1",
+        "payout": "10",
+        "boat": 2,
+        "personal": false,
+        "item": "lantern_paper",
+        "remaining": "1",
+        "wishes": [],
+        "wishAuthors": [],
+        "state": "upcoming"
+      },
+      {
+        "id": "boat-3",
+        "name": "The Tern",
+        "opens": 100,
+        "quantity": "1",
+        "payout": "15",
+        "boat": 3,
+        "personal": false,
+        "item": "lantern_float",
+        "remaining": "1",
+        "wishes": [],
+        "wishAuthors": [],
+        "state": "upcoming"
+      },
+      {
+        "id": "boat-4",
+        "name": "The Egret",
+        "opens": 140,
+        "quantity": "1",
+        "payout": "18",
+        "boat": 4,
+        "personal": false,
+        "item": "lantern_color",
+        "remaining": "1",
+        "wishes": [],
+        "wishAuthors": [],
+        "state": "upcoming"
+      },
+      {
+        "id": "boat-5",
+        "name": "The Firefly",
+        "opens": 180,
+        "quantity": "1",
+        "payout": "15",
+        "boat": 5,
+        "personal": false,
+        "item": "lantern_float",
+        "remaining": "1",
+        "wishes": [],
+        "wishAuthors": [],
+        "state": "upcoming"
+      }
+    ],
+    "balances": {
+      "coins": "30",
+      "cargo": {
+        "paper": "2",
+        "oil": "2",
+        "reed": "0",
+        "cord": "0",
+        "dye": "0",
+        "lantern_paper": "0",
+        "lantern_float": "0",
+        "lantern_color": "0"
+      },
+      "shares": "0",
+      "delivered": "0",
+      "crafted": "0"
+    }
+  }
+}

@@ -30,6 +30,7 @@ export type RunReport = z.infer<typeof runReportSchema>;
 export const bargeTrimSchema = z.enum(["balanced", "runner", "ironclad", "gunner"]);
 
 export const manifestSchema = z.object({
+  stopLayout: z.literal("campaign_reach").optional(),
   trim: bargeTrimSchema.optional(),
   id, seed: z.int().nonnegative(), deadline: coins, wallet: coins, hold: units,
   items: z.array(z.object({ village: id, item: id, stock: coins, target: z.int().positive(),

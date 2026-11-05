@@ -54,7 +54,7 @@ export function refreshOfferings(world: World) {
     const cash = get(state, shop(stall), "coin");
     const market = state.market[stall];
     const dark = cashBand(cash) === "dark";
-    const guided = state.mode === "campaign" && state.night === 3 && stall === "paper_mill" && state.elapsed >= 42;
+    const guided = state.mode === "campaign" && state.night === 4 && stall === "paper_mill" && state.elapsed >= 42;
     if (Object.values(state.offers).some(offer => offer.stall === stall)) continue;
     const kind = dark && !market.rescued ? "rescue"
       : !dark && market.offerCount === 0 && (guided || (cash < 25 && market.drift > 10000)) ? "expansion" : undefined;
@@ -231,7 +231,7 @@ export function closeOwnership(world: World): World {
     for (const [actor, amount] of Object.entries(owners(state, stall))) {
       const dividend = amount * each;
       const trader = traders[actor]!;
-      traders[actor] = { ...trader, dividends: { ...trader.dividends, [stall]: dividend },
+      traders[actor] = { ...trader, dividends: { ...trader.dividends, [stall]: dividend + (stall === "oil_wharf" ? trader.wharfBonus : 0) },
         lifetimeDividends: trader.lifetimeDividends + dividend };
       if (dividend) effects.push(move(payoutPool(stall), actor, "coin", dividend, "Dividend paid"));
     }

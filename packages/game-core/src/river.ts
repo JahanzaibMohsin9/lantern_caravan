@@ -172,7 +172,10 @@ export function beginRiverNight(world: World) {
   // The opening night ships a whole harvest to stock the Row; the villages bring in a second one so the
   // barge has something to buy upriver from the very first evening.
   if (world.night === 1) state = harvest(state, true);
-  if (world.mode === "campaign") return world.night >= 2 ? scheduleAmbient(refreshRelief(state)) : state;
+  if (world.mode === "campaign") {
+    if (world.night === 3) state = prepareReachNight(state);
+    return world.night >= 2 ? scheduleAmbient(refreshRelief(state)) : state;
+  }
   state = refreshContracts(state);
   if (state.mode === "endless") {
     const actor = Object.keys(state.traders).find(id => id.startsWith("r:"));
@@ -190,6 +193,29 @@ function schedule(world: World, actor: string, id: VillageId, cargo: CargoLeg[],
   ]));
   return withRiver(next, { serial, hauls: { ...world.river.hauls, [haul.id]: haul },
     ...(contract ? { contracts: { ...world.river.contracts, [contract.id]: { ...contract, actor } } } : {}) });
+}
+
+/** Authored shortages return stock upriver; every contract and escort is paid by its real issuer. */
+function prepareReachNight(world: World) {
+  let state = changeReach(world, "marsh_bend", 3 - world.river.reaches.marsh_bend.danger, true);
+  for (const [stall, item, keep] of [["reed_thread", "reed", 3], ["reed_thread", "dye", 1], ["indigo_atelier", "dye", 1]] as const) {
+    const qty = Math.max(0, get(state, shop(stall), item) - keep);
+    if (qty) state = applyEffects(state, [move(shop(stall), village("reedmarsh"), item, qty, "Pirates delay the dye freight")]);
+  }
+  for (const item of ["reed", "dye"] as const) {
+    const strategy = state.market.reed_thread.strategy;
+    const payout = 12 + (strategy === "bold" ? 2 : strategy === "festival" ? 1 : strategy === "bargain" ? -1 : 0);
+    if (get(state, shop("reed_thread"), "coin") < payout + 5) continue;
+    state = postContract(state, { village: "reedmarsh", item, qty: 3, payout, payer: shop("reed_thread"),
+      stall: "reed_thread", deadline: 300, kind: "supply" });
+  }
+  const paid = cost(state, "reedmarsh", "reed", 2);
+  if (get(state, "r:juno", "coin") >= paid + 8) {
+    state = schedule(state, "r:juno", "reedmarsh", [{ item: "reed", qty: 2, paid, stall: "reed_thread" }], 45, 65);
+    state = postContract(state, { village: "reedmarsh", item: "reed", qty: 2, payout: 8, payer: "r:juno",
+      stall: "reed_thread", deadline: 150, kind: "escort", haul: "haul-" + state.river.serial });
+  }
+  return addActivity(state, "Pirates hold Marsh Bend. Break the boom and answer Reed & Thread's bell, or escort Juno. Strategy votes change the bell's premium.");
 }
 
 function inTransit(world: World, stall: StallId, item: ItemId) {
@@ -320,7 +346,7 @@ export function relightStall(world: World, stall: StallId, actor: string) {
   const name = world.traders[actor]?.name ?? "Freight";
   const trader = world.traders[actor];
   const traders = trader && !actor.startsWith("r:") ? { ...world.traders, [actor]: { ...trader,
-    rescuedTonight: [...new Set([...trader.rescuedTonight, stall])], rescued: trader.rescued + 1 } } : world.traders;
+    rescuedTonight: [...new Set([...trader.rescuedTonight, stall])], rescued: trader.rescued + Number(!trader.rescuedTonight.includes(stall)) } } : world.traders;
   const state: World = { ...world, offers, traders, market: { ...world.market, [stall]: { ...world.market[stall], rescued: true,
     stockClosed: false, thinking: "Relit by " + name + "’s relief haul. The lights are back." } } };
   return addActivity(state, name + " relit " + merchants[stall].name + " with a relief haul!", name);
@@ -656,7 +682,7 @@ function runManifest(world: World, actor: string, intent: Extract<RiverIntent, {
   }));
   const manifest: RunManifest = { id, seed: (world.river.random ^ Math.imul(world.revision + 1, 0x45d9f3b)) >>> 0,
     deadline: now + limitMs, limitMs, wallet: get(world, actor, "coin"), hold, upgrades, boats, bounty: get(world, bounty, "coin"),
-    glow: rowGlow(world), trim,
+    glow: rowGlow(world), trim, stopLayout: world.mode === "campaign" && world.night === 3 ? "campaign_reach" : undefined,
     wrecks: Object.values(world.river.wrecks).filter(wreck => wreckOpen(world, wreck) && !wreck.claimedBy)
       .map(wreck => ({ id: wreck.id, reach: wreck.reach, at: wreck.at, name: wreck.by, cargo: wreckCargo(world, wreck.id) as Record<string, number> }))
       .filter(wreck => Object.keys(wreck.cargo).length).slice(0, 6),
@@ -696,7 +722,7 @@ function finishRun(world: World, actor: string, id: string, report: RunReport, n
     return !wreck || world.river.wrecks[entry.wreck_id]?.claimedBy !== id || !Object.hasOwn(wreck.cargo, entry.item_id) ||
       entry.quantity > wreck.cargo[entry.item_id]! || entry.quantity > get(world, wreckAccount(entry.wreck_id), entry.item_id);
   })) reject("RIVER_SALVAGE", "The salvage report does not match the wrecks on this run.");
-  const stops = stopPlan(manifest.seed);
+  const stops = stopPlan(manifest.seed, manifest.stopLayout);
   const given: Record<string, number> = {};
   let stopCoins = 0;
   if (!unique(taken.map(entry => entry.stop_id))) reject("RIVER_STOP", "A riverside stop was reported twice.");
@@ -776,6 +802,9 @@ function finishRun(world: World, actor: string, id: string, report: RunReport, n
     ? Number(op.amount) * (Number(op.to === actor) - Number(op.from === actor)) : 0), 0);
   if (get(world, actor, "coin") + delta < 0) reject("RIVER_FUNDS", "The barge cannot cover its purchases.");
   const payout = deliveredContract ? contract.payout : 0;
+  const bonus = payout && !world.traders[actor]!.wharfBonus && world.mode === "campaign" && world.night === 2 && contract?.relief && contract.stall === "oil_wharf" &&
+    get(world, actor, "share:oil_wharf") > 0 ? Math.min(2, get(world, rescueFund, "coin")) : 0;
+  if (bonus) effects.push(move(rescueFund, actor, "coin", bonus, "Wharf pledge and haul bonus dividend"));
   if (contract) {
     if (payout && contract.kind === "supply") effects.push(move(actor, shop(contract.stall), contract.item, contract.qty, "Supply contract delivery"));
     effects.push(move(contractEscrow(contract.id), payout ? actor : contract.payer, "coin", contract.payout,
@@ -786,7 +815,7 @@ function finishRun(world: World, actor: string, id: string, report: RunReport, n
   if (tow) effects.push(move(actor, freightSink, "coin", tow, "River tow"));
   const earlyCredit = (op: LedgerOp) => Number(op.op === "transfer" && op.to === actor && op.asset === "coin" && op.memo !== "Harbor Bell payout");
   effects.sort((a, b) => earlyCredit(b) - earlyCredit(a));
-  return { effects, contract, payout, run, summary: report.outcome === "moored" ? "Moored at The Landing" :
+  return { effects, contract, payout, bonus, run, summary: report.outcome === "moored" ? "Moored at The Landing" :
     report.outcome === "towed" ? "Towed to The Landing" : "Rescued after sinking" };
 }
 
@@ -849,11 +878,12 @@ export function commitRiver(prior: World, world: World, actor: string, intent: R
       runs: { ...world.river.runs, [id]: { actor, started: now, startedAt: prior.phase === "open" ? prior.elapsed : undefined, manifest } },
       ...(contract ? { contracts: { ...world.river.contracts, [contract.id]: { ...contract, actor } } } : {}) });
   }
-  const { run, contract, payout } = finishRun(prior, actor, intent.run_id, intent.report, now);
+  const { run, contract, payout, bonus } = finishRun(prior, actor, intent.run_id, intent.report, now);
   const { [intent.run_id]: _, ...runs } = world.river.runs;
   const wrecks = Object.fromEntries(Object.entries(releaseWrecks(world, intent.run_id))
     .filter(([key]) => Object.keys(wreckCargo(world, key)).length));
   let state = withRiver(world, { runs, wrecks, bountyFund: get(world, bounty, "coin") });
+  if (bonus) state = addActivity(state, trader.name + " earned a " + bonus + "-coin bonus dividend for pledging and hauling oil to the wharf.", trader.name);
   const report = intent.report;
   for (const entry of report.salvaged ?? []) {
     const wreck = run.manifest.wrecks!.find(wreck => wreck.id === entry.wreck_id)!;
@@ -875,9 +905,11 @@ export function commitRiver(prior: World, world: World, actor: string, intent: R
     const id = reach as ReachId, kills = state.river.reaches[id].kills + count;
     state = changeReach(state, id, -Math.floor(kills / 3), state.river.reaches[id].boom, kills % 3);
   }
+  let broken = 0;
   for (const reach of report.boomsBroken) {
     const id = reach as ReachId;
     if (!state.river.reaches[id].boom) continue;
+    broken++;
     state = addActivity(changeReach(state, id, -2, false), trader.name + " broke the boom at " + reaches[id].name + ".", trader.name);
   }
   if (contract) {
@@ -895,7 +927,11 @@ export function commitRiver(prior: World, world: World, actor: string, intent: R
       state = addActivity(state, trader.name + " escorted " + world.traders[haul.actor]?.name + " safely to The Landing.", trader.name);
     }
   }
-  return { ...state, traders: { ...state.traders, [actor]: { ...state.traders[actor]!, relationship, lastStop: "shed" } } };
+  return { ...state, traders: { ...state.traders, [actor]: { ...state.traders[actor]!, relationship, lastStop: "shed",
+    lifetimeDividends: trader.lifetimeDividends + bonus,
+    wharfBonus: trader.wharfBonus + bonus,
+    dividends: bonus ? { ...trader.dividends, oil_wharf: (trader.dividends.oil_wharf ?? 0) + bonus } : trader.dividends,
+    boomsTonight: trader.boomsTonight + broken, contractsTonight: trader.contractsTonight + Number(payout > 0) } } };
 }
 
 function orderView(world: World, actor: string) {

@@ -34,6 +34,12 @@ Quotes are bound to an actor, room, and night and expire after 15 game seconds. 
 
 ## River Run intents
 
+W6 moves the campaign finale to Night 4; Endless starts on Night 5. Night 3's existing `objective.steps` now shows the player's boom, successful contract/escort and colored-lantern progress. `boomsTonight`, `contractsTonight` and the Night 2 `wharfBonus` survive saves and reset at the next night (missing fields in old saves default to zero). Only a confirmed finish earns river credit; an empty return or refunded contract does not.
+
+A pre-W6 campaign Night 3 save (all traders lack the new counters) represents the old festival: the codec moves it to Night 4 without changing its ledger, orders or progress. Both the current save and the retry checkpoint use this migration.
+
+Night 3 manifests carry optional `stopLayout: "campaign_reach"`. Both simulation and settlement call `stopPlan(seed, stopLayout)` to derive two Heron Reach stops. Omission preserves the ordinary seeded layout for existing manifests. No new intent or backend endpoint is required. The Night 2 pledge-plus-oil-haul bonus transfers up to 2 coins from `sys:rescue` and never mints goods or coins.
+
 W5 adds player Bell orders, two more river intents that go through the usual quote, submit and status flow on both backends:
 
 | Intent | Fields | Effect |

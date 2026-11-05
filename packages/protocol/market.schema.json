@@ -2284,6 +2284,10 @@
                 "manifest": {
                   "type": "object",
                   "properties": {
+                    "stopLayout": {
+                      "type": "string",
+                      "const": "campaign_reach"
+                    },
                     "trim": {
                       "$ref": "#/$defs/__schema7"
                     },
@@ -4154,6 +4158,10 @@
                   "manifest": {
                     "type": "object",
                     "properties": {
+                      "stopLayout": {
+                        "type": "string",
+                        "const": "campaign_reach"
+                      },
                       "trim": {
                         "$ref": "#/$defs/__schema7"
                       },
@@ -8177,6 +8185,10 @@
                   "manifest": {
                     "type": "object",
                     "properties": {
+                      "stopLayout": {
+                        "type": "string",
+                        "const": "campaign_reach"
+                      },
                       "trim": {
                         "$ref": "#/$defs/__schema7"
                       },

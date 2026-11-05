@@ -1,0 +1,161 @@
+{
+  "fixture": {
+    "seed": 42,
+    "scenario": "festival",
+    "steps": [
+      {
+        "at": 0,
+        "intent": {
+          "type": "post_bell_order",
+          "item_id": "dye",
+          "quantity": 2,
+          "unit_price": 6
+        }
+      }
+    ]
+  },
+  "expected": {
+    "statuses": [
+      {
+        "state": "confirmed",
+        "quote": {
+          "quote_id": "quote-0",
+          "intent": {
+            "type": "post_bell_order",
+            "item_id": "dye",
+            "quantity": 2,
+            "unit_price": 6
+          },
+          "summary": "Posted a Bell order: 2 dye at 6 coins each",
+          "effects": [
+            {
+              "op": "transfer",
+              "from": "p:guest",
+              "to": "esc:bell:quote-0",
+              "asset": "coin",
+              "amount": "12",
+              "memo": "Bell order escrow"
+            }
+          ],
+          "expires_at": 15000
+        }
+      }
+    ],
+    "night": 4,
+    "name": "Festival of Lights",
+    "objective": {
+      "name": "Light all six boats",
+      "complete": false,
+      "steps": [
+        {
+          "label": "boats lit",
+          "count": "0",
+          "target": "6",
+          "icon": "boat"
+        }
+      ]
+    },
+    "orders": [
+      {
+        "id": "boat-0",
+        "name": "The Heron",
+        "opens": 0,
+        "quantity": "1",
+        "payout": "10",
+        "boat": 0,
+        "personal": true,
+        "item": "lantern_paper",
+        "remaining": "1",
+        "wishes": [],
+        "wishAuthors": [],
+        "state": "open"
+      },
+      {
+        "id": "boat-1",
+        "name": "The Kingfisher",
+        "opens": 0,
+        "quantity": "1",
+        "payout": "15",
+        "boat": 1,
+        "personal": false,
+        "item": "lantern_float",
+        "remaining": "1",
+        "wishes": [],
+        "wishAuthors": [],
+        "state": "open"
+      },
+      {
+        "id": "boat-2",
+        "name": "The Swallow",
+        "opens": 0,
+        "quantity": "1",
+        "payout": "18",
+        "boat": 2,
+        "personal": false,
+        "item": "lantern_color",
+        "remaining": "1",
+        "wishes": [],
+        "wishAuthors": [],
+        "state": "open"
+      },
+      {
+        "id": "boat-3",
+        "name": "The Tern",
+        "opens": 35,
+        "quantity": "1",
+        "payout": "18",
+        "boat": 3,
+        "personal": false,
+        "item": "lantern_float",
+        "remaining": "1",
+        "wishes": [],
+        "wishAuthors": [],
+        "state": "upcoming"
+      },
+      {
+        "id": "boat-4",
+        "name": "The Egret",
+        "opens": 50,
+        "quantity": "1",
+        "payout": "22",
+        "boat": 4,
+        "personal": false,
+        "item": "lantern_color",
+        "remaining": "1",
+        "wishes": [],
+        "wishAuthors": [],
+        "state": "upcoming"
+      },
+      {
+        "id": "boat-5",
+        "name": "The Firefly",
+        "opens": 70,
+        "quantity": "1",
+        "payout": "12",
+        "boat": 5,
+        "personal": false,
+        "item": "lantern_paper",
+        "remaining": "1",
+        "wishes": [],
+        "wishAuthors": [],
+        "state": "upcoming"
+      }
+    ],
+    "balances": {
+      "coins": "18",
+      "cargo": {
+        "paper": "2",
+        "oil": "2",
+        "reed": "0",
+        "cord": "0",
+        "dye": "0",
+        "lantern_paper": "0",
+        "lantern_float": "0",
+        "lantern_color": "0"
+      },
+      "shares": "0",
+      "delivered": "0",
+      "crafted": "0"
+    }
+  }
+}

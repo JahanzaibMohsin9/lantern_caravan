@@ -58,7 +58,7 @@ export function createRiver(manifest: RunManifest): River {
     bought: {}, sold: {}, lost: {}, flaresUsed: 0, flareCooldown: 0, kills: {}, roleKills: {}, spawned: {},
     booms: createBooms(manifest), broken: [], pirates: [], bullets: [], drops: [], boats: createBoats(manifest),
     savedBoats: [], escort: "active", escortOutside: 0, escortJoined: false, notice: "", effects: [], log: [],
-    barrels: createBarrels(manifest.seed), serial: 0, wrecks: createWrecks(manifest), stops: createStops(manifest.seed),
+    barrels: createBarrels(manifest.seed), serial: 0, wrecks: createWrecks(manifest), stops: createStops(manifest),
     salvaged: {}, stopsTaken: [] };
 }
 
@@ -75,8 +75,8 @@ function createWrecks(manifest: RunManifest): WreckSite[] {
     return { ...point, id: wreck.id, name: wreck.name, reach, cargo: { ...wreck.cargo }, angle: wreck.at * 9 };
   });
 }
-function createStops(seed: number): StopSite[] {
-  return stopPlan(seed).map(stop => {
+function createStops(manifest: RunManifest): StopSite[] {
+  return stopPlan(manifest.seed, manifest.stopLayout).map(stop => {
     const point = beside(stop.reach, stop.at, stop.side * 230);
     keepInChannel(point, 40);
     return { ...point, id: stop.id, kind: stop.kind, reach: stop.reach };

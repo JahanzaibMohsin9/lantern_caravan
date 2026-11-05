@@ -27,6 +27,7 @@ export const move = (from: string, to: string, asset: string, amount: number, me
   ({ op: "transfer", from, to, asset, amount: String(amount), memo });
 
 export type Trader = {
+  boomsTonight: number; contractsTonight: number; wharfBonus: number;
   trim?: BargeTrimId;
   name: string; upgrades: (UpgradeId | BargeUpgradeId)[]; delivered: Partial<Record<ItemId, number>>;
   crafted: number; crowdSold: number; earned: number; spent: number; jobsDone: number;
@@ -61,6 +62,7 @@ const defaults: Record<StallId, StrategyId> = {
 };
 
 const freshTrader = (name: string): Trader => ({
+  boomsTonight: 0, contractsTonight: 0, wharfBonus: 0,
   name, upgrades: [], delivered: {}, crafted: 0, crowdSold: 0, earned: 0, spent: 0,
   jobsDone: 0, relationship: {}, fair: {}, refused: [], cooldowns: {}, votes: {},
   lifetimeCrafted: 0, lifetimeDividends: 0, boatsHelped: 0, rescued: 0, rescuedTonight: [], dividends: {},
@@ -211,6 +213,12 @@ export function objective(state: World, actor: string): Snapshot["objective"] {
     return { name: "Relight the wharf", complete: relit && (got.lantern_float ?? 0) >= 2 && (got.lantern_paper ?? 0) >= 2,
       steps: [step("Wharf relit", Number(relit), 1, "wharf"), step("Floating", got.lantern_float ?? 0, 2, "lantern_float"),
         step("Paper", got.lantern_paper ?? 0, 2, "lantern_paper")] };
+  }
+  if (state.mode === "campaign" && state.night === 3) {
+    const booms = trader?.boomsTonight ?? 0, contracts = trader?.contractsTonight ?? 0;
+    return { name: "Clear the reach and carry its light", complete: booms >= 1 && contracts >= 1 && (got.lantern_color ?? 0) >= 2,
+      steps: [step("Boom broken", booms, 1, "boom"), step("Contract or escort", contracts, 1, "bell"),
+        step("Colored", got.lantern_color ?? 0, 2, "lantern_color")] };
   }
   return { name: "Light all six boats", complete: lit >= 6, steps: [step("boats lit", lit, 6, "boat")] };
 }

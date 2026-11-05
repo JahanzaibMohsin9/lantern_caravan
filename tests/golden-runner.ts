@@ -5,13 +5,16 @@ import { apply } from "../packages/game-core/src/ledger";
 
 const actor = "p:guest";
 type Step = { at: number; intent: Intent; commitAt?: number } | { at: number; offer: HaggleOffer; accept?: boolean };
-export type Fixture = { seed: number; scenario: "first" | "dark" | "closed" | "prepared"; setup?: LedgerOp[]; steps: Step[] };
+export type Fixture = { seed: number; scenario: "first" | "dark" | "reach" | "festival" | "closed" | "prepared"; setup?: LedgerOp[]; steps: Step[] };
 
 export function runFixture(fixture: Fixture) {
   let world = createWorld("campaign", fixture.seed);
   if (fixture.scenario !== "prepared") world = openNight(world);
   if (fixture.scenario === "closed") world = closeNight(world);
   if (fixture.scenario === "dark") world = openNight(newNight(closeNight(world)));
+  if (fixture.scenario === "reach" || fixture.scenario === "festival") {
+    for (let night = 1; night < (fixture.scenario === "reach" ? 3 : 4); night++) world = openNight(newNight(closeNight(world)));
+  }
   if (fixture.setup) world = { ...world, ledger: apply(world.ledger, fixture.setup) };
   const statuses = fixture.steps.map((step, index) => {
     world = { ...world, elapsed: step.at / 1000 };
@@ -36,6 +39,8 @@ export function runFixture(fixture: Fixture) {
     }
   });
   const snapshot = snapshotFor(world, "golden");
-  return { statuses, balances: { coins: snapshot.coins, cargo: snapshot.cargo,
+  return { statuses, ...(fixture.scenario === "reach" || fixture.scenario === "festival" ? {
+    night: snapshot.night, name: snapshot.nightName, objective: snapshot.objective, orders: snapshot.orders,
+  } : {}), balances: { coins: snapshot.coins, cargo: snapshot.cargo,
     shares: snapshot.merchants.oil_wharf?.owned, delivered: snapshot.delivered, crafted: snapshot.crafted } };
 }

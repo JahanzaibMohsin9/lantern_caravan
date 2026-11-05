@@ -247,7 +247,7 @@ export function snapshotFor(state: World, session_id: string, actor = player, se
   if (trader?.boatsHelped) titles.push("Lamplighter");
   if (trader?.rescued) titles.push("Patron");
   if (trader && merchantIds.filter(stall => owners(state, stall)[actor]).length >= 3) titles.push("Shareholder");
-  if (trader && ((state.mode === "campaign" && state.night === 3 && state.phase === "results" && objective(state, actor).complete)
+  if (trader && ((state.mode === "campaign" && state.night === 4 && state.phase === "results" && objective(state, actor).complete)
     || state.mode === "endless")) titles.push("Master of the Row");
   return {
     ...riverSnapshot(state, actor),
@@ -375,9 +375,9 @@ function agentTurn(world: World) {
   if (!actors.length) return state;
   const campaign = state.mode === "campaign";
   const actor = actors[(Math.floor(state.elapsed / 20) + state.seed + state.night) % actors.length]!;
-  const canTrade = state.elapsed >= (campaign && state.night === 3 ? 40 : campaign ? 80 : 20) && state.elapsed % 20 === 0;
+  const canTrade = state.elapsed >= (campaign && state.night === 4 ? 40 : campaign ? 80 : 20) && state.elapsed % 20 === 0;
   if (!canTrade || Object.values(state.river.hauls).some(haul => haul.actor === actor)) return state;
-  const offers = Object.values(state.offers).filter(offer => offer.kind === "rescue" || (!campaign || state.night >= 3));
+  const offers = Object.values(state.offers).filter(offer => offer.kind === "rescue" || (!campaign || state.night >= 4));
   for (const offer of offers) {
     const n = Math.min(2 - (offer.contributions[actor] ?? 0), offer.total - pledged(offer));
     if (!n || (campaign && offer.kind === "rescue" && state.night === 2 && offer.stall === "oil_wharf") ||
@@ -394,7 +394,7 @@ function agentTurn(world: World) {
     if (hauled !== state) return hauled;
   }
   const candidates = plan(state).orders.filter(order => !order.personal && order.opens <= state.elapsed && remaining(state, order) > 0 &&
-    (!campaign || (state.night === 3 ? order.boat >= 3 || state.elapsed >= 140 : order.boat >= 2)));
+    (!campaign || (state.night === 4 ? order.boat >= 3 || state.elapsed >= 140 : order.boat >= 2)));
   for (const order of candidates.sort((a, b) => orderPayout(state, b) - orderPayout(state, a))) {
     const next = botRoute(state, actor, order);
     if (next !== state) return next;

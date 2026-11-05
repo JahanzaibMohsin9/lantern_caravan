@@ -123,7 +123,11 @@ export type StopPlan = { id: string; kind: StopKind; reach: ReachId; at: number;
 export const stopChoice = (kind: StopKind, choice: string) => riverStops[kind].choices.find(entry => entry.id === choice);
 
 /** Two or three optional riverside stops, placed from the run seed on their own stream so pirates and replays never shift. */
-export function stopPlan(seed: number): StopPlan[] {
+export function stopPlan(seed: number, layout?: "campaign_reach"): StopPlan[] {
+  if (layout === "campaign_reach") return [
+    { id: "stop-0", kind: "shed", reach: "heron_reach", at: .25, side: .25 },
+    { id: "stop-1", kind: "punt", reach: "heron_reach", at: .78, side: -.25 },
+  ];
   let value = (seed ^ 0x51ed2701) >>> 0;
   const next = () => (value = (Math.imul(value, 1664525) + 1013904223) >>> 0) / 0x100000000;
   const kinds: StopKind[] = ["fisher", "shed", "punt"];

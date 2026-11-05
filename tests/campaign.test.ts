@@ -1,11 +1,12 @@
 import "fake-indexeddb/auto";
-import { expect, test } from "vitest";
+import { expect, test, vi } from "vitest";
+import { reachVoyage } from "./campaign-river";
 import { LocalBackend } from "../apps/web/src/backend/local";
 import type { Intent } from "@lantern/protocol";
 import { addTrader, advanceClock, closeNight, commit, commitFor, createWorld, newNight, openNight, quote, quoteFor, snapshotFor } from "@lantern/game-core";
 import { apply } from "../packages/game-core/src/ledger";
 
-test("a guest plays all three nights through the local backend and reopens the save", async () => {
+test("a guest plays all four nights through the local backend and reopens the save", async () => {
   const backend = new LocalBackend();
   const slot = "slot-3";
   let serial = 0;
@@ -59,6 +60,36 @@ test("a guest plays all three nights through the local backend and reopens the s
   await phase();
   expect(backend.view().merchants.oil_wharf?.dividend).toBe("2");
   await phase();
+  expect(backend.view()).toMatchObject({ night: 3, mode: "campaign", nightName: "Pirates on the Reach" });
+  const contract = backend.view().river.contracts.find(c => c.kind === "supply" && c.item === "dye")!;
+  await act({ type: "accept_contract", contract_id: contract.id });
+  await act({ type: "start_run", barge_plan: [] });
+  const manifest = backend.view().river.myRun!.manifest;
+  const voyage = reachVoyage(manifest);
+  expect(voyage.replay).toEqual(voyage.report);
+  expect(voyage.report.boomsBroken).toEqual(["marsh_bend"]);
+  expect(voyage.report.stops).toHaveLength(2);
+  vi.useFakeTimers({ toFake: ["Date"] });
+  vi.setSystemTime(Date.now() + voyage.report.durationMs);
+  try { await act({ type: "finish_run", run_id: manifest.id, report: voyage.report }); }
+  finally { vi.useRealTimers(); }
+  await phase();
+  for (let i = 0; i < 2; i++) {
+    await buy("paper_mill", "paper");
+    await buy("oil_wharf", "oil");
+    await buy("reed_thread", "cord");
+    await buy("reed_thread", "dye");
+    await craft("colored_lantern");
+  }
+  await deliver("boat-0", 2);
+  expect(backend.view().objective.complete).toBe(true);
+  await phase();
+  expect(backend.view().titles).not.toContain("Master of the Row");
+  const night3Reload = new LocalBackend();
+  expect(await night3Reload.restore(slot)).toBe(true);
+  expect(night3Reload.view().objective.complete).toBe(true);
+  await phase();
+  expect(backend.view()).toMatchObject({ night: 4, mode: "campaign", nightName: "Festival of Lights" });
   await act({ type: "vote_strategy", stall_id: "oil_wharf", strategy_id: "festival" });
   await phase();
   expect(backend.view().merchants.oil_wharf?.strategy).toBe("festival");
@@ -86,7 +117,7 @@ test("a guest plays all three nights through the local backend and reopens the s
   expect(restored.view().merchants.oil_wharf?.owned).toBe("2");
   expect(restored.view().orders[0]?.wishes).toEqual(["May the river be kind"]);
   await restored.advancePhase(slot, id());
-  expect(restored.view()).toMatchObject({ mode: "endless", night: 4 });
+  expect(restored.view()).toMatchObject({ mode: "endless", night: 5 });
 });
 
 test("a one-share rescue pledge refunds when the market closes", () => {

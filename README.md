@@ -13,7 +13,7 @@ npm ci
 npm run dev
 ```
 
-Open the URL Vite prints. In **First Light**, your cart starts with two paper and two oil. Visit the Workshop, craft lanterns, then deliver them at the Order Board. Buy more supplies and deliver three lanterns to unlock **The Dark Wharf**. Help reopen the wharf, earn dividends, and cast a strategy vote before the **Festival of Lights**. After the festival, your cart and shares carry into Endless.
+Open the URL Vite prints. In **First Light**, your cart starts with two paper and two oil. Visit the Workshop, craft lanterns, then deliver them at the Order Board. Deliver three lanterns to unlock **The Dark Wharf**. Night 3, **Pirates on the Reach**, asks you to break the Marsh Bend boom, fill a contract or escort, and deliver two colored lanterns. Night 4 is the **Festival of Lights**: light all six boats, then carry your cart and shares into Endless.
 
 Click a location or use **1–8** to walk there. **A/D** or **←/→** walks manually, **E** interacts, **I** opens the cart, **J** opens the journal, **H** opens history, and **Esc** closes or pauses. Hover an ingredient for its name or click it to find a stall. A local save is automatic.
 

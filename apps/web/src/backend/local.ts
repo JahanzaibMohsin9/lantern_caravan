@@ -221,7 +221,7 @@ export class LocalBackend implements MarketBackend {
     if (this.world.phase === "preparation") this.world = openNight(cancelRun(this.world, player));
     else if (this.world.phase === "open" && goal) this.world = closeNight(this.world);
     else if (this.world.phase === "results" && (goal || this.world.mode === "endless")) {
-      this.world = newNight(this.world, this.world.night === 3 ? "endless" : this.world.mode);
+      this.world = newNight(this.world, this.world.mode === "campaign" && this.world.night === 4 ? "endless" : this.world.mode);
       this.checkpoint = this.world;
     } else throw new Error("Finish this night’s objective first.");
     this.phases.add(actionId);

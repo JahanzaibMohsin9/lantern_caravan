@@ -1,6 +1,6 @@
 # Lantern Caravan architecture
 
-Lantern Row is the in-world night market. The Night 4 Floodtide procession of six festival boats is called the Lantern Caravan; that campaign extension is scheduled for W6/W9. Repository, package, protocol and save identifiers retain their existing names.
+Lantern Row is the in-world night market. The four-night campaign ends with the Lantern Caravan, a procession of six festival boats; Floodtide scheduling is W9. Repository, package, protocol and save identifiers retain their existing names. Night 3 objective counters live on each trader, persist through the shared codec, and reset at dusk. Its authored stop layout is bound to the manifest and interpreted identically by simulation and settlement.
 
 ```text
 React UI ── MarketBackend ── LocalBackend ── game-core ── IndexedDB

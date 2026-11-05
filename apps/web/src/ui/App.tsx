@@ -284,7 +284,7 @@ export function App() {
     void run(async () => {
       const updated = await active.current.advancePhase(snapshot.session_id, id());
       setPanel(undefined);
-      if (updated.phase === "results" && updated.night === 3 && updated.objective.complete) {
+      if (updated.mode === "campaign" && updated.phase === "results" && updated.night === 4 && updated.objective.complete) {
         feedback("finale");
       } else if (updated.phase === "results" && Object.values(updated.merchants).some(merchant => Number(merchant.dividend))) {
         feedback("sell");

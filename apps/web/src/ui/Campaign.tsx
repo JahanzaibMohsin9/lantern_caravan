@@ -1,4 +1,4 @@
-import { Anchor, ArrowRight, BookOpen, Check, Coins, Package, Play, Ship, Sparkles, Trash2, Users } from "lucide-react";
+import { Anchor, ArrowRight, Bell, BookOpen, Check, Coins, Package, Play, Ship, Sparkles, Trash2, Users } from "lucide-react";
 import { items, merchants, recipes, type ItemId, type StallId } from "@lantern/content";
 import { strategies, upgrades, type StrategyId, type UpgradeId } from "@lantern/content/nights";
 import type { ProfileSummary, Snapshot } from "@lantern/protocol";
@@ -13,7 +13,9 @@ export function guideFor(snapshot: Snapshot): { stop: Stop; line: string; item?:
   if (snapshot.mode !== "campaign" || snapshot.objective.complete) return;
   if (snapshot.job) return { stop: "shed", line: "Take the parcel to the dock" };
   if (snapshot.jobAvailable) return { stop: "board", line: "Pick up a dock job" };
-  if (snapshot.night === 2 && snapshot.merchants.oil_wharf?.band === "dark") return { stop: "oil_wharf", line: "Help relight the wharf" };
+  if (snapshot.night === 2 && snapshot.merchants.oil_wharf?.band === "dark") return { stop: "shed", line: "Ring the Harbor Bell: haul oil to relight the wharf, or pledge at Oil Wharf" };
+  if (snapshot.night === 3 && snapshot.objective.steps.slice(0, 2).some(step => step.count === "0"))
+    return { stop: "shed", line: "Cast off: break the Marsh Bend boom and fill a contract or escort" };
   const orders = snapshot.orders.filter(order => order.state === "open");
   if (orders.some(order => Number(snapshot.cargo[order.item]))) return { stop: "board", line: "Deliver a lantern" };
   if (snapshot.night === 2) {
@@ -41,7 +43,7 @@ export function Objective({ snapshot }: { snapshot: Snapshot }) {
             <i key={index} className={index < Number(snapshot.objective.steps[0]!.count) ? "filled" : ""}/>)}
           <small>{snapshot.objective.steps[0]!.count} / {snapshot.objective.steps[0]!.target} {snapshot.objective.steps[0]!.label}</small>
         </> : snapshot.objective.steps.map(step => <span className="objective-step" key={step.label} title={step.label}>
-          {step.icon === "wharf" ? <Anchor size={14}/> : <ItemIcon item={step.icon as ItemId} size={14}/>}
+          {step.icon === "wharf" || step.icon === "boom" ? <Anchor size={14}/> : step.icon === "bell" ? <Bell size={14}/> : <ItemIcon item={step.icon as ItemId} size={14}/>}
           <small>{step.icon === "wharf" ? Number(step.count) ? "Relit" : "Dark" : step.count + "/" + step.target}</small>
         </span>)}
       </div>
@@ -60,6 +62,9 @@ export function Preparation({ snapshot, actions, advance, landing }: { snapshot:
       <div className="eyebrow">{nightLabel(snapshot.night)} · PREPARATION</div>
       <h2>{snapshot.nightName}</h2>
       <p className="hint">{snapshot.objective.name}{snapshot.night === 2 && " · 2 floating + 2 paper lanterns"}</p>
+      {snapshot.mode === "campaign" && snapshot.night === 2 && <p className="hint">Ring the Harbor Bell → accept the oil relief haul → cast off → trade at Ember Falls → moor at The Landing. A rescue pledge at Oil Wharf also relights it.</p>}
+      {snapshot.mode === "campaign" && snapshot.night === 3 && <p className="hint">Break the Marsh Bend boom, fill one contract or escort, and deliver 2 colored lanterns. Try a trim, salvage the storm wreck and visit two stops on Heron Reach. Shareholder strategy votes change contract premiums.</p>}
+      {snapshot.mode === "campaign" && snapshot.night === 4 && <p className="hint">Post an order at The Landing: let the haulers bring the dye. Light all six boats for the Lantern Caravan.</p>}
       {owned.length > 0 && <div className="prep-list">
         <div className="eyebrow">Strategy votes</div>
         {owned.map(([stall, market]) => <label className="order-row" key={stall}>
@@ -91,7 +96,7 @@ export function NightReport({ snapshot, busy, advance, retry, title, live }: {
   snapshot: Snapshot; busy: boolean; advance: () => void; retry: () => void; title: () => void; live?: () => void;
 }) {
   const complete = snapshot.objective.complete;
-  const finale = snapshot.mode === "campaign" && snapshot.night === 3 && complete;
+  const finale = snapshot.mode === "campaign" && snapshot.night === 4 && complete;
   const dividends = Object.entries(snapshot.merchants).filter(([, merchant]) => Number(merchant.dividend));
   const boats = snapshot.orders.filter(order => order.state === "filled").length;
   const canContinue = complete || snapshot.mode === "endless";

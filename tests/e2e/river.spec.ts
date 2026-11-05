@@ -154,6 +154,17 @@ test("salvages the oil the Night 2 storm sank at Heron Reach", async ({ page }) 
   const river = page.getByRole("region", { name: "River Run" });
   await expect(river).toBeVisible();
   const salvage = river.getByRole("button", { name: /Salvage the wreck/ });
+  // Keep real wall time between locator checks from carrying us past the small stop radius.
+  await page.clock.pauseAt(await page.evaluate(() => Date.now() + 1000));
+  const stop = river.getByRole("button", { name: /Visit the lock keeper's shed/ });
+  await page.keyboard.down("w");
+  for (let i = 0; i < 35 && !(await stop.isVisible()); i++) await page.clock.runFor(150);
+  await page.keyboard.up("w");
+  await expect(stop).toBeVisible();
+  await page.keyboard.press("e");
+  await page.getByRole("dialog", { name: "Riverside stop" }).getByRole("button", { name: /Take the shot crate/ }).click();
+  await page.clock.runFor(150);
+  await expect(page.getByRole("dialog", { name: "Riverside stop" })).toHaveCount(0);
   await page.keyboard.down("w");
   for (let i = 0; i < 120 && !(await salvage.isVisible()); i++) await page.clock.runFor(150);
   await page.keyboard.up("w");
@@ -175,6 +186,7 @@ test("salvages the oil the Night 2 storm sank at Heron Reach", async ({ page }) 
   await page.keyboard.press("e");
   await page.clock.runFor(400);
   await expect(river).toHaveCount(0);
+  await page.clock.resume();
   await page.keyboard.press("Escape");
   await button("The Landing").click();
   await button("Barge").click();

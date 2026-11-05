@@ -36,6 +36,7 @@ const strategy = z.enum(["steady", "bold", "festival", "bargain"]);
 const vote = z.partialRecord(stall, strategy);
 const receipt = z.object({ id: z.string(), label: z.string(), url: z.string().optional() });
 const trader = z.object({
+  boomsTonight: num.optional(), contractsTonight: num.default(0), wharfBonus: num.default(0),
   trim: bargeTrimSchema.optional(),
   name: z.string(), upgrades: z.array(z.enum(["cart_i", "cart_ii", "lantern_strings", ...(Object.keys(bargeUpgrades) as (keyof typeof bargeUpgrades)[])])),
   delivered: numbers, crafted: num, crowdSold: num, earned: num, spent: num, jobsDone: num,
@@ -69,6 +70,11 @@ export function encodeWorld(world: World): unknown {
 }
 
 export function decodeWorld(payload: unknown): World {
-  const { river, ...world } = worldSchema.parse(payload);
+  const { river, ...row } = worldSchema.parse(payload);
+  // Before W6, Night 3 was the festival. Keep its orders, escrow and progress intact.
+  const oldFestival = row.mode === "campaign" && row.night === 3 &&
+    Object.values(row.traders).every(trader => trader.boomsTonight === undefined);
+  const world = { ...row, night: oldFestival ? 4 : row.night,
+    traders: Object.fromEntries(Object.entries(row.traders).map(([id, trader]) => [id, { ...trader, boomsTonight: trader.boomsTonight ?? 0 }])) };
   return river ? { ...world, river } : harvest({ ...world, river: freshRiver(world.seed) });
 }

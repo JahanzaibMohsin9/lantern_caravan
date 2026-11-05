@@ -116,6 +116,28 @@ function withOilShortage() {
 }
 afterEach(() => vi.useRealTimers());
 
+test("Night 2's pledge plus oil haul pays its bonus from the dock fund without duplicate rescue credit", () => {
+  let world = openNight(prepared());
+  const offer = Object.values(world.offers).find(o => o.stall === "oil_wharf")!;
+  world = submit(world, { type: "buy_offering", offering_id: offer.id, shares: "2" }, "pledge");
+  const contract = Object.values(world.river.contracts).find(c => c.relief && c.stall === "oil_wharf")!;
+  world = submit(world, { type: "start_run", contract_id: contract.id, barge_plan: [] }, "both-paths");
+  const manifest = snapshotFor(world, "test").river.myRun!.manifest;
+  const lot = manifest.items.find(lot => lot.item === "oil")!;
+  const report = { ...empty(manifest), bought: [{ village_id: "ember_falls", item_id: "oil", quantity: 6,
+    paid: lot.prices.slice(0, 6).reduce((a, b) => a + b, 0) }], delivered: { oil: 6 } };
+  const deal = quote(world, { type: "finish_run", run_id: manifest.id, report }, "home", 40000);
+  expect(deal.effects).toContainEqual(move("sys:rescue", player, "coin", 2, "Wharf pledge and haul bonus dividend"));
+  expect(deal.effects.every(effect => effect.op === "transfer")).toBe(true);
+  const home = commit(world, deal, 40000);
+  expect(home.traders[player]!.rescued).toBe(1);
+  expect(home.traders[player]!.lifetimeDividends).toBe(2);
+  for (const asset of [...Object.keys(items), "coin"]) {
+    const total = (s: World) => Object.values(s.ledger).reduce((n, account) => n + (account[asset] ?? 0), 0);
+    expect(total(home)).toBe(total(world));
+  }
+});
+
 test("LocalBackend reserves real cargo, settles receipts exactly once, and sells hauled oil at a stall", async () => {
   vi.useFakeTimers({ toFake: ["Date"] });
   const backend = new LocalBackend(), slot = "slot-2";

@@ -46,6 +46,10 @@ export function nightPlan(night: number, mode: "campaign" | "endless" | "live", 
       orders: [festival(0, "lantern_float", 2, 0, 15, true), festival(1, "lantern_paper", 2, 0, 10),
         festival(2, "lantern_paper", 1, 50, 10), festival(3, "lantern_float", 1, 100, 15),
         festival(4, "lantern_paper", 1, 140, 10), festival(5, "lantern_float", 1, 180, 15)], events: [] };
+    if (night === 3) return { name: "Pirates on the Reach", duration: 300,
+      orders: [festival(0, "lantern_color", 2, 0, 18, true), festival(1, "lantern_paper", 2, 0, 10),
+        festival(2, "lantern_paper", 1, 50, 10), festival(3, "lantern_float", 1, 100, 15),
+        festival(4, "lantern_color", 1, 140, 18), festival(5, "lantern_float", 1, 180, 15)], events: [] };
     return { name: "Festival of Lights", duration: 300, orders: festivalOrders, events };
   }
   const shift = Math.abs((seed ^ Math.imul(night, 113)) % 4);

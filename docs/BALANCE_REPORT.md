@@ -1,6 +1,6 @@
 # Lantern Caravan · River Run balance report
 
-Rows below are from the W5 run (5 November 2026), with wrecks, the almanac and a simulated player posting a Bell order every night. W0 verification first reproduced the table. The CLI now fails `--check` for a dark streak above **one** night (previously five), matching §16.2. No economy or balance values changed.
+Rows below were reproduced by the W6 five-seed run (5 November 2026), with wrecks, the almanac and a simulated player posting a Bell order every night. They match W5. The CLI fails `--check` for a dark streak above **one** night, matching §16.2. W6 changes only authored campaign values, listed below.
 
 Each checked run used three autonomous traders over 2,000 nights. Run `npm run simulate -- --nights 2000 --seed <seed> --check` to reproduce a row. The CLI writes the summary and per-tick CSV under `sim-output/`.
 
@@ -15,6 +15,8 @@ Each checked run used three autonomous traders over 2,000 nights. Run `npm run s
 The longest dark streak was one night for every seed. During the review, two seeds exposed a stall that sold out while holding 10–15 coins: it couldn't pay a hauler above its 10-coin reserve, so it stayed closed for up to 11 nights. The harbor's relief contract now pays for that haul, priced so rivals will take it. The checks cover nonnegative integer balances, price bounds, outstanding shares, permitted goods mints and burns, village balances between 20 and 300, danger from 0 to 5, and empty run and contract escrows at close. Supplier units include stall-to-stall wholesale. A lost sailing with several cargo lines can produce several freight loss entries.
 
 ## Tuned values
+
+W6 campaign-only authored values: Night 3 has danger 3 and a boom at Marsh Bend; Reed & Thread keeps 3 reed and 1 dye, and Indigo Atelier keeps 1 dye. Excess stock returns to Reedmarsh. Reed & Thread funds two 3-unit contracts at a base 12 coins each, modified by strategy (Bold +2, Festival +1, Bargain −1), only while retaining 5 coins. Juno buys 2 reed and escrows an 8-coin escort, departing at 45 seconds and arriving at 110. These values keep both objective paths funded without new supply. The two stops sit at 25% and 78% of Heron Reach, 57.5 units off its center. The Night 2 pledge-plus-haul bonus is 2 coins from the existing dock fund, capped by its balance. Endless/live economy values are unchanged.
 
 W5 Bell orders: 1–12 units at 3–20 coins each, one order per player. A hauler takes at most 6 units per trip and only when the order's price for those units beats their village cost. A free hauler answers a relief bell first, then a player's Bell order (unless a stall is dark), then festival and stall routes. The soak now includes a simulated player that posts a 6-unit order every night at the village price plus 3; every seed delivers or refunds all 2,000 orders with no escrow left at close.
 

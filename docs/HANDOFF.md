@@ -4,7 +4,7 @@
 
 ### Scope and §16.4 hand-back
 
-W0–W2 were delivered by the first implementer and W3–W5 by the second. **W6–W9 are not started; resume at W6.** Each package below records its own checks.
+W0–W5 were delivered previously. **W6 adds the four-night campaign; W7–W9 remain.** Each package below records its own checks.
 
 | Package | Status |
 | --- | --- |
@@ -14,7 +14,7 @@ W0–W2 were delivered by the first implementer and W3–W5 by the second. **W6�
 | W3 · wrecks/stops | Committed in the `W3:` commit; checks below |
 | W4 · almanac | Committed in the `W4:` commit; checks below |
 | W5 · player Bell orders | Committed in the `W5:` commit; checks below |
-| W6 · four-night campaign | Not started |
+| W6 · four-night campaign | Committed in the `W6:` commit; checks below |
 | W7 · barge looks/cosmetics | Not started |
 | W8 · Watch/history/trust | Not started |
 | W9 · Floodtide/server replay | Not started |
@@ -24,7 +24,27 @@ W0–W2 were delivered by the first implementer and W3–W5 by the second. **W6�
 - [ ] Human new-player test without docs in under three minutes: not performed.
 - [ ] Full manual playthrough: not performed. Firefox and physical touch devices: not verified.
 
-Branch remains `river-run`; no push, remote changes, rebase or history rewrite.
+Branch is `main`; no push, remote changes, rebase or history rewrite.
+
+### W6 · Four-night campaign
+
+Night 3 is **Pirates on the Reach**: a personal two-colored-lantern order, a danger-3 Marsh Bend boom, Reed & Thread's funded reed/dye contracts, Juno's funded escort, the existing storm wreck and pressing strike, unlocked trims, and two service stops on Heron Reach. Excess authored stall stock returns to Reedmarsh; rewards and the new Night 2 pledge-plus-haul bonus transfer from real accounts. Objective credit belongs to the player who settles the run, survives reload, and resets at dusk. Preparation and action guidance explain the voyage and Night 4 Bell orders. Festival orders, rival timing, the guided offering, finale/title and Endless transition now use Night 4. Existing Night 3 festival saves migrate to Night 4 with ledger and progress intact.
+
+`stopLayout: "campaign_reach"` binds the authored stops to the manifest; both settlement and simulation derive them through the same content function. A recorded-input voyage visits both stops, breaks the boom and delivers the dye contract, with an identical replay and goods/coin conservation. The browser campaign sails with WASD, boost and fire, buys dye, moors, crafts and delivers two colored lanterns, then finishes Night 4 and reloads into Endless. The separate salvage path now takes a service-stop choice through E and its dialog.
+
+- `npm run schema` — passed; schema regenerated.
+- `npx tsx tools/build-golden.ts` — passed; 38 cases, including new Night 3 and Night 4 fixtures.
+- `npm run build` — passed, including the save migration; existing Vite bundle and Zod annotation warnings.
+- `npm test` — final run passed, 142 tests in 8 files. Earlier full runs passed 139 and 141 tests as coverage was added. The first new voyage test exposed a lost dye unit after a skiff ram; the route now clears nearby pirates before loading and verifies a loss-free, conserved delivery. The first targeted run omitted the replay frame count; fixed the test call.
+- `npx vitest run tests/campaign.test.ts` and `npx vitest run tests/campaign-reach.test.ts tests/campaign.test.ts` — passed after those corrections (5 and 7 tests respectively).
+- `$env:LANTERN_CHROME_CHANNEL='chrome'; npm run test:e2e -- --project=chrome` — final run passed, 7 tests (3.4 minutes). A prior full run also passed all 7; the next rerun exposed wall-time drift past the service stop (6 passed, 1 failed). The river segment now freezes the browser clock between controlled advances, and the full suite passed again. The two earlier targeted campaign attempts (`... tests/e2e/campaign.spec.ts`) failed on test steering and the village's default five-unit purchase size. Corrected the route and explicitly selected one unit; no checks removed.
+- `npm run simulate -- --nights 2000 --seed 17 --check` — passed; longest dark streak 1, zero invariant errors.
+- `npm run simulate -- --nights 2000 --seed 42 --check` — passed; longest dark streak 1, zero invariant errors.
+- `npm run simulate -- --nights 2000 --seed 93 --check` — passed; longest dark streak 1, zero invariant errors.
+- `npm run simulate -- --nights 2000 --seed 166 --check` — passed; longest dark streak 1, zero invariant errors.
+- `npm run simulate -- --nights 2000 --seed 271 --check` — passed; longest dark streak 1, zero invariant errors.
+
+All five soaks also had zero invalid goods operations, 2,000 stable nights, and 2,000 Bell orders with none rejected. No source was edited while the soaks ran. Firefox, physical touch devices, a human new-player trial and a full manual playthrough were not run. Floodtide scheduling and server replay remain W9.
 
 ### W5 · Player Bell orders
 
