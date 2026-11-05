@@ -4,6 +4,8 @@
 
 System Chrome is the browser used for this session. Firefox, real touch devices, a human new-player usability run, and a full manual playthrough have not been verified in this session. Historical browser claims below describe earlier work. The checked-in media predates the Lantern Caravan rename.
 
+W0–W2 are the delivered scope of this session. W3–W9 were cut from the tail and not started: wrecks/service stops, almanac, player Bell orders, the four-night campaign, visual upgrades/cosmetics, Watch/history/trust, and scheduled Floodtide/server replay enforcement remain outstanding. Resume with W3. The automated new-player path uses Playwright's simulated river clock; it does not verify that a human unfamiliar with the game can finish it in under three minutes. Role reports still use Tier 1 bounds until W9.
+
 - The three-night campaign runs offline. River Run unlocks on Night 2, where the harbor's relief haul can relight the Oil Wharf. The new Night 3 (Pirates on the Reach), the fourth campaign night and its guided tutorial copy are scheduled for M4.
 - Shared rooms support River Runs with the same intents. The Watch river strip and public river history are scheduled for M5.
 - Reloading during an offline run returns its reserved goods and contract escrow. A fresh run can start from The Landing.

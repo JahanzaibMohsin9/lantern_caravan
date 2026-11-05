@@ -1,6 +1,6 @@
 import { items, merchants, recipes, type ItemId, type StallId } from "@lantern/content";
 import { strategies } from "@lantern/content/nights";
-import { bargeHold, bargeUpgrades, pirateCap, reachIds, reaches, routeDistance, runMs, sourceFor,
+import { bargeHold, bargeUpgrades, pirateCap, pirateRoleCaps, pirateRoles, reachIds, reaches, routeDistance, runMs, sourceFor,
   villageGoods, villageIds, villageStrategy, villages, type BargeUpgradeId, type ReachId, type VillageId } from "@lantern/content/river";
 import { runReportSchema, type Intent, type LedgerOp, type RunManifest, type RunReport, type Snapshot } from "@lantern/protocol";
 import { apply } from "./ledger";
@@ -539,12 +539,21 @@ function finishRun(world: World, actor: string, id: string, report: RunReport, n
     report.boomsBroken.some(id => !manifest.reaches.some(reach => reach.id === id && reach.boom)))
     reject("RIVER_COMBAT", "The combat report exceeds the run's hazards.");
   const saved = report.savedBoats ?? [];
+  for (const entry of report.pirates) {
+    if (!entry.roles) continue; // Older clients retain the original 3-coin bounty.
+    const caps = pirateRoleCaps(manifest.reaches.find(reach => reach.id === entry.reach)!.danger, report.durationMs / 1000);
+    if (Object.values(entry.roles).reduce((a, b) => a + b, 0) !== entry.count ||
+      (Object.keys(caps) as (keyof typeof caps)[]).some(role => entry.roles![role] > caps[role]))
+      reject("RIVER_COMBAT", "The role counts exceed the manifest's spawn mix.");
+  }
   if (!unique(saved) || saved.some(id => !manifest.boats.some(boat => boat.id === id && boat.ambient && boat.arrives * 1000 <= report.durationMs + 1)))
     reject("RIVER_BOAT", "The village boat report does not match.");
   if (report.escort && (manifest.contract?.kind !== "escort" || manifest.contract.id !== report.escort.id ||
     (report.escort.completed && !manifest.boats.some(boat => boat.id === manifest.contract?.haul && boat.arrives * 1000 <= report.durationMs + 1))))
     reject("RIVER_ESCORT", "The escort report does not match.");
-  const reward = Math.min(get(world, bounty, "coin"), report.pirates.reduce((n, entry) => n + entry.count * 3, 0) +
+  const reward = Math.min(get(world, bounty, "coin"), manifest.bounty, report.pirates.reduce((n, entry) => n + (entry.roles
+    ? (Object.keys(pirateRoles) as (keyof typeof pirateRoles)[]).reduce((sum, role) => sum + entry.roles![role] * pirateRoles[role].bounty, 0)
+    : entry.count * 3), 0) +
     report.boomsBroken.filter(id => world.river.reaches[id as ReachId].boom).length * 4 + saved.length);
   if (reward) effects.push(move(bounty, actor, "coin", reward, "River bounty"));
   for (const lot of manifest.items) {

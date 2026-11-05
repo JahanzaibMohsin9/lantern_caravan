@@ -80,6 +80,7 @@ test("relights the dark wharf with a relief haul from upriver, then sells spare 
   await page.keyboard.up("s");
   await page.keyboard.up("Shift");
   await expect(river.getByRole("button", { name: /Moor at The Landing/ })).toBeVisible();
+  await expect(river.getByLabel("Skiffs sunk")).toHaveText(/Skiffs sunk: [1-9]/);
   await page.keyboard.press("e");
   await page.clock.runFor(400);
   await expect(river).toHaveCount(0);

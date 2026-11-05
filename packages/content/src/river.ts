@@ -46,3 +46,17 @@ export const bargeTrims = {
 } as const;
 export type BargeTrimId = keyof typeof bargeTrims;
 export const trimFor = (manifest: { trim?: BargeTrimId }) => bargeTrims[manifest.trim ?? "balanced"];
+
+export const pirateRoles = {
+  skiff: { name: "Skiff", color: "#edb16c", hp: 40, bounty: 6, speed: 148, approach: 0, retreat: 0, range: 0 },
+  raider: { name: "Raider", color: "#ee7967", hp: 57, bounty: 8, speed: 100, approach: 185, retreat: 115, range: 360 },
+  gunboat: { name: "Gunboat", color: "#b7a0e8", hp: 96, bounty: 14, speed: 68, approach: 300, retreat: 230, range: 460 },
+} as const;
+export type PirateRole = keyof typeof pirateRoles;
+export const pirateRoleAt = (danger: number, index: number): PirateRole =>
+  danger >= 3 && index % 3 === 2 ? "gunboat" : danger >= 2 && index % 3 === 1 ? "skiff" : "raider";
+export function pirateRoleCaps(danger: number, seconds: number): Record<PirateRole, number> {
+  const roles = { skiff: 0, raider: 0, gunboat: 0 };
+  for (let i = 0; i < pirateCap(danger, seconds); i++) roles[pirateRoleAt(danger, i)]++;
+  return roles;
+}

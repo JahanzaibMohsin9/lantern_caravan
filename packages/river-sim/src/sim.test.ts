@@ -1,5 +1,5 @@
 import { describe, expect, test } from "vitest";
-import { landing, reachIds, reaches, villages, type BargeTrimId } from "@lantern/content/river";
+import { landing, pirateRoleCaps, pirateRoles, reachIds, reaches, villages, type BargeTrimId, type PirateRole } from "@lantern/content/river";
 import { tradePrice } from "@lantern/game-core/pricing";
 import type { RunManifest } from "@lantern/protocol";
 import { createRiver, distance, marketQuote, replayRiver, stepRiver, type Point, type River, type RiverInput } from "./sim";
@@ -224,7 +224,7 @@ describe("River Run additions", () => {
     const crews = [...state.pirates];
     expect(state.spawned.heron_reach).toBeGreaterThanOrEqual(3);
     expect(crews.some(pirate => pirate.heavy && pirate.maxHp === 96)).toBe(true);
-    expect(crews.filter(pirate => !pirate.heavy).every(pirate => pirate.maxHp === 42)).toBe(true);
+    expect(crews.filter(pirate => !pirate.heavy).every(pirate => pirate.maxHp === pirateRoles[pirate.role].hp)).toBe(true);
   });
 
   test("floating supplies sit inside the channel and refill the barge once", () => {
@@ -247,5 +247,103 @@ describe("River Run additions", () => {
     advance(state, 31);
     expect(state.outcome).toBe("towed");
     expect(runReport(state).durationMs).toBe(30_000);
+  });
+});
+
+describe("skiffs and role bounties", () => {
+  test.each([0, 1, 2, 3, 4, 5])("danger %i produces the prescribed mix and replay", danger => {
+    const input = manifest({ reaches: [{ id: "ember_cut", danger, boom: false }] });
+    const state = createRiver(input);
+    advance(state, 150);
+    const counts = { skiff: 0, raider: 0, gunboat: 0 };
+    for (const pirate of state.pirates) {
+      counts[pirate.role]++;
+      expect(pirate.hp).toBe(pirateRoles[pirate.role].hp);
+    }
+    const expected = [
+      { skiff: 0, raider: 0, gunboat: 0 }, { skiff: 0, raider: 2, gunboat: 0 },
+      { skiff: 1, raider: 3, gunboat: 0 }, { skiff: 2, raider: 2, gunboat: 2 },
+      { skiff: 3, raider: 3, gunboat: 2 }, { skiff: 3, raider: 4, gunboat: 3 },
+    ][danger];
+    expect(counts).toEqual(expected);
+    expect(pirateRoleCaps(danger, 150)).toEqual(expected);
+    const replay = replayRiver(input, state.log, state.frame);
+    expect(replay.pirates).toEqual(state.pirates);
+    expect(runReport(replay)).toEqual(runReport(state));
+  });
+
+  function encounter(role: PirateRole, gap = 20) {
+    const state = createRiver(manifest());
+    state.barrels = [];
+    state.pirates.push({ x: landing.x, y: landing.y - gap, id: 1, reach: "heron_reach", role, breakoff: 0,
+      hp: pirateRoles[role].hp, maxHp: pirateRoles[role].hp, heavy: role === "gunboat", phase: 0, cooldown: 0, angle: 0, stun: 0 });
+    return state;
+  }
+
+  test.each([true, false])("a skiff rams, breaks off, and accounts for spilled cargo (recover=%s)", recover => {
+    const s = encounter("skiff");
+    s.player.cargo.oil = 1;
+    stepRiver(s);
+    expect(s.player.hp).toBe(92);
+    expect(s.player.cargo.oil).toBe(0);
+    expect(s.pirates[0]!.breakoff).toBeGreaterThan(2);
+    const before = distance(s.pirates[0]!, s.player);
+    stepRiver(s);
+    expect(distance(s.pirates[0]!, s.player)).toBeGreaterThan(before);
+    const drop = s.drops.find(drop => drop.cargo)!;
+    s.pirates = []; // Isolate one ram's cargo lifecycle.
+    if (recover) Object.assign(s.player, { x: drop.x, y: drop.y });
+    advance(s, 21);
+    expect((s.player.cargo.oil ?? 0) + (s.lost.oil ?? 0)).toBe(1);
+    expect(s.lost.oil ?? 0).toBe(recover ? 0 : 1);
+    expect(s.drops).toHaveLength(0);
+  });
+
+  test("spilled goods cannot overfill a hold when recovered", () => {
+    const s = encounter("skiff");
+    s.player.cargo.oil = 1;
+    stepRiver(s);
+    s.pirates = [];
+    s.player.cargo.oil = s.manifest.hold;
+    const drop = s.drops[0]!;
+    Object.assign(s.player, { x: drop.x, y: drop.y });
+    stepRiver(s);
+    expect(s.player.cargo.oil).toBe(s.manifest.hold);
+    expect(drop.cargo).toEqual({ oil: 1 });
+  });
+
+  test("mooring before a ram-spill expires reports that cargo lost exactly once", () => {
+    const s = encounter("skiff");
+    s.player.cargo.oil = 1;
+    stepRiver(s);
+    stepRiver(s, { moor: true });
+    expect(s.outcome).toBe("moored");
+    expect(runReport(s).lost).toEqual({ oil: 1 });
+    expect(runReport(s).lost).toEqual({ oil: 1 });
+    expect(s.lost).toEqual({}); // Reporting does not mutate the simulation.
+  });
+
+  test("gunboats fire twin shots beyond raider range and skiffs close without shooting", () => {
+    for (const role of ["skiff", "raider", "gunboat"] as const) {
+      const s = encounter(role, 400);
+      const y = s.pirates[0]!.y;
+      stepRiver(s);
+      expect(s.pirates[0]!.y - y).toBeCloseTo(pirateRoles[role].speed / 60, 9);
+      expect(s.bullets.length).toBe(role === "gunboat" ? 2 : 0);
+    }
+  });
+
+  test.each(["skiff", "raider", "gunboat"] as const)("%s pays its bounty once, capped by the manifest fund", role => {
+    for (const fund of [4, 36]) {
+      const s = encounter(role, 100);
+      s.bounty = fund;
+      s.pirates[0]!.hp = 0;
+      stepRiver(s);
+      expect(s.player.wallet - 30).toBe(Math.min(fund, pirateRoles[role].bounty));
+      expect(s.player.wallet + s.bounty).toBe(30 + fund);
+      expect(s.roleKills.heron_reach?.[role]).toBe(1);
+      stepRiver(s);
+      expect(s.player.wallet + s.bounty).toBe(30 + fund);
+    }
   });
 });

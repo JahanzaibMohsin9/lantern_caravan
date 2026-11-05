@@ -2,6 +2,48 @@
 
 ## Work packages · 5 November 2026
 
+### Scope and §16.4 hand-back
+
+Delivered W0–W2 in order. Cut the remaining tail (W9, W8, W7, W6, W5, W4, W3) from this session; none of those packages was started. **Resume at W3**, then proceed in order. The full W0–W9 specification is not complete.
+
+| Package | Status |
+| --- | --- |
+| W0 · rename | Committed as `3196430`; checks below |
+| W1 · trims | Committed as `0de05b9`; checks below |
+| W2 · skiffs | This package commit; checks below |
+| W3 · wrecks/stops | Not started |
+| W4 · almanac | Not started |
+| W5 · player Bell orders | Not started |
+| W6 · four-night campaign | Not started |
+| W7 · barge looks/cosmetics | Not started |
+| W8 · Watch/history/trust | Not started |
+| W9 · Floodtide/server replay | Not started |
+
+- [x] Each delivered package has its own W-prefixed commit and a passing build, Vitest, system-Chrome Playwright and five-seed 2,000-night check. No partial feature package is left in the tree.
+- [x] Verification and cuts are recorded here; API and balance changes are documented.
+- [x] `KNOWN_ISSUES.md` identifies Firefox, physical touch devices, human usability and full manual playthrough as unverified this session.
+- [x] Automated title → Night 2 → first River Run → oil sold on the Row passes in under three wall-clock minutes, using real controls and a simulated river clock (84 seconds in final W2 run).
+- [ ] Human new-player test without docs in under three minutes: not performed.
+- [ ] Full manual playthrough and remaining W3–W9 acceptance paths: not performed.
+
+Branch remains `river-run`; no push, remote changes, rebase or history rewrite. The final reply records the W2 commit and post-commit working-tree check.
+
+### W2 · Skiffs and pirate roles
+
+Added gold 40-HP ram skiffs, coral 57-HP raiders and purple 96-HP long-range twin-shot gunboats, with distinct silhouettes and targeted name labels. The manifest danger determines the spawn mix; replay tests cover dangers 0–5 and existing trim/combat/trade runs. Skiff spills move one held good into a recoverable drop, respect hold capacity and enter reported losses on expiry or early mooring. Role bounties transfer 6/8/14 coins from `sys:bounty`, capped by available and manifested funds; forged role totals/mixes are rejected. Legacy reports retain 3-coin payouts. Both backends inherit the same quote/submit/status validation; offline browser combat settles through LocalBackend. No browser live-combat payout or physical-touch verification is claimed.
+
+- `npm run schema` — passed; generated schema committed.
+- `npm run build` — passed twice, including final production code (existing bundle/annotation warnings).
+- `npm test` — passed at each stage: 115 twice, then 116 twice after early-mooring coverage and the depleted-fund assertion; final result 116 tests in 7 files.
+- `$env:LANTERN_CHROME_CHANNEL='chrome'; npm run test:e2e -- --project=chrome` — passed twice, 5 tests each; final run after the spill fix. The real-control offline river path now asserts a skiff kill before mooring, delivering and selling oil. Existing campaign, trim, live contention and Watch tests pass.
+- `npm run simulate -- --nights 2000 --seed 17 --check` — passed twice, final dark streak 1, zero invariant errors.
+- `npm run simulate -- --nights 2000 --seed 42 --check` — passed twice, final dark streak 1, zero invariant errors.
+- `npm run simulate -- --nights 2000 --seed 93 --check` — passed twice, final dark streak 1, zero invariant errors.
+- `npm run simulate -- --nights 2000 --seed 166 --check` — passed twice, final dark streak 1, zero invariant errors.
+- `npm run simulate -- --nights 2000 --seed 271 --check` — passed twice, final dark streak 1, zero invariant errors.
+
+No W2 check failed. Review found and fixed the early-mooring spill omission before completion, with a regression test. Firefox, real-device touch and human usability remain unverified. Updated numbers and their rationale are in `BALANCE_REPORT.md`.
+
 ### W1 · Barge trims
 
 Added Balanced, Runner, Ironclad and Gunner with A2's multipliers, applied to movement/turning, shot damage/cadence, fuel and incoming bullet/collision/Floodtide damage. The Landing selector fits for free on `start_run`; manifests and saves retain the choice, old saves default to Balanced, and campaign refits unlock on Night 3. HUD title, barge tint and cruising estimates reflect the trim. Shared game-core/codec behavior is exercised through both existing backends, including local reload and live restart. Every trim has replay and goods-conservation coverage.

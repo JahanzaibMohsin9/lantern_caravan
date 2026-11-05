@@ -1,6 +1,6 @@
-import { landing, reaches, trimFor, villages, type ReachId, type VillageId } from "@lantern/content/river";
+import { landing, pirateRoles, reaches, trimFor, villages, type ReachId, type VillageId } from "@lantern/content/river";
 import { items, type ItemId } from "@lantern/content";
-import { distance, objective, type Point, type River, type RiverEffect } from "@lantern/river-sim";
+import { distance, objective, targetedPirate, type Point, type River, type RiverEffect } from "@lantern/river-sim";
 import type { Snapshot } from "@lantern/protocol";
 import type { RiverCue } from "../world/sound";
 import { bankWidth, bounds, drawTerrain, hash, onWater, riverInfo, type Terrain } from "./terrain";
@@ -405,18 +405,24 @@ function playerBarge(ctx: Ink, scene: Scene, state: River, reduced: boolean) {
   if (p.hp < p.maxHp * .4 && !reduced && next() < .3) spray(scene, p.x, p.y, 1, "#3e3a40", 30, "smoke", 1.4, 12, -Math.PI / 2);
 }
 
-function pirateBoat(ctx: Ink, scene: Scene, pirate: River["pirates"][number]) {
-  const big = pirate.heavy, len = big ? 68 : 52, beam = big ? 17 : 11;
+function pirateBoat(ctx: Ink, scene: Scene, pirate: River["pirates"][number], targeted: boolean) {
+  const big = pirate.heavy, skiff = pirate.role === "skiff", len = big ? 68 : skiff ? 40 : 52, beam = big ? 17 : skiff ? 8 : 11;
+  const role = pirateRoles[pirate.role];
   ctx.save(); ctx.translate(pirate.x, pirate.y);
   ctx.globalAlpha = .4; ctx.fillStyle = "#03060a"; ctx.beginPath(); ctx.ellipse(5, 8, len * .55, beam * 1.4, pirate.angle, 0, tau); ctx.fill(); ctx.globalAlpha = 1;
   ctx.rotate(pirate.angle);
-  hull(ctx, len, beam, big ? "#2a282e" : "#21171a", big ? "#6d6a72" : "#7a3a36");
+  hull(ctx, len, beam, big ? "#2a282e" : "#21171a", role.color);
   if (big) {
     ctx.fillStyle = "#3a383f";
     for (const x of [-18, -2, 14]) ctx.fillRect(x, -beam + 3, 11, beam * 2 - 6);
     ctx.fillStyle = "#17161b"; ctx.fillRect(10, -9, 26, 5); ctx.fillRect(10, 4, 26, 5);
+  } else if (skiff) {
+    // Low, narrow ram bow and outriggers; no sail or cannon.
+    ctx.fillStyle = role.color;
+    ctx.beginPath(); ctx.moveTo(18, -6); ctx.lineTo(32, 0); ctx.lineTo(18, 6); ctx.closePath(); ctx.fill();
+    ctx.fillRect(-12, -13, 18, 3); ctx.fillRect(-12, 10, 18, 3);
   } else {
-    ctx.fillStyle = "#5a1f24";
+    ctx.fillStyle = role.color;
     ctx.beginPath(); ctx.moveTo(-6, 0); ctx.lineTo(10, -18 - Math.sin(scene.time * 2 + pirate.id) * 2); ctx.lineTo(16, 0); ctx.closePath(); ctx.fill();
     dot(ctx, -14, -3, 3.4, "#0d0b0e"); dot(ctx, -14, 4, 3.4, "#0d0b0e");
     ctx.fillStyle = "#17161b"; ctx.fillRect(8, -2.5, 20, 5);
@@ -424,9 +430,13 @@ function pirateBoat(ctx: Ink, scene: Scene, pirate: River["pirates"][number]) {
   ctx.restore();
   const lamp = { x: pirate.x - Math.cos(pirate.angle) * len * .35, y: pirate.y - Math.sin(pirate.angle) * len * .35 };
   const flicker = .8 + Math.sin(scene.time * 9 + pirate.id) * .2;
-  glow(ctx, lamp.x, lamp.y, big ? 150 : 110, "#ff4a3a", .32 * flicker);
-  dot(ctx, lamp.x, lamp.y, big ? 4.5 : 3.5, "#ff7a63");
-  reflection(ctx, lamp.x, lamp.y, "#ff6a52", .6 * flicker, scene.time, 44);
+  glow(ctx, lamp.x, lamp.y, big ? 150 : 110, role.color, .32 * flicker);
+  dot(ctx, lamp.x, lamp.y, big ? 4.5 : 3.5, role.color);
+  reflection(ctx, lamp.x, lamp.y, role.color, .6 * flicker, scene.time, 44);
+  if (targeted) {
+    ctx.font = "800 16px Manrope, sans-serif"; ctx.textAlign = "center"; ctx.fillStyle = role.color;
+    ctx.fillText(role.name, pirate.x, pirate.y - (big ? 50 : 42));
+  }
   if (pirate.stun > 0) {
     ctx.save(); ctx.strokeStyle = "#bff4ff"; ctx.lineWidth = 2; ctx.globalAlpha = .8;
     for (let i = 0; i < 4; i++) {
@@ -436,7 +446,7 @@ function pirateBoat(ctx: Ink, scene: Scene, pirate: River["pirates"][number]) {
     }
     ctx.restore();
   }
-  if (pirate.hp < pirate.maxHp) bar(ctx, pirate.x, pirate.y - (big ? 40 : 32), big ? 54 : 40, pirate.hp / pirate.maxHp, "#ff7a63");
+  if (pirate.hp < pirate.maxHp) bar(ctx, pirate.x, pirate.y - (big ? 40 : 32), big ? 54 : 40, pirate.hp / pirate.maxHp, role.color);
 }
 
 function bar(ctx: Ink, x: number, y: number, width: number, fraction: number, color: string) {
@@ -627,7 +637,7 @@ function indicators(ctx: Ink, state: River, view: { x: number; y: number; scale:
       ctx.fillStyle = color; ctx.fillText(text, x - Math.cos(a) * 30, y - Math.sin(a) * 30 + 4);
     }
   };
-  for (const pirate of state.pirates) if (distance(pirate, p) < 1100) edge(pirate, "#ff6a52", undefined, 10);
+  for (const pirate of state.pirates) if (distance(pirate, p) < 1100) edge(pirate, pirateRoles[pirate.role].color, undefined, 10);
   for (const barrel of state.barrels) if (!barrel.taken && distance(barrel, p) < 900) edge(barrel, "#8fe3a8", undefined, 8);
   edge(target, "#ffd28d", Math.round(distance(target, p) / 100) * 100 + " m", 16);
 }
@@ -661,7 +671,8 @@ export function drawRiver(ctx: Ink, scene: Scene, state: River, villageState: Sn
   wake(ctx, scene, "player", p, p.angle, Math.hypot(p.vx, p.vy), 16);
   for (const entry of state.booms.filter(b => b.hp > 0)) boom(ctx, scene, entry);
   for (const b of state.boats.filter(b => b.active)) traderBoat(ctx, scene, state, b);
-  for (const pirate of state.pirates) pirateBoat(ctx, scene, pirate);
+  const targeted = targetedPirate(state);
+  for (const pirate of state.pirates) pirateBoat(ctx, scene, pirate, pirate.id === targeted?.id);
   for (const bullet of state.bullets) {
     const color = bullet.friendly ? "#ffd691" : "#ff7a63";
     ctx.save(); ctx.globalCompositeOperation = "lighter"; ctx.strokeStyle = color; ctx.lineWidth = 3; ctx.lineCap = "round";
@@ -737,7 +748,7 @@ export function drawMap(ctx: Ink, state: River, villageState: Snapshot["villages
   dot(ctx, x(landing.x), y(landing.y), labels ? 7 : 3.5, "#ffb46e");
   if (labels) { ctx.fillStyle = "#ffe1b3"; ctx.fillText("The Landing", x(landing.x), y(landing.y) + 22); }
   for (const boat of state.boats.filter(b => b.active)) dot(ctx, x(boat.x), y(boat.y), labels ? 3.5 : 2, "#8fd3e6");
-  for (const pirate of state.pirates) if (distance(pirate, state.player) < 1600) dot(ctx, x(pirate.x), y(pirate.y), labels ? 3.5 : 2, "#ff6a52");
+  for (const pirate of state.pirates) if (distance(pirate, state.player) < 1600) dot(ctx, x(pirate.x), y(pirate.y), labels ? 3.5 : 2, pirateRoles[pirate.role].color);
   for (const barrel of state.barrels) if (!barrel.taken) dot(ctx, x(barrel.x), y(barrel.y), labels ? 2.5 : 1.3, "#8fe3a8");
   const target = objective(state);
   ctx.strokeStyle = "#ffd28d"; ctx.lineWidth = 1.5; ctx.beginPath(); ctx.arc(x(target.x), y(target.y), labels ? 11 : 6, 0, tau); ctx.stroke();

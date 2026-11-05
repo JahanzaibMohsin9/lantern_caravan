@@ -1,8 +1,8 @@
 import { useEffect, useRef, useState, type PointerEvent as ReactPointerEvent } from "react";
 import { Anchor, Bell, Compass, Crosshair, Flame, Fuel, Map as MapIcon, Pause, Play, Shield, Target, Zap } from "lucide-react";
 import { items, merchants, type ItemId, type StallId } from "@lantern/content";
-import { bargeTier, landing, reaches, runMs, trimFor, villages, type ReachId } from "@lantern/content/river";
-import { createRiver, distance, harborRadius, hz, marketQuote, nearVillage, objective, stepRiver,
+import { bargeTier, landing, pirateRoles, reaches, runMs, trimFor, villages, type ReachId } from "@lantern/content/river";
+import { createRiver, distance, harborRadius, hz, marketQuote, nearVillage, objective, stepRiver, targetedPirate,
   type Point, type RiverInput } from "@lantern/river-sim";
 import { runReport } from "@lantern/river-sim/report";
 import type { RunManifest, RunReport, Snapshot } from "@lantern/protocol";
@@ -209,6 +209,8 @@ export function RiverRun({ manifest, snapshot, finish, busy, reduced, live = fal
       <strong>{banner.title}</strong><span>{banner.sub}</span></div>}
     <div className="river-card river-status">
       <span className="eyebrow" style={{ color: trimFor(manifest).color }}>BARGE / {trimFor(manifest).name.toUpperCase()}</span>
+      {targetedPirate(river) && <small>Target: {pirateRoles[targetedPirate(river)!.role].name}</small>}
+      <small aria-label="Skiffs sunk">Skiffs sunk: {Object.values(river.roleKills).reduce((sum, roles) => sum + (roles?.skiff ?? 0), 0)}</small>
       <Meter label="Hull" icon={<Shield size={13}/>} value={p.hp} max={p.maxHp} color={p.hp < p.maxHp * .35 ? "#ff7a63" : "#8fe3a8"} text={Math.max(0, Math.ceil(p.hp)) + " / " + p.maxHp}/>
       <Meter label="Fuel" icon={<Fuel size={13}/>} value={p.fuel} max={100} color="#ffb35c" text={Math.ceil(p.fuel) + "%"}/>
       <Meter label="Ammo" icon={<Target size={13}/>} value={p.ammo} max={200} color="#ffe1a6" text={String(p.ammo)}/>

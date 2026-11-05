@@ -41,6 +41,34 @@ test("old saves use Balanced; unknown trims and early campaign refits are reject
   }
 });
 
+test("role bounties transfer from sys:bounty, conserve goods, and reject forged mixes", () => {
+  const world = createWorld("endless");
+  world.river.reaches.heron_reach.danger = 3;
+  const started = submit(world, { type: "start_run", barge_plan: [] }, "roles");
+  const run = snapshotFor(started, "test").river.myRun!.manifest;
+  const report: RunReport = { ...empty(run), durationMs: 40_000,
+    pirates: [{ reach: "heron_reach", count: 3, roles: { skiff: 1, raider: 1, gunboat: 1 } }] };
+  const deal = quote(started, { type: "finish_run", run_id: run.id, report }, "bounty", 40_000);
+  expect(deal.effects).toContainEqual(move("sys:bounty", player, "coin", 28, "River bounty"));
+  expect(deal.effects.every(op => op.op === "transfer")).toBe(true);
+  const home = commit(started, deal, 40_000);
+  expect(get(home, player, "coin") - get(world, player, "coin")).toBe(28);
+  expect(get(world, "sys:bounty", "coin") - get(home, "sys:bounty", "coin")).toBe(28);
+  const depleted = { ...started, ledger: apply(started.ledger, [
+    move("sys:bounty", "sys:fixture", "coin", get(started, "sys:bounty", "coin") - 5, "Another runner's bounty"),
+  ]) };
+  const capped = quote(depleted, { type: "finish_run", run_id: run.id, report }, "capped", 40_000);
+  expect(capped.effects).toContainEqual(move("sys:bounty", player, "coin", 5, "River bounty"));
+  for (const item of Object.keys(items)) {
+    const total = (state: World) => Object.values(state.ledger).reduce((sum, account) => sum + (account[item] ?? 0), 0);
+    expect(total(home)).toBe(total(world));
+  }
+  for (const roles of [{ skiff: 0, raider: 0, gunboat: 3 }, { skiff: 1, raider: 1, gunboat: 0 }]) {
+    expect(() => quote(started, { type: "finish_run", run_id: run.id,
+      report: { ...report, pirates: [{ reach: "heron_reach", count: 3, roles }] } }, "forged", 40_000)).toThrow("RIVER_COMBAT");
+  }
+});
+
 test("LocalBackend confirms a trim with departure and preserves it after reload", async () => {
   vi.useFakeTimers({ toFake: ["Date"] });
   const backend = new LocalBackend(), slot = "slot-3";

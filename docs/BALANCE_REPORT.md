@@ -16,6 +16,8 @@ The longest dark streak was one night for every seed. During the review, two see
 
 ## Tuned values
 
+W2 applies A3: skiff 40 HP / 6 bounty, raider 57 HP / 8 bounty (previously 42 HP / 3 bounty), gunboat 96 HP / 14 bounty. At danger 2+, every third spawn starting with the second is a skiff; at danger 3+, every third starting with the third is a gunboat. Danger 0 has no spawns. The existing 36-coin fund is unchanged. Skiffs close at 148 units/s, ram for 8 hull and spill one held good, then retreat for 2.2 seconds. A spill is recoverable for 20 seconds; unrecovered goods use the existing river burn. Gunboats retain 68 units/s and twin fire, now approaching to 300, retreating inside 230 and firing within 460 (raiders: 100 speed, 185/115/360). These values implement the specified fast rammer and long-range gunboat; no economic tuning was needed.
+
 W1 uses the A2 values without tuning: Balanced has no modifiers; Runner multiplies speed, acceleration and turning by 1.15 and shot damage by 0.85; Ironclad multiplies speed, acceleration and turning by 0.85 and incoming bullet, collision and Floodtide damage by 0.75; Gunner multiplies firing rate and moving fuel consumption by 1.2. Upgrade bonuses apply before these multipliers. Fits cost no coins or goods. Trims unlock on campaign Night 3 and immediately in endless/live. Physics remains fixed at 60 Hz (firing intervals are quantized to frames).
 
 | Rule | Value |
@@ -29,6 +31,6 @@ W1 uses the A2 values without tuning: Balanced has no modifiers; Runner multipli
 | Barge | 150-second game timer. 12-unit hold, 100 hull and fuel, and 235 cruising speed. Village routes take roughly 29–35 seconds at cruise. |
 | Relief hauls | A stall that is dark from lack of cash or stock, and short at least 3 units, gets a harbor contract from the dock fund: the village price plus 2 coins and one per two units, for 3–8 units the village can sell. Delivery relights it with a restart float to 20 coins. |
 | Opening night | Villages harvest again after stocking the Row on night 1. |
-| Bounties | 36 coins in the nightly fund. Pirate 3, boom 4, saved village boat 1, and tow costs up to 2. |
+| Bounties | 36 coins in the nightly fund. Skiff 6, raider 8, gunboat 14 (legacy reports 3 per pirate), boom 4, saved village boat 1, and tow costs up to 2. |
 
 The authored campaign starts from its existing inventory targets. Those loads come from village harvests delivered through freight. Night 2 records the oil loss from actual freight cargo. Local runs can be taken during preparation, so they use their own clock.

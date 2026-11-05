@@ -1,4 +1,4 @@
-import { bargeTier, landing, pirateCap, runMs, trimFor, villageStrategy, villages, type ReachId, type VillageId } from "@lantern/content/river";
+import { bargeTier, landing, pirateCap, pirateRoleAt, pirateRoles, runMs, trimFor, villageStrategy, villages, type PirateRole, type ReachId, type VillageId } from "@lantern/content/river";
 import { items, type ItemId } from "@lantern/content";
 import { tradePrice } from "@lantern/game-core/pricing";
 import type { RunManifest, RunReport } from "@lantern/protocol";
@@ -15,7 +15,7 @@ export type Point = { x: number; y: number };
 type Cargo = Record<string, number>;
 type Player = Point & { vx: number; vy: number; angle: number; turret: number; hp: number; maxHp: number;
   fuel: number; ammo: number; wallet: number; cargo: Cargo; cooldown: number; invulnerable: number; visited: boolean };
-type Pirate = Point & { id: number; reach: ReachId; hp: number; maxHp: number; heavy: boolean; phase: number; cooldown: number; angle: number; stun: number };
+type Pirate = Point & { id: number; reach: ReachId; role: PirateRole; breakoff: number; hp: number; maxHp: number; heavy: boolean; phase: number; cooldown: number; angle: number; stun: number };
 type Bullet = Point & { vx: number; vy: number; life: number; damage: number; friendly: boolean; hit?: boolean };
 type Drop = Point & { life: number; ammo: number; cargo?: Cargo };
 /** Floating supplies: drift in the shallows and refill fuel, ammo or hull when collected. */
@@ -32,6 +32,7 @@ export type River = {
   manifest: RunManifest; seed: number; frame: number; player: Player; bounty: number;
   bought: Record<string, RunReport["bought"][number]>; sold: Record<string, RunReport["soldBack"][number]>;
   lost: Cargo; flaresUsed: number; flareCooldown: number; kills: Partial<Record<ReachId, number>>;
+  roleKills: Partial<Record<ReachId, Record<PirateRole, number>>>;
   spawned: Partial<Record<ReachId, number>>; booms: ReturnType<typeof createBooms>; broken: ReachId[];
   pirates: Pirate[]; bullets: Bullet[]; drops: Drop[]; boats: ReturnType<typeof createBoats>; savedBoats: string[];
   escort: "active" | "completed" | "failed"; escortOutside: number; escortJoined: boolean;
@@ -45,7 +46,7 @@ export function createRiver(manifest: RunManifest): River {
   return { manifest, seed: manifest.seed, frame: 0, bounty: manifest.bounty,
     player: { ...landing, vx: 0, vy: 0, angle: -Math.PI / 2, turret: -Math.PI / 2, hp, maxHp: hp,
       fuel: 100, ammo: 100, wallet: manifest.wallet, cargo: {}, cooldown: 0, invulnerable: 0, visited: false },
-    bought: {}, sold: {}, lost: {}, flaresUsed: 0, flareCooldown: 0, kills: {}, spawned: {},
+    bought: {}, sold: {}, lost: {}, flaresUsed: 0, flareCooldown: 0, kills: {}, roleKills: {}, spawned: {},
     booms: createBooms(manifest), broken: [], pirates: [], bullets: [], drops: [], boats: createBoats(manifest),
     savedBoats: [], escort: "active", escortOutside: 0, escortJoined: false, notice: "", effects: [], log: [],
     barrels: createBarrels(manifest.seed), serial: 0 };
@@ -74,6 +75,14 @@ function effect(state: River, kind: EffectKind, at: Point, extra: Partial<RiverE
 }
 export function nearVillage(state: River) {
   return (Object.keys(villages) as VillageId[]).find(id => distance(state.player, villages[id]) < harborRadius);
+}
+
+export function targetedPirate(state: River) {
+  const p = state.player;
+  return state.pirates.filter(enemy => {
+    const delta = Math.atan2(enemy.y - p.y, enemy.x - p.x) - p.turret;
+    return enemy.hp > 0 && distance(p, enemy) < 540 && Math.abs(Math.atan2(Math.sin(delta), Math.cos(delta))) < .12;
+  }).sort((a, b) => distance(p, a) - distance(p, b))[0];
 }
 
 export function marketQuote(state: River, village: string, item: string, side: "buy" | "sell", quantity: number) {
@@ -157,10 +166,8 @@ function combat(state: River, input: Input) {
     const spawned = state.spawned[id] ?? 0;
     if (spawned >= cap) continue;
     const point = along(id, .22 + rng(state) * .58);
-    // Dangerous reaches send an armored gunboat with every third crew.
-    const heavy = reach.danger >= 3 && spawned % 3 === 2;
-    const hp = heavy ? 96 : 42;
-    state.pirates.push({ ...point, id: ++state.serial, reach: id, hp, maxHp: hp, heavy, cooldown: 1, phase: rng(state) * 6, angle: 0, stun: 0 });
+    const role = pirateRoleAt(reach.danger, spawned), heavy = role === "gunboat", hp = pirateRoles[role].hp;
+    state.pirates.push({ ...point, id: ++state.serial, reach: id, role, breakoff: 0, hp, maxHp: hp, heavy, cooldown: 1, phase: rng(state) * 6, angle: 0, stun: 0 });
     state.spawned[id] = spawned + 1;
   }
   state.flareCooldown = Math.max(0, state.flareCooldown - dt);
@@ -180,21 +187,39 @@ function combat(state: River, input: Input) {
     pirate.stun = Math.max(0, pirate.stun - dt);
     if (pirate.stun > 0) continue;
     pirate.cooldown -= dt;
+    pirate.breakoff = Math.max(0, pirate.breakoff - dt);
     pirate.phase += dt;
     const boat = state.boats.filter(boat => boat.active && distance(boat, pirate) < 330)
       .sort((a, b) => distance(a, pirate) - distance(b, pirate))[0];
     const target = distance(pirate, p) < 650 ? p : boat;
     const range = target ? distance(pirate, target) : Infinity;
     pirate.angle = target ? Math.atan2(target.y - pirate.y, target.x - pirate.x) : pirate.phase * .3;
-    const speed = (target ? range > 185 ? 100 : range < 115 ? -48 : 0 : 22) * (pirate.heavy ? .68 : 1);
+    const role = pirateRoles[pirate.role];
+    const speed = pirate.breakoff > 0 ? -role.speed : target ? range > role.approach ? role.speed : range < role.retreat ? -48 : 0 : 22;
     pirate.x += Math.cos(pirate.angle) * speed * dt; pirate.y += Math.sin(pirate.angle) * speed * dt;
     keepInChannel(pirate, 30);
-    if (range < 360 && pirate.cooldown <= 0) {
+    if (range < role.range && pirate.cooldown <= 0) {
       const spread = (rng(state) - .5) * .17;
       fire(state, pirate, pirate.angle + spread, false);
       if (pirate.heavy) fire(state, pirate, pirate.angle - spread - .16, false);
       effect(state, "eshot", pirate, { amount: pirate.angle, heavy: pirate.heavy });
       pirate.cooldown = (1.6 + rng(state) * .6) * (pirate.heavy ? 1.35 : 1);
+    }
+    if (pirate.role === "skiff" && target && range < 34 && pirate.breakoff === 0) {
+      pirate.breakoff = 2.2;
+      if (target !== p || !p.invulnerable) {
+        target.hp -= 8 * (target === p ? trimFor(state.manifest).incoming : 1);
+        if (target === p) {
+          const item = Object.keys(p.cargo).sort().find(item => p.cargo[item]! > 0);
+          if (item) {
+            p.cargo[item]!--;
+            state.drops.push({ x: p.x - Math.cos(pirate.angle) * 90, y: p.y - Math.sin(pirate.angle) * 90,
+              life: 20, ammo: 0, cargo: { [item]: 1 } });
+            state.notice = "Skiff ram! Recover the spilled cargo within 20 seconds.";
+          }
+          effect(state, "hit", p, { target: "player", amount: 8 });
+        }
+      }
     }
     const bargeSpeed = Math.hypot(p.vx, p.vy);
     if (distance(pirate, p) < (pirate.heavy ? 42 : 34) && bargeSpeed > 100) {
@@ -234,8 +259,10 @@ function combat(state: River, input: Input) {
       if (boat.ambient && boat.active && distance(boat, pirate) < 330) boat.protected = true;
     }
     state.kills[pirate.reach] = (state.kills[pirate.reach] ?? 0) + 1;
+    const roles = state.roleKills[pirate.reach] ??= { skiff: 0, raider: 0, gunboat: 0 };
+    roles[pirate.role]++;
     effect(state, "sink", pirate, { heavy: pirate.heavy, amount: pirate.angle });
-    reward(state, pirate, 3, pirate.heavy ? 30 : 14);
+    reward(state, pirate, pirateRoles[pirate.role].bounty, pirate.heavy ? 30 : 14);
   }
   state.pirates = state.pirates.filter(pirate => pirate.hp > 0);
   for (const boom of state.booms.filter(boom => boom.hp <= 0 && !state.broken.includes(boom.id))) {
@@ -273,13 +300,22 @@ function recover(state: River, input: Input) {
     drop.life -= dt;
     if (!state.outcome && drop.life > 0 && distance(drop, p) < 47) {
       p.ammo = Math.min(200, p.ammo + drop.ammo);
-      for (const [item, units] of Object.entries(drop.cargo ?? {})) p.cargo[item] = (p.cargo[item] ?? 0) + units;
-      if (drop.cargo) state.notice = "Cargo recovered. Press E to call the tow.";
-      drop.cargo = undefined;
-      drop.life = 0;
+      drop.ammo = 0;
+      for (const [item, units] of Object.entries(drop.cargo ?? {})) {
+        const loaded = Math.min(units, Math.max(0, state.manifest.hold - count(p.cargo)));
+        p.cargo[item] = (p.cargo[item] ?? 0) + loaded;
+        drop.cargo![item] = units - loaded;
+      }
+      if (!count(drop.cargo ?? {})) {
+        if (drop.cargo) state.notice = state.rescueAt !== undefined ? "Cargo recovered. Press E to call the tow." : "Spilled cargo recovered.";
+        drop.cargo = undefined;
+        drop.life = 0;
+      }
     }
     if (drop.cargo && (drop.life <= 0 || state.outcome)) {
       for (const [item, units] of Object.entries(drop.cargo)) state.lost[item] = (state.lost[item] ?? 0) + units;
+      drop.cargo = undefined;
+      drop.life = 0;
     }
   }
   state.drops = state.drops.filter(drop => drop.life > 0);

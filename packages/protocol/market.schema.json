@@ -797,6 +797,32 @@
               "type": "integer",
               "minimum": 1,
               "maximum": 10
+            },
+            "roles": {
+              "type": "object",
+              "properties": {
+                "skiff": {
+                  "type": "integer",
+                  "minimum": 0,
+                  "maximum": 10
+                },
+                "raider": {
+                  "type": "integer",
+                  "minimum": 0,
+                  "maximum": 10
+                },
+                "gunboat": {
+                  "type": "integer",
+                  "minimum": 0,
+                  "maximum": 10
+                }
+              },
+              "required": [
+                "skiff",
+                "raider",
+                "gunboat"
+              ],
+              "additionalProperties": false
             }
           },
           "required": [
@@ -1489,6 +1515,32 @@
               "type": "integer",
               "minimum": 1,
               "maximum": 10
+            },
+            "roles": {
+              "type": "object",
+              "properties": {
+                "skiff": {
+                  "type": "integer",
+                  "minimum": 0,
+                  "maximum": 10
+                },
+                "raider": {
+                  "type": "integer",
+                  "minimum": 0,
+                  "maximum": 10
+                },
+                "gunboat": {
+                  "type": "integer",
+                  "minimum": 0,
+                  "maximum": 10
+                }
+              },
+              "required": [
+                "skiff",
+                "raider",
+                "gunboat"
+              ],
+              "additionalProperties": false
             }
           },
           "required": [
@@ -4935,6 +4987,32 @@
                 "type": "integer",
                 "minimum": 1,
                 "maximum": 10
+              },
+              "roles": {
+                "type": "object",
+                "properties": {
+                  "skiff": {
+                    "type": "integer",
+                    "minimum": 0,
+                    "maximum": 10
+                  },
+                  "raider": {
+                    "type": "integer",
+                    "minimum": 0,
+                    "maximum": 10
+                  },
+                  "gunboat": {
+                    "type": "integer",
+                    "minimum": 0,
+                    "maximum": 10
+                  }
+                },
+                "required": [
+                  "skiff",
+                  "raider",
+                  "gunboat"
+                ],
+                "additionalProperties": false
               }
             },
             "required": [
@@ -5627,6 +5705,32 @@
                 "type": "integer",
                 "minimum": 1,
                 "maximum": 10
+              },
+              "roles": {
+                "type": "object",
+                "properties": {
+                  "skiff": {
+                    "type": "integer",
+                    "minimum": 0,
+                    "maximum": 10
+                  },
+                  "raider": {
+                    "type": "integer",
+                    "minimum": 0,
+                    "maximum": 10
+                  },
+                  "gunboat": {
+                    "type": "integer",
+                    "minimum": 0,
+                    "maximum": 10
+                  }
+                },
+                "required": [
+                  "skiff",
+                  "raider",
+                  "gunboat"
+                ],
+                "additionalProperties": false
               }
             },
             "required": [
@@ -6415,6 +6519,32 @@
                 "type": "integer",
                 "minimum": 1,
                 "maximum": 10
+              },
+              "roles": {
+                "type": "object",
+                "properties": {
+                  "skiff": {
+                    "type": "integer",
+                    "minimum": 0,
+                    "maximum": 10
+                  },
+                  "raider": {
+                    "type": "integer",
+                    "minimum": 0,
+                    "maximum": 10
+                  },
+                  "gunboat": {
+                    "type": "integer",
+                    "minimum": 0,
+                    "maximum": 10
+                  }
+                },
+                "required": [
+                  "skiff",
+                  "raider",
+                  "gunboat"
+                ],
+                "additionalProperties": false
               }
             },
             "required": [

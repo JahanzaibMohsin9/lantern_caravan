@@ -34,6 +34,8 @@ Quotes are bound to an actor, room, and night and expire after 15 game seconds. 
 
 ## River Run intents
 
+W2 extends each `report.pirates` entry with optional `roles: {skiff, raider, gunboat}` counts. Counts must sum to `count` and fit the role mix possible at that reach's manifest danger and reported duration, otherwise `RIVER_COMBAT`. New clients report roles and earn 6/8/14 coins per kill respectively. Legacy reports without roles retain the old 3-coin reward. Total bounty is capped by both the departure manifest and the remaining `sys:bounty` balance; all payment is a transfer. Skiff spills enter `delivered` when recovered or `lost` on expiry/end-of-run, using the same cargo-conservation check. No new backend route is needed.
+
 W1 adds optional `trim` to `start_run`: `balanced`, `runner`, `ironclad` or `gunner`. Omission retains the actor's previous trim, defaulting to Balanced for old saves. Submission fits it for free and includes it in the authoritative manifest and `snapshot.barge.trim`; quoting alone changes nothing. Refitting is only possible between runs. Non-Balanced trims unlock on campaign Night 3 (`RIVER_TRIM_LOCKED` earlier); endless and live rooms have them immediately. Old manifests without `trim` replay as Balanced. Both backends use the shared rules and codec for this field.
 
 Both LocalBackend and the live server accept the four intents during preparation and during the open night while at least 45 seconds remain (`RIVER_LATE` otherwise). River intents use wall-clock milliseconds for quote expiry (15 seconds) and run timing, on both backends. Submit and check the receipt as for a Row trade.
