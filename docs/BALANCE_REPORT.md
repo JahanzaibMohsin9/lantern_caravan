@@ -1,20 +1,27 @@
 # Lantern Caravan · River Run balance report
 
-Rows below are from the W4 run (5 November 2026), with wrecks and the almanac active. W0 verification first reproduced the table. The CLI now fails `--check` for a dark streak above **one** night (previously five), matching §16.2. No economy or balance values changed.
+Rows below are from the W5 run (5 November 2026), with wrecks, the almanac and a simulated player posting a Bell order every night. W0 verification first reproduced the table. The CLI now fails `--check` for a dark streak above **one** night (previously five), matching §16.2. No economy or balance values changed.
 
 Each checked run used three autonomous traders over 2,000 nights. Run `npm run simulate -- --nights 2000 --seed <seed> --check` to reproduce a row. The CLI writes the summary and per-tick CSV under `sim-output/`.
 
 | Seed | Nights with 3+ open stalls | Stall coins at close | Village coins at sampled ticks | Freight loss entries | Supplier units | Boats lit | Invariant errors |
 | --- | ---: | ---: | ---: | ---: | ---: | ---: | ---: |
-| 17 | 2,000 | 61–228 | 30–231 | 709 | 25,192 | 5,924 | 0 |
-| 42 | 2,000 | 64–243 | 30–204 | 829 | 25,446 | 5,794 | 0 |
-| 93 | 2,000 | 62–250 | 31–206 | 803 | 25,458 | 5,876 | 0 |
-| 166 | 2,000 | 64–237 | 30–195 | 809 | 25,465 | 5,911 | 0 |
-| 271 | 2,000 | 65–226 | 31–220 | 794 | 25,312 | 5,789 | 0 |
+| 17 | 2,000 | 58–286 | 36–273 | 1019 | 25,337 | 5,434 | 0 |
+| 42 | 2,000 | 60–260 | 36–267 | 987 | 24,971 | 5,469 | 0 |
+| 93 | 2,000 | 57–301 | 36–266 | 955 | 25,093 | 5,418 | 0 |
+| 166 | 2,000 | 68–288 | 36–258 | 916 | 25,317 | 5,438 | 0 |
+| 271 | 2,000 | 62–289 | 36–238 | 835 | 25,131 | 5,570 | 0 |
 
 The longest dark streak was one night for every seed. During the review, two seeds exposed a stall that sold out while holding 10–15 coins: it couldn't pay a hauler above its 10-coin reserve, so it stayed closed for up to 11 nights. The harbor's relief contract now pays for that haul, priced so rivals will take it. The checks cover nonnegative integer balances, price bounds, outstanding shares, permitted goods mints and burns, village balances between 20 and 300, danger from 0 to 5, and empty run and contract escrows at close. Supplier units include stall-to-stall wholesale. A lost sailing with several cargo lines can produce several freight loss entries.
 
 ## Tuned values
+
+W5 Bell orders: 1–12 units at 3–20 coins each, one order per player. A hauler takes at most 6 units per trip and only when the order's price for those units beats their village cost. A free hauler answers a relief bell first, then a player's Bell order (unless a stall is dark), then festival and stall routes. The soak now includes a simulated player that posts a 6-unit order every night at the village price plus 3; every seed delivers or refunds all 2,000 orders with no escrow left at close.
+
+Two fixes came out of the W5 soak. With Bell orders competing for haulers, two seeds reached a two-night dark streak:
+- **Relief picked a good the villages had run out of.** It now asks for the most-needed good that a village can supply at least 3 of.
+- **A relief haul on a dangerous route paid too little to be taken.** The relief premium now adds 2 coins per danger point on the route, like ordinary contracts, and haulers answer relief bells before other work.
+- **A relief bell for a good every village had lost to the river stayed posted all night**, which blocked a relief bell for a good that was in stock. An untaken relief bell is now withdrawn, with its escrow back in the dock fund, once its village can no longer supply it, and the harbor rings again for an available good.
 
 W4 almanac values: an oil glut harvests to 36 oil (24 × 1.5); a pressing strike, mill flood or reed blight harvests to half the usual target (12 oil, 12 paper, 10 reed); a dye bloom adds 6 dye (20). A harvest only tops a village up to its target, so a shortage event matters when the village has already been bought down. When tomorrow's event is a shortage, any stall that sells that good posts a Harbor Bell contract once its stock falls below 90% of target instead of the usual 50–60%, still subject to its cash reserve. Events run on odd nights from Night 3 in endless and live rooms and rotate villages; the campaign has only Night 3's pressing strike.
 

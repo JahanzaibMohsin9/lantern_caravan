@@ -127,3 +127,42 @@ describe("authoritative market", () => {
     await expect(restarted.verify(credential + "wrong")).rejects.toThrow("AUTH_REQUIRED");
   });
 });
+
+describe("Bell orders in a live room", () => {
+  test("two players' orders race for the same haulers; each gets only their own goods and every coin is accounted for", async () => {
+    vi.useFakeTimers({ toFake: ["Date"] });
+    vi.stubEnv("LANTERN_PREP_SECONDS", "1");
+    const { dir, store } = await makeStore();
+    const market = new LiveMarket(store, new DevSettlementProvider(dir));
+    const room = "bell-race";
+    await market.load(room, true);
+    await market.join(room, { playerId: "a", displayName: "Ari" }, false);
+    await market.join(room, { playerId: "b", displayName: "Bo" }, false);
+    const start = await Promise.all(["p:a", "p:b"].map(actor => market.snapshot(room, actor)));
+    const night = start[0]!.night_id;
+    const orders = [{ actor: "p:a", item_id: "oil", quantity: 3, unit_price: 9 }, { actor: "p:b", item_id: "oil", quantity: 3, unit_price: 10 }];
+    const deals = await Promise.all(orders.map(({ actor, ...order }) => market.getQuote(room, actor, night, { type: "post_bell_order", ...order })));
+    const outcomes = await Promise.allSettled(orders.map(({ actor }, i) =>
+      market.serialized(() => market.submit(room, actor, night, deals[i]!.quote_id, "post-" + actor))));
+    expect(outcomes.map(outcome => outcome.status)).toEqual(["fulfilled", "fulfilled"]);
+    const again = await market.getQuote(room, "p:a", night, { type: "post_bell_order", item_id: "paper", quantity: 1, unit_price: 5 })
+      .then(() => "quoted", (error: Error) => error.message);
+    expect(again).toContain("BELL_ORDER_LIMIT");
+    for (let step = 0; step < 30; step++) {
+      vi.setSystemTime(Date.now() + 10_000);
+      await market.snapshot(room, "");
+    }
+    const views = await Promise.all(["p:a", "p:b"].map(actor => market.snapshot(room, actor)));
+    let delivered = 0;
+    views.forEach((view, i) => {
+      const before = start[i]!, order = orders[i]!;
+      const got = Number(view.cargo.oil ?? 0) - Number(before.cargo.oil ?? 0);
+      delivered += got;
+      expect(got).toBeLessThanOrEqual(order.quantity);
+      const held = view.river.myOrder ? Number(view.river.myOrder.escrow) : 0;
+      // Coins in hand + coins still in escrow + coins paid for delivered oil = the purse before posting.
+      expect(Number(view.coins) + held + got * order.unit_price).toBe(Number(before.coins));
+    });
+    expect(delivered).toBeGreaterThan(0);
+  });
+});

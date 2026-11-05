@@ -94,6 +94,9 @@ export function harvestTarget(event: AlmanacId | undefined, village: VillageId, 
   return entry && entry.village === village && entry.item === item ? Math.round(target * entry.factor) + entry.bonus : target;
 }
 
+/** Player Bell orders: a player escrows coins and rival haulers decide whether to fetch the goods. */
+export const bellOrderLimits = { quantity: 12, minPrice: 3, maxPrice: 20, haulUnits: 6 } as const;
+
 /** A sunk haul becomes salvageable at the next dusk and breaks up after this many nights. */
 export const wreckNights = 2;
 

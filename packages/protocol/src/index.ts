@@ -59,6 +59,8 @@ export const intentSchema = z.discriminatedUnion("type", [
   z.object({ type: z.literal("finish_run"), run_id: id, report: runReportSchema }),
   z.object({ type: z.literal("accept_contract"), contract_id: id }),
   z.object({ type: z.literal("buy_barge_upgrade"), upgrade_id: id }),
+  z.object({ type: z.literal("post_bell_order"), item_id: id, quantity: z.int().min(1).max(12), unit_price: z.int().min(3).max(20) }),
+  z.object({ type: z.literal("cancel_bell_order"), order_id: id }),
   z.object({ type: z.literal("finish_job"), job_id: id }),
   z.object({ type: z.literal("accept_buyback"), buyback_id: id }),
   z.object({ type: z.literal("list_shares"), stall_id: id, shares: quantity, price_per_share: quantity }),
@@ -96,6 +98,8 @@ export type MerchantSnapshot = {
   offering?: { id: string; kind: "rescue" | "expansion"; price: string; left: string; total: string; available: string; ends: number };
   buyback?: { id: string; price: string };
 };
+export type BellOrderView = { id: string; item: string; quantity: number; unitPrice: number; escrow: string; delivered: number;
+  waiting: number; hauling: { name: string; quantity: number; eta: number }[]; cancelled: boolean; news: string };
 export type AlmanacEntry = { id: string; name: string; village: string; item: string; detail: string };
 export type Snapshot = {
   session_id: string; night_id: string; night: number; nightName: string; mode: Mode; seed: number;
@@ -111,6 +115,8 @@ export type Snapshot = {
     myRun?: { id: string; deadline: number; manifest: RunManifest };
     wrecks: { id: string; reach: string; name: string; cargo: Record<string, string>; open: boolean; nightsLeft: number; claimed: boolean }[];
     almanac: { tonight?: AlmanacEntry; tomorrow?: AlmanacEntry };
+    myOrder?: BellOrderView;
+    bellOrders: number;
     upriver: { actor: string; name: string }[];
     bountyFund: string;
   };

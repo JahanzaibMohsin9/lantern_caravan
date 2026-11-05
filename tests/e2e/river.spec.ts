@@ -184,3 +184,32 @@ test("salvages the oil the Night 2 storm sank at Heron Reach", async ({ page }) 
   await expect(page.getByText(/salvaged 6 lamp oil from the wreck of the freight barge on Heron Reach/).first()).toBeVisible();
   expect(errors).toEqual([]);
 });
+
+test("posts a Bell order in a live room and a rival hauler delivers it", async ({ page }) => {
+  test.setTimeout(200_000);
+  const errors: string[] = [];
+  page.on("pageerror", error => errors.push(error.message));
+  await page.goto("/");
+  await page.getByRole("button", { name: "Live market", exact: true }).click();
+  await page.getByLabel("Display name").fill("Bell captain");
+  await page.getByRole("button", { name: "Sign in", exact: true }).click();
+  await page.getByRole("button", { name: "Create private room" }).click();
+  await expect(page.locator("[data-room-code]")).toBeVisible();
+  const landing = page.getByRole("navigation").getByRole("button", { name: /The Landing/ });
+  await expect(landing).toBeEnabled();
+  await landing.click();
+  await page.getByRole("button", { name: "Post an order" }).click();
+  await page.getByLabel("Order item").selectOption("oil");
+  await page.getByLabel("Order quantity").fill("2");
+  await page.getByLabel("Price per unit").fill("12");
+  await expect(page.getByText("Reserve 24 coins")).toBeVisible();
+  await page.getByRole("button", { name: /^Ring the bell/ }).click();
+  const order = page.getByLabel("Your Bell order");
+  await expect(order).toContainText("2 lamp oil at 12 coins each");
+  await expect(order).toContainText("24 coins held at the Harbor Bell");
+  // A rival weighs the job on its next turn, sails upriver and back.
+  await expect(order).toContainText(/is hauling 2/, { timeout: 120_000 });
+  await expect(order).toContainText("2 delivered", { timeout: 90_000 });
+  await expect(order).toContainText("0 coins held");
+  expect(errors).toEqual([]);
+});

@@ -13,7 +13,7 @@ import { afterOwnership, bookValue, buybackPrice, closeOwnership, owners, owners
 export { createWorld, newNight, addTrader, addActivity, capacity, duration, player, crowd, nightId, nowAt, objective, plan, type World } from "./model";
 export { openNight } from "./ownership";
 export { cancelRun, InvalidRun, isRiverIntent } from "./river";
-import { advanceRiver, closeRiver, commitRiver, isRiverIntent, recordSupply, refreshContracts, riverQuote,
+import { advanceRiver, closeRiver, commitRiver, hasOpenBellOrder, isRiverIntent, recordSupply, refreshContracts, riverQuote,
   riverSnapshot, scheduleFreight, startRivalHaul } from "./river";
 
 function phaseCheck(state: World, intent: Intent) {
@@ -387,6 +387,11 @@ function agentTurn(world: World) {
     state = commitFor(state, actor, deal, now);
     if (offer.kind === "rescue") return state;
     break;
+  }
+  // A player's Bell order is paid work waiting at the dock, so a free hauler weighs it before festival routes.
+  if (hasOpenBellOrder(state)) {
+    const hauled = startRivalHaul(state, actor);
+    if (hauled !== state) return hauled;
   }
   const candidates = plan(state).orders.filter(order => !order.personal && order.opens <= state.elapsed && remaining(state, order) > 0 &&
     (!campaign || (state.night === 3 ? order.boat >= 3 || state.elapsed >= 140 : order.boat >= 2)));

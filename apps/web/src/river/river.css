@@ -128,3 +128,11 @@
   border: 1px solid rgba(255, 207, 138, .3); }
 .landing-almanac small { text-transform: uppercase; letter-spacing: .08em; opacity: .75; }
 .landing-almanac p { margin: 4px 0 0; }
+.bell-order, .bell-order-form { display: grid; gap: 8px; margin: 10px 0; }
+.bell-order { padding: 10px 12px; border-radius: 10px; background: rgba(255, 207, 138, .08); border: 1px solid rgba(255, 207, 138, .3); }
+.bell-order small { opacity: .8; }
+.bell-order-haul { display: flex; align-items: center; gap: 6px; margin: 0; }
+.bell-order-form label { display: grid; gap: 4px; font-size: .9rem; }
+.bell-order-form input, .bell-order-form select { padding: 7px 9px; border-radius: 8px; font: inherit; }
+.bell-order-total { margin: 2px 0; }
+.bell-order-total.short { color: #ff9a84; }

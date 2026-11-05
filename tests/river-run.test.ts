@@ -6,7 +6,8 @@ import { addTrader, advanceClock, closeNight, commit, commitFor, createWorld, ne
 import type { Intent, RunManifest, RunReport } from "@lantern/protocol";
 import { apply } from "../packages/game-core/src/ledger";
 import { get, merchantIds, mint, move, player, shop, stockTargets, type World } from "../packages/game-core/src/model";
-import { harvest, refreshContracts, scheduleFreight, startRivalHaul } from "../packages/game-core/src/river";
+import { advanceRiver, harvest, refreshContracts, refreshRelief, scheduleFreight, startRivalHaul } from "../packages/game-core/src/river";
+import { tradePrice } from "../packages/game-core/src/pricing";
 import { items, merchants } from "@lantern/content";
 import { decodeWorld, encodeWorld } from "@lantern/game-core/codec";
 import { almanacEvents, almanacFor, harvestTarget, stopPlan, villageGoods, type BargeTrimId } from "@lantern/content/river";
@@ -515,4 +516,121 @@ describe("harbor almanac", () => {
     }
     throw new Error("No seed with a Night 3 shortage.");
   });
+});
+
+describe("player Bell orders", () => {
+  const post = (world: World, quantity = 10, unit_price = 9, item_id = "oil") =>
+    submit(world, { type: "post_bell_order", item_id, quantity, unit_price }, "bell-order");
+  const legs = (world: World) => Object.values(world.river.hauls).flatMap(haul => haul.cargo.filter(leg => leg.order).map(leg => ({ haul, leg })));
+  const funded = () => { const world = createWorld("endless"); return { ...world, ledger: apply(world.ledger, [mint(player, "coin", 200, "Test savings")]) }; };
+  function runUntilHauled(world: World) {
+    let state = openNight(world);
+    for (let at = 10; at <= 280 && !legs(state).length; at += 10) state = advanceClock(state, at);
+    return state;
+  }
+
+  test("posting escrows the full price, haulers fill it in partial loads, and the night's end refunds the rest", () => {
+    const world = funded();
+    const coins = get(world, player, "coin"), oil = get(world, player, "oil");
+    const posted = post(world);
+    expect(get(posted, player, "coin")).toBe(coins - 90);
+    expect(get(posted, "esc:bell:bell-order", "coin")).toBe(90);
+    expect(snapshotFor(posted, "test").river.myOrder).toMatchObject({ quantity: 10, waiting: 10, delivered: 0, escrow: "90" });
+    const hauled = runUntilHauled(posted);
+    const { haul, leg } = legs(hauled)[0]!;
+    expect(leg.qty).toBeLessThanOrEqual(6);
+    const view = snapshotFor(hauled, "test").river.myOrder!;
+    expect(view.hauling).toEqual([{ name: hauled.traders[haul.actor]!.name, quantity: leg.qty, eta: haul.arrives - hauled.elapsed }]);
+    expect(view.waiting).toBe(10 - leg.qty);
+    expect(hauled.activity.some(entry => entry.line.includes("took You’s Bell order") || entry.line.includes("Bell order:"))).toBe(true);
+    const closed = advanceClock(hauled, 300);
+    const delivered = get(closed, player, "oil") - oil;
+    expect(delivered).toBeGreaterThan(0);
+    // Every coin the player gave up paid for a delivered unit; the rest came back at the night's end.
+    expect(get(closed, player, "coin")).toBe(coins - delivered * 9);
+    expect(get(closed, "esc:bell:bell-order", "coin")).toBe(0);
+    expect(snapshotFor(closed, "test").river.myOrder).toBeUndefined();
+  });
+
+  test("a hauler sunk on the way reopens the units without touching the escrow, and the cargo becomes a wreck", () => {
+    const hauled = runUntilHauled(post(funded()));
+    const { haul, leg } = legs(hauled)[0]!;
+    // Pick a river roll that sinks this haul.
+    let random = 1;
+    for (; random < 100000; random++) if (((Math.imul(random, 1664525) + 1013904223) >>> 0) / 0x100000000 < .01) break;
+    const risky = { ...hauled, elapsed: haul.arrives, river: { ...hauled.river, random,
+      reaches: Object.fromEntries(Object.entries(hauled.river.reaches).map(([id, reach]) => [id, { ...reach, danger: 5 }])) as World["river"]["reaches"] } };
+    const sunk = advanceRiver(risky);
+    const order = snapshotFor(sunk, "test").river.myOrder!;
+    expect(order.waiting).toBe(snapshotFor(hauled, "test").river.myOrder!.waiting + leg.qty);
+    expect(order.hauling).toEqual([]);
+    expect(order.news).toMatch(/sank on .* with \d+ lamp oil\. The wreck can be salvaged tomorrow\. The order is open again\./);
+    expect(get(sunk, "esc:bell:bell-order", "coin")).toBe(90);
+    expect(snapshotFor(sunk, "test").river.wrecks.some(wreck => Number(wreck.cargo.oil) === leg.qty)).toBe(true);
+  });
+
+  test("cancelling refunds the waiting units at once; a haul already under way still delivers and is paid", () => {
+    const hauled = runUntilHauled(post(funded()));
+    const { haul, leg } = legs(hauled)[0]!;
+    const waiting = 10 - leg.qty, before = get(hauled, player, "coin");
+    const deal = quote(hauled, { type: "cancel_bell_order", order_id: "bell-order" }, "cancel", 0);
+    expect(deal.effects).toEqual([move("esc:bell:bell-order", player, "coin", waiting * 9, "Bell order refund")]);
+    const cancelled = commit(hauled, deal, 0);
+    expect(get(cancelled, player, "coin")).toBe(before + waiting * 9);
+    expect(snapshotFor(cancelled, "test").river.myOrder).toMatchObject({ cancelled: true, waiting: 0 });
+    expect(() => quote(cancelled, { type: "cancel_bell_order", order_id: "bell-order" }, "again", 0)).toThrow("BELL_ORDER_UNKNOWN");
+    const arrived = advanceRiver({ ...cancelled, elapsed: haul.arrives, river: { ...cancelled.river, reaches: Object.fromEntries(
+      Object.entries(cancelled.river.reaches).map(([id, reach]) => [id, { ...reach, danger: 0 }])) as World["river"]["reaches"] } });
+    expect(get(arrived, "esc:bell:bell-order", "coin")).toBe(0);
+    expect(get(arrived, haul.actor, "coin") - get(cancelled, haul.actor, "coin")).toBe(leg.qty * 9);
+    expect(snapshotFor(arrived, "test").river.myOrder).toBeUndefined();
+  });
+
+  test("no hauler takes a losing job, and posting then selling back upriver never pays", () => {
+    let state = openNight(post(funded(), 10, 3));
+    for (let at = 10; at <= 290; at += 10) state = advanceClock(state, at);
+    expect(legs(state)).toEqual([]);
+    expect(state.activity.some(entry => entry.line.includes("Bell order:"))).toBe(false);
+    // The cheapest order a hauler will accept pays more per unit than the village's buyback, so the loop always loses.
+    const world = createWorld("endless");
+    for (const item of ["paper", "cord", "oil", "reed", "dye"] as const) {
+      const id = Object.entries({ paper: "millbrook", cord: "millbrook", oil: "ember_falls", reed: "reedmarsh", dye: "reedmarsh" }).find(([key]) => key === item)![1];
+      const stock = get(world, "v:" + id, item), target = villageGoods(id as never)[item]!;
+      const cheapest = tradePrice("buy", items[item].price, stock, target, 7000, 1) + 1;
+      expect(tradePrice("sell", items[item].price, stock, target, 7000, 1)).toBeLessThan(cheapest);
+    }
+  });
+
+  test("orders are validated: one per player, funded, village goods only, Night 4 in the campaign, and saved", () => {
+    const world = funded();
+    const posted = post(world, 2, 9);
+    expect(() => post(posted, 1, 9, "paper")).toThrow("BELL_ORDER_LIMIT");
+    expect(() => post(createWorld("endless"), 12, 20)).toThrow("BELL_ORDER_FUNDS");
+    expect(() => post(world, 1, 9, "lantern_paper")).toThrow("BELL_ORDER");
+    expect(() => post(world, 13, 9)).toThrow();
+    expect(() => post(prepared(), 2, 9)).toThrow("BELL_ORDER_LOCKED");
+    const decoded = decodeWorld(encodeWorld(posted));
+    expect(snapshotFor(decoded, "test").river.myOrder).toEqual(snapshotFor(posted, "test").river.myOrder);
+  });
+});
+
+test("the harbor withdraws a relief bell its village can no longer supply and rings for a good that is in stock", () => {
+  const base = createWorld("endless");
+  const closed = { ...base, river: { ...base.river, contracts: {} },
+    market: { ...base.market, indigo_atelier: { ...base.market.indigo_atelier, stockClosed: true } },
+    ledger: apply(base.ledger, [
+      move(shop("indigo_atelier"), "sys:fixture", "dye", get(base, shop("indigo_atelier"), "dye"), "Test sold out"),
+      move(shop("indigo_atelier"), "sys:fixture", "paper", get(base, shop("indigo_atelier"), "paper"), "Test sold out"),
+    ]) };
+  const rung = refreshRelief(closed);
+  const first = Object.values(rung.river.contracts).find(contract => contract.relief && contract.stall === "indigo_atelier")!;
+  expect(first.item).toBe("dye");
+  const fund = get(rung, "sys:rescue", "coin");
+  // Every dye at Reedmarsh sinks before anyone takes the relief haul.
+  const drained = { ...rung, ledger: apply(rung.ledger, [move("v:reedmarsh", "sys:fixture", "dye", get(rung, "v:reedmarsh", "dye"), "Test sunk")]) };
+  const again = refreshRelief(drained);
+  const relief = Object.values(again.river.contracts).filter(contract => contract.relief && contract.stall === "indigo_atelier");
+  expect(relief).toHaveLength(1);
+  expect(relief[0]).toMatchObject({ item: "paper", village: "millbrook" });
+  expect(get(again, "sys:rescue", "coin")).toBe(fund + first.payout - relief[0]!.payout);
 });

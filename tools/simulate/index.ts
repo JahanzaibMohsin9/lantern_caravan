@@ -5,10 +5,12 @@ import { parseArgs } from "node:util";
 import { items, recipes, type ItemId } from "@lantern/content";
 import { villageIds, sourceFor } from "@lantern/content/river";
 import { setLedgerAudit } from "../../packages/game-core/src/ledger";
-import { addTrader, advanceClock, createWorld, newNight, openNight, snapshotFor } from "@lantern/game-core";
+import { addTrader, advanceClock, commitFor, createWorld, newNight, openNight, quoteFor, snapshotFor } from "@lantern/game-core";
+import { apply } from "../../packages/game-core/src/ledger";
+import { mint } from "../../packages/game-core/src/model";
 
 const { values } = parseArgs({ options: { nights: { type: "string", default: "200" }, seed: { type: "string", default: "42" },
-  traders: { type: "string", default: "3" }, "check": { type: "boolean", default: false } } });
+  traders: { type: "string", default: "3" }, "check": { type: "boolean", default: false }, orders: { type: "boolean", default: true } } });
 const nights = Number(values.nights);
 const seed = Number(values.seed);
 const count = Number(values.traders);
@@ -34,6 +36,11 @@ if (count === 4) world = addTrader(world, "r:ivy", "Ivy");
 for (const actor of Object.keys(world.traders).slice(count)) {
   delete world.traders[actor];
 }
+// A simulated player rings the Harbor Bell every night, so the soak covers Bell order escrow, hauls and refunds.
+const orderer = "p:sim";
+if (values.orders) world = addTrader(world, orderer, "Sim");
+const orderGoods = ["oil", "paper", "dye", "reed", "cord"];
+let bellOrders = 0, bellRejected = 0;
 const report = { seed, nights, traders: count, closures: 0, rescues: 0, expansions: 0, buybacks: 0, boats: 0, stableNights: 0,
   priceMin: Infinity, priceMax: 0, merchantCoinMin: Infinity, merchantCoinMax: 0, maxDarkStreak: 0, invariantErrors: 0,
   villageCoinMin: Infinity, villageCoinMax: 0, freightLosses: 0, supplierUnits: 0, invalidGoodsOps: 0,
@@ -41,6 +48,17 @@ const report = { seed, nights, traders: count, closures: 0, rescues: 0, expansio
 const streaks = new Map<string, number>();
 for (let night = 1; night <= nights; night++) {
   world = openNight(world);
+  if (values.orders) {
+    const item = orderGoods[night % orderGoods.length]!;
+    const village = snapshotFor(world, orderer, "").villages[sourceFor(item as ItemId)!]!;
+    const unit_price = Math.min(20, Number(village.prices[item]!.buy) + 3), cash = world.ledger[orderer]?.coin ?? 0;
+    if (cash < 6 * unit_price) world = { ...world, ledger: apply(world.ledger, [mint(orderer, "coin", 6 * unit_price - cash, "Sim allowance")]) };
+    try {
+      const deal = quoteFor(world, orderer, { type: "post_bell_order", item_id: item, quantity: 6, unit_price }, "bell-" + night, 0);
+      world = commitFor(world, orderer, deal, 0);
+      bellOrders++;
+    } catch { bellRejected++; }
+  }
   for (let elapsed = 10; elapsed <= 300; elapsed += 10) {
     world = advanceClock(world, elapsed);
     const view = snapshotFor(world, "sim", "");
@@ -89,7 +107,7 @@ for (let night = 1; night <= nights; night++) {
   report.merchantCoinMin = Math.min(report.merchantCoinMin, coins);
   report.merchantCoinMax = Math.max(report.merchantCoinMax, coins);
   if (merchants.filter(([, merchant]) => merchant.band !== "dark").length >= 3) report.stableNights++;
-  if (Object.keys(world.ledger).some(id => id.startsWith("esc:run:") || id.startsWith("esc:contract:")) ||
+  if (Object.keys(world.ledger).some(id => id.startsWith("esc:run:") || id.startsWith("esc:contract:") || id.startsWith("esc:bell:")) ||
     Object.keys(world.river.hauls).length || Object.keys(world.river.contracts).length || Object.keys(world.river.runs).length) report.invariantErrors++;
   const entries = world.activity.filter(entry => entry.night === night);
   report.freightLosses += entries.filter(entry => entry.line.startsWith("Freight barge lost")).length;
@@ -105,6 +123,8 @@ for (let night = 1; night <= nights; night++) {
 csv.end();
 await finished(csv);
 report.invalidGoodsOps = invalidGoodsOps;
+// Goods the simulated player holds at the end: everything haulers delivered for its orders, plus two dock provisions.
+Object.assign(report, { bellOrders, bellRejected, bellGoodsHeld: orderGoods.reduce((sum, item) => sum + (world.ledger[orderer]?.[item] ?? 0), 0) });
 report.invariantErrors += invalidGoodsOps;
 const json = JSON.stringify(report, null, 2);
 await writeFile(`sim-output/${seed}.json`, json + "\n");

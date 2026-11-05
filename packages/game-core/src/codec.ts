@@ -24,10 +24,13 @@ const riverSchema = z.object({
   contracts: z.record(label, z.object({ id: label, village, item, qty: natural.positive(), payout: natural.positive(),
     deadline: time, kind: z.enum(["supply", "escort"]), payer: label, stall, actor: label.optional(), haul: label.optional(), relief: z.boolean().optional() })),
   hauls: z.record(label, z.object({ id: label, actor: label, village, destination: village.optional(), departs: time, arrives: time,
-    cargo: z.array(z.object({ item, qty: natural.positive(), paid: natural, stall: stall.optional(), unitPrices: z.array(natural.positive()).optional() })), contract: label.optional(),
+    cargo: z.array(z.object({ item, qty: natural.positive(), paid: natural, stall: stall.optional(), unitPrices: z.array(natural.positive()).optional(),
+      order: label.optional() })), contract: label.optional(),
     guaranteed: z.boolean().optional() })),
   wrecks: z.record(label, z.object({ id: label, reach, at: z.number().min(0).max(1), sank: z.int().positive(), by: label,
     claimedBy: label.optional() })).default({}),
+  orders: z.record(label, z.object({ id: label, actor: label, item, quantity: natural.min(1).max(12), unitPrice: natural.min(3).max(20),
+    remaining: natural.max(12), delivered: natural.max(12), cancelled: z.boolean().optional(), news: z.string() })).default({}),
 });
 const strategy = z.enum(["steady", "bold", "festival", "bargain"]);
 const vote = z.partialRecord(stall, strategy);

@@ -626,6 +626,52 @@
           "properties": {
             "type": {
               "type": "string",
+              "const": "post_bell_order"
+            },
+            "item_id": {
+              "$ref": "#/$defs/__schema0"
+            },
+            "quantity": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 12
+            },
+            "unit_price": {
+              "type": "integer",
+              "minimum": 3,
+              "maximum": 20
+            }
+          },
+          "required": [
+            "type",
+            "item_id",
+            "quantity",
+            "unit_price"
+          ],
+          "additionalProperties": false
+        },
+        {
+          "type": "object",
+          "properties": {
+            "type": {
+              "type": "string",
+              "const": "cancel_bell_order"
+            },
+            "order_id": {
+              "$ref": "#/$defs/__schema0"
+            }
+          },
+          "required": [
+            "type",
+            "order_id"
+          ],
+          "additionalProperties": false
+        },
+        {
+          "type": "object",
+          "properties": {
+            "type": {
+              "type": "string",
               "const": "finish_job"
             },
             "job_id": {
@@ -1264,6 +1310,52 @@
               "required": [
                 "type",
                 "upgrade_id"
+              ],
+              "additionalProperties": false
+            },
+            {
+              "type": "object",
+              "properties": {
+                "type": {
+                  "type": "string",
+                  "const": "post_bell_order"
+                },
+                "item_id": {
+                  "$ref": "#/$defs/__schema0"
+                },
+                "quantity": {
+                  "type": "integer",
+                  "minimum": 1,
+                  "maximum": 12
+                },
+                "unit_price": {
+                  "type": "integer",
+                  "minimum": 3,
+                  "maximum": 20
+                }
+              },
+              "required": [
+                "type",
+                "item_id",
+                "quantity",
+                "unit_price"
+              ],
+              "additionalProperties": false
+            },
+            {
+              "type": "object",
+              "properties": {
+                "type": {
+                  "type": "string",
+                  "const": "cancel_bell_order"
+                },
+                "order_id": {
+                  "$ref": "#/$defs/__schema0"
+                }
+              },
+              "required": [
+                "type",
+                "order_id"
               ],
               "additionalProperties": false
             },
@@ -2409,6 +2501,89 @@
               },
               "additionalProperties": false
             },
+            "myOrder": {
+              "type": "object",
+              "properties": {
+                "id": {
+                  "$ref": "#/$defs/__schema0"
+                },
+                "item": {
+                  "$ref": "#/$defs/__schema0"
+                },
+                "quantity": {
+                  "type": "integer",
+                  "minimum": 1,
+                  "maximum": 12
+                },
+                "unitPrice": {
+                  "type": "integer",
+                  "minimum": 3,
+                  "maximum": 20
+                },
+                "escrow": {
+                  "$ref": "#/$defs/__schema3"
+                },
+                "delivered": {
+                  "type": "integer",
+                  "minimum": 0,
+                  "maximum": 12
+                },
+                "waiting": {
+                  "type": "integer",
+                  "minimum": 0,
+                  "maximum": 12
+                },
+                "hauling": {
+                  "type": "array",
+                  "items": {
+                    "type": "object",
+                    "properties": {
+                      "name": {
+                        "$ref": "#/$defs/__schema0"
+                      },
+                      "quantity": {
+                        "type": "integer",
+                        "minimum": 1,
+                        "maximum": 12
+                      },
+                      "eta": {
+                        "$ref": "#/$defs/__schema2"
+                      }
+                    },
+                    "required": [
+                      "name",
+                      "quantity",
+                      "eta"
+                    ],
+                    "additionalProperties": false
+                  }
+                },
+                "cancelled": {
+                  "type": "boolean"
+                },
+                "news": {
+                  "type": "string"
+                }
+              },
+              "required": [
+                "id",
+                "item",
+                "quantity",
+                "unitPrice",
+                "escrow",
+                "delivered",
+                "waiting",
+                "hauling",
+                "cancelled",
+                "news"
+              ],
+              "additionalProperties": false
+            },
+            "bellOrders": {
+              "type": "integer",
+              "minimum": 0,
+              "maximum": 9007199254740991
+            },
             "upriver": {
               "type": "array",
               "items": {
@@ -2437,6 +2612,7 @@
             "contracts",
             "wrecks",
             "almanac",
+            "bellOrders",
             "upriver",
             "bountyFund"
           ],
@@ -4195,6 +4371,89 @@
                 },
                 "additionalProperties": false
               },
+              "myOrder": {
+                "type": "object",
+                "properties": {
+                  "id": {
+                    "$ref": "#/$defs/__schema0"
+                  },
+                  "item": {
+                    "$ref": "#/$defs/__schema0"
+                  },
+                  "quantity": {
+                    "type": "integer",
+                    "minimum": 1,
+                    "maximum": 12
+                  },
+                  "unitPrice": {
+                    "type": "integer",
+                    "minimum": 3,
+                    "maximum": 20
+                  },
+                  "escrow": {
+                    "$ref": "#/$defs/__schema3"
+                  },
+                  "delivered": {
+                    "type": "integer",
+                    "minimum": 0,
+                    "maximum": 12
+                  },
+                  "waiting": {
+                    "type": "integer",
+                    "minimum": 0,
+                    "maximum": 12
+                  },
+                  "hauling": {
+                    "type": "array",
+                    "items": {
+                      "type": "object",
+                      "properties": {
+                        "name": {
+                          "$ref": "#/$defs/__schema0"
+                        },
+                        "quantity": {
+                          "type": "integer",
+                          "minimum": 1,
+                          "maximum": 12
+                        },
+                        "eta": {
+                          "$ref": "#/$defs/__schema2"
+                        }
+                      },
+                      "required": [
+                        "name",
+                        "quantity",
+                        "eta"
+                      ],
+                      "additionalProperties": false
+                    }
+                  },
+                  "cancelled": {
+                    "type": "boolean"
+                  },
+                  "news": {
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "id",
+                  "item",
+                  "quantity",
+                  "unitPrice",
+                  "escrow",
+                  "delivered",
+                  "waiting",
+                  "hauling",
+                  "cancelled",
+                  "news"
+                ],
+                "additionalProperties": false
+              },
+              "bellOrders": {
+                "type": "integer",
+                "minimum": 0,
+                "maximum": 9007199254740991
+              },
               "upriver": {
                 "type": "array",
                 "items": {
@@ -4223,6 +4482,7 @@
               "contracts",
               "wrecks",
               "almanac",
+              "bellOrders",
               "upriver",
               "bountyFund"
             ],
@@ -5159,6 +5419,52 @@
                 "properties": {
                   "type": {
                     "type": "string",
+                    "const": "post_bell_order"
+                  },
+                  "item_id": {
+                    "$ref": "#/$defs/__schema1"
+                  },
+                  "quantity": {
+                    "type": "integer",
+                    "minimum": 1,
+                    "maximum": 12
+                  },
+                  "unit_price": {
+                    "type": "integer",
+                    "minimum": 3,
+                    "maximum": 20
+                  }
+                },
+                "required": [
+                  "type",
+                  "item_id",
+                  "quantity",
+                  "unit_price"
+                ],
+                "additionalProperties": false
+              },
+              {
+                "type": "object",
+                "properties": {
+                  "type": {
+                    "type": "string",
+                    "const": "cancel_bell_order"
+                  },
+                  "order_id": {
+                    "$ref": "#/$defs/__schema1"
+                  }
+                },
+                "required": [
+                  "type",
+                  "order_id"
+                ],
+                "additionalProperties": false
+              },
+              {
+                "type": "object",
+                "properties": {
+                  "type": {
+                    "type": "string",
                     "const": "finish_job"
                   },
                   "job_id": {
@@ -5810,6 +6116,52 @@
                 "required": [
                   "type",
                   "upgrade_id"
+                ],
+                "additionalProperties": false
+              },
+              {
+                "type": "object",
+                "properties": {
+                  "type": {
+                    "type": "string",
+                    "const": "post_bell_order"
+                  },
+                  "item_id": {
+                    "$ref": "#/$defs/__schema0"
+                  },
+                  "quantity": {
+                    "type": "integer",
+                    "minimum": 1,
+                    "maximum": 12
+                  },
+                  "unit_price": {
+                    "type": "integer",
+                    "minimum": 3,
+                    "maximum": 20
+                  }
+                },
+                "required": [
+                  "type",
+                  "item_id",
+                  "quantity",
+                  "unit_price"
+                ],
+                "additionalProperties": false
+              },
+              {
+                "type": "object",
+                "properties": {
+                  "type": {
+                    "type": "string",
+                    "const": "cancel_bell_order"
+                  },
+                  "order_id": {
+                    "$ref": "#/$defs/__schema0"
+                  }
+                },
+                "required": [
+                  "type",
+                  "order_id"
                 ],
                 "additionalProperties": false
               },
@@ -6658,6 +7010,52 @@
                     "required": [
                       "type",
                       "upgrade_id"
+                    ],
+                    "additionalProperties": false
+                  },
+                  {
+                    "type": "object",
+                    "properties": {
+                      "type": {
+                        "type": "string",
+                        "const": "post_bell_order"
+                      },
+                      "item_id": {
+                        "$ref": "#/$defs/__schema0"
+                      },
+                      "quantity": {
+                        "type": "integer",
+                        "minimum": 1,
+                        "maximum": 12
+                      },
+                      "unit_price": {
+                        "type": "integer",
+                        "minimum": 3,
+                        "maximum": 20
+                      }
+                    },
+                    "required": [
+                      "type",
+                      "item_id",
+                      "quantity",
+                      "unit_price"
+                    ],
+                    "additionalProperties": false
+                  },
+                  {
+                    "type": "object",
+                    "properties": {
+                      "type": {
+                        "type": "string",
+                        "const": "cancel_bell_order"
+                      },
+                      "order_id": {
+                        "$ref": "#/$defs/__schema0"
+                      }
+                    },
+                    "required": [
+                      "type",
+                      "order_id"
                     ],
                     "additionalProperties": false
                   },
@@ -7996,6 +8394,89 @@
                 },
                 "additionalProperties": false
               },
+              "myOrder": {
+                "type": "object",
+                "properties": {
+                  "id": {
+                    "$ref": "#/$defs/__schema0"
+                  },
+                  "item": {
+                    "$ref": "#/$defs/__schema0"
+                  },
+                  "quantity": {
+                    "type": "integer",
+                    "minimum": 1,
+                    "maximum": 12
+                  },
+                  "unitPrice": {
+                    "type": "integer",
+                    "minimum": 3,
+                    "maximum": 20
+                  },
+                  "escrow": {
+                    "$ref": "#/$defs/__schema3"
+                  },
+                  "delivered": {
+                    "type": "integer",
+                    "minimum": 0,
+                    "maximum": 12
+                  },
+                  "waiting": {
+                    "type": "integer",
+                    "minimum": 0,
+                    "maximum": 12
+                  },
+                  "hauling": {
+                    "type": "array",
+                    "items": {
+                      "type": "object",
+                      "properties": {
+                        "name": {
+                          "$ref": "#/$defs/__schema0"
+                        },
+                        "quantity": {
+                          "type": "integer",
+                          "minimum": 1,
+                          "maximum": 12
+                        },
+                        "eta": {
+                          "$ref": "#/$defs/__schema2"
+                        }
+                      },
+                      "required": [
+                        "name",
+                        "quantity",
+                        "eta"
+                      ],
+                      "additionalProperties": false
+                    }
+                  },
+                  "cancelled": {
+                    "type": "boolean"
+                  },
+                  "news": {
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "id",
+                  "item",
+                  "quantity",
+                  "unitPrice",
+                  "escrow",
+                  "delivered",
+                  "waiting",
+                  "hauling",
+                  "cancelled",
+                  "news"
+                ],
+                "additionalProperties": false
+              },
+              "bellOrders": {
+                "type": "integer",
+                "minimum": 0,
+                "maximum": 9007199254740991
+              },
               "upriver": {
                 "type": "array",
                 "items": {
@@ -8024,6 +8505,7 @@
               "contracts",
               "wrecks",
               "almanac",
+              "bellOrders",
               "upriver",
               "bountyFund"
             ],

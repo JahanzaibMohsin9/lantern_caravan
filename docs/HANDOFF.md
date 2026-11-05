@@ -4,7 +4,7 @@
 
 ### Scope and §16.4 hand-back
 
-W0–W2 were delivered by the first implementer; W3 onward continue in order from this point. Each package below records its own checks.
+W0–W2 were delivered by the first implementer and W3–W5 by the second. **W6–W9 are not started; resume at W6.** Each package below records its own checks.
 
 | Package | Status |
 | --- | --- |
@@ -13,7 +13,7 @@ W0–W2 were delivered by the first implementer; W3 onward continue in order fro
 | W2 · skiffs | Committed as `9a0c327` |
 | W3 · wrecks/stops | Committed in the `W3:` commit; checks below |
 | W4 · almanac | Committed in the `W4:` commit; checks below |
-| W5 · player Bell orders | Not started |
+| W5 · player Bell orders | Committed in the `W5:` commit; checks below |
 | W6 · four-night campaign | Not started |
 | W7 · barge looks/cosmetics | Not started |
 | W8 · Watch/history/trust | Not started |
@@ -25,6 +25,18 @@ W0–W2 were delivered by the first implementer; W3 onward continue in order fro
 - [ ] Full manual playthrough: not performed. Firefox and physical touch devices: not verified.
 
 Branch remains `river-run`; no push, remote changes, rebase or history rewrite.
+
+### W5 · Player Bell orders
+
+At The Landing, **Post an order** escrows `quantity × unit price` coins (1–12 units, 3–20 coins) in `esc:bell:<id>`; one order per player. Rival haulers weigh open orders on their turn alongside stall routes, taking up to 6 units only when the order's price beats the village cost, scored by margin over distance and danger. A free hauler puts a Bell order first unless a stall on the Row is dark. Delivery moves the goods to the player and pays the hauler from the escrow; a sunk haul becomes a W3 wreck and reopens those units; cancelling refunds the waiting units at once while a haul already under way still delivers; the night's end refunds what's left. The campaign's rivals take Bell orders too (from Night 4, when they open). The Landing shows the order's escrow, deliveries, each haul with its arrival time, and the latest news.
+
+The soak now includes a simulated player posting a 6-unit order every night. With that traffic, three seeds first failed the dark-streak check, which exposed three weaknesses in the harbor's relief: it asked for a good no village had in stock, it paid nothing for danger, and an unfillable relief bell blocked a fillable one. All three are fixed (see `BALANCE_REPORT.md`), with a regression test for the last.
+
+- `npm run schema` — passed; regenerated schema committed.
+- `npm run build` — passed.
+- `npm test` — passed, 136 tests (7 new for Bell orders: escrow and partial fills through the night's end, sinking reopens units without touching escrow, cancel with a haul under way, no losing jobs and no post-and-resell loop, validation and save round trip, a live-room race between two players; plus the relief withdrawal regression).
+- `LANTERN_CHROME_CHANNEL=chrome npm run test:e2e -- --project=chrome` — passed, 7 tests. The new path signs in to a live room, posts a 2-oil order at 12 coins through the form, and waits for a rival to haul and deliver it with the escrow back at 0.
+- `npm run simulate -- --nights 2000 --seed <17|42|93|166|271> --check` — all five passed on the final run: longest dark streak 1, zero invariant errors, zero invalid goods ops, 2,000 Bell orders posted and none rejected per seed, no `esc:bell:` balance left at any close. The balance table is refreshed from this run.
 
 ### W4 · Harbor almanac
 

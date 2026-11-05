@@ -1,7 +1,7 @@
 import { items, merchants, recipes, type ItemId, type StallId } from "@lantern/content";
 import { strategies } from "@lantern/content/nights";
 import { bargeHold, bargeUpgrades, pirateCap, pirateRoleCaps, pirateRoles, reachIds, reaches, routeDistance, runMs, sourceFor, stopChoice,
-  stopPlan, villageGoods, villageIds, villageStrategy, villages, wreckNights, almanacEvents, almanacFor, harvestTarget,
+  stopPlan, villageGoods, villageIds, villageStrategy, villages, wreckNights, almanacEvents, almanacFor, harvestTarget, bellOrderLimits,
   type AlmanacId, type BargeUpgradeId, type ReachId, type VillageId } from "@lantern/content/river";
 import { runReportSchema, type Intent, type LedgerOp, type RunManifest, type RunReport, type Snapshot } from "@lantern/protocol";
 import { apply } from "./ledger";
@@ -13,6 +13,7 @@ export const village = (id: VillageId) => "v:" + id;
 const runEscrow = (id: string) => "esc:run:" + id;
 const contractEscrow = (id: string) => "esc:contract:" + id;
 export const wreckAccount = (id: string) => "esc:wreck:" + id;
+export const bellAccount = (id: string) => "esc:bell:" + id;
 const lostCargo = (from: string, item: string, qty: number, memo = "Lost to the river"): LedgerOp =>
   ({ ...burn(from, item, qty, memo), sink: "sys:river" });
 const applyEffects = (world: World, effects: LedgerOp[]): World =>
@@ -24,7 +25,10 @@ type Contract = {
   /** Posted by the harbor for a stall that ran out of cash; delivery relights it. */
   relief?: boolean;
 };
-type CargoLeg = { item: ItemId; qty: number; paid: number; stall?: StallId; unitPrices?: number[] };
+type CargoLeg = { item: ItemId; qty: number; paid: number; stall?: StallId; unitPrices?: number[]; order?: string };
+/** A player's escrowed request for goods. `remaining` units wait for a hauler; units on a haul are counted from the hauls. */
+type BellOrder = { id: string; actor: string; item: ItemId; quantity: number; unitPrice: number; remaining: number;
+  delivered: number; cancelled?: boolean; news: string };
 type Haul = {
   id: string; actor: string; village: VillageId; destination?: VillageId; cargo: CargoLeg[];
   departs: number; arrives: number; contract?: string; guaranteed?: boolean;
@@ -38,11 +42,12 @@ export type RiverState = {
   hauls: Record<string, Haul>; sailings: number; serial: number; random: number;
   supplied: Partial<Record<StallId, Record<string, number>>>;
   wrecks: Record<string, Wreck>;
+  orders: Record<string, BellOrder>;
 };
 
 export function freshRiver(seed = 42): RiverState {
   return { reaches: Object.fromEntries(reachIds.map((id, i) => [id, { danger: i === 0 ? 1 : 0, boom: false, lamps: i === 0 ? 4 : 5, kills: 0 }])) as RiverState["reaches"],
-    bountyFund: 0, runs: {}, contracts: {}, hauls: {}, sailings: 0, serial: 0, random: seed >>> 0, supplied: {}, wrecks: {} };
+    bountyFund: 0, runs: {}, contracts: {}, hauls: {}, sailings: 0, serial: 0, random: seed >>> 0, supplied: {}, wrecks: {}, orders: {} };
 }
 const withRiver = (world: World, patch: Partial<RiverState>): World => ({ ...world, river: { ...world.river, ...patch } });
 function random(world: World) {
@@ -267,16 +272,24 @@ export function refreshRelief(world: World) {
     const coins = get(state, shop(stall), "coin");
     const dark = cashBand(coins) === "dark" || !!state.market[stall].stockClosed;
     if (!dark || state.market[stall].rescued) continue;
+    // A relief bell nobody has taken is withdrawn once its village can no longer supply it, so the harbor can ring
+    // for a good that is available instead; the escrow returns to the dock fund.
+    const stale = Object.values(state.river.contracts).find(contract => contract.relief && contract.stall === stall &&
+      !contract.actor && stock(state, contract.village, contract.item) < contract.qty);
+    if (stale) state = removeContract(state, stale);
     if (Object.values(state.river.contracts).some(contract => contract.relief && contract.stall === stall)) continue;
+    // Ask for the most-needed good a village can actually supply: a sold-out source would leave the stall dark.
     const needs = (Object.entries(stockTargets(stall)) as [ItemId, number][])
       .map(([item]) => ({ item, shortage: shortage(state, stall, item) }))
+      .filter(entry => stock(state, sourceFor(entry.item)!, entry.item) >= 3)
       .sort((a, b) => b.shortage - a.shortage)[0];
     if (!needs || needs.shortage < 3) continue;
     // The harbor pays the village's current price plus a hauling premium, so the haul is worth taking even
     // when the source is scarce, and asks only for what the village can actually sell.
     const id = sourceFor(needs.item)!;
     const budget = get(state, rescueFund, "coin") - 4;
-    const pay = (n: number) => cost(state, id, needs.item, n) + 2 + Math.ceil(n / 2);
+    // Like ordinary contracts, the hauling premium rises with the danger on the route.
+    const pay = (n: number) => cost(state, id, needs.item, n) + 2 + Math.ceil(n / 2) + dangerOnRoute(state, id) * 2;
     let qty = Math.min(8, needs.shortage, stock(state, id, needs.item));
     while (qty >= 3 && pay(qty) > budget) qty--;
     if (qty < 3) continue;
@@ -353,10 +366,36 @@ function postContract(world: World, contract: Omit<Contract, "id">) {
   return withRiver(state, { serial, contracts: { ...world.river.contracts, [id]: { ...contract, id } } });
 }
 
+/** Units of a Bell order currently aboard a haul. */
+const orderInTransit = (world: World, id: string) => Object.values(world.river.hauls)
+  .reduce((sum, haul) => sum + haul.cargo.filter(leg => leg.order === id).reduce((n, leg) => n + leg.qty, 0), 0);
+/** Bell orders come first for a free hauler, unless a stall on the Row is dark and waiting for supply. */
+export const hasOpenBellOrder = (world: World) => Object.values(world.river.orders ?? {}).some(order => !order.cancelled && order.remaining > 0) &&
+  !merchantIds.some(stall => world.market[stall].stockClosed || cashBand(get(world, shop(stall), "coin")) === "dark");
+
+/**
+ * A hauler weighs each open Bell order like any other route: buy at the village, sail, deliver. It only takes the
+ * job when the escrowed price beats what the goods cost upriver, and the score discounts distance and danger.
+ */
+function bellOrderOptions(world: World, actor: string, departs: number) {
+  return Object.values(world.river.orders ?? {}).flatMap(order => {
+    if (order.cancelled || order.remaining <= 0 || order.actor === actor) return [];
+    const id = sourceFor(order.item)!;
+    const duration = Math.ceil(routeDistance(id) / 195) + Math.round(routeRisk(world, id) * 3);
+    if (departs + duration >= plan(world).duration) return [];
+    let qty = Math.min(bellOrderLimits.haulUnits, order.remaining, stock(world, id, order.item));
+    while (qty > 0 && (cost(world, id, order.item, qty) >= qty * order.unitPrice || cost(world, id, order.item, qty) > get(world, actor, "coin"))) qty--;
+    if (!qty) return [];
+    const paid = cost(world, id, order.item, qty), sale = qty * order.unitPrice;
+    const score = (sale - paid) / (1 + routeDistance(id) / 1800 + routeRisk(world, id));
+    return [{ item: order.item, id, qty, paid, duration, score, order: order.id, stall: undefined, contract: undefined }];
+  });
+}
+
 export function startRivalHaul(world: World, actor: string, departs = world.elapsed) {
-  if (world.mode === "campaign" || get(world, actor, "coin") < 10 ||
-    Object.values(world.river.hauls).some(haul => haul.actor === actor)) return world;
-  const options = merchantIds.flatMap(stall => Object.keys(stockTargets(stall)).flatMap(key => {
+  if (get(world, actor, "coin") < 10 || Object.values(world.river.hauls).some(haul => haul.actor === actor)) return world;
+  // The campaign's rivals don't run their own supply business, but they do take players' Bell orders.
+  const options = (world.mode === "campaign" ? [] : merchantIds).flatMap(stall => Object.keys(stockTargets(stall)).flatMap(key => {
     const item = key as ItemId, id = sourceFor(item)!, target = stockTargets(stall)[item]!;
     const contract = Object.values(world.river.contracts).find(c => !c.actor && c.kind === "supply" && c.stall === stall && c.item === item);
     const needed = shortage(world, stall, item) - inTransit(world, stall, item);
@@ -368,19 +407,31 @@ export function startRivalHaul(world: World, actor: string, departs = world.elap
     const sale = contract?.payout ?? tradePrice("sell", items[item].price, get(world, shop(stall), item), target, ratio(world, stall), qty);
     if (!contract && get(world, shop(stall), "coin") - sale < 10) return [];
     const score = (sale - paid) / (1 + routeDistance(id) / 1800 + routeRisk(world, id));
-    return score > 0 ? [{ stall, item, id, qty, paid, duration, score, contract }] : [];
-  })).sort((a, b) => b.score - a.score);
+    return score > 0 ? [{ stall: stall as StallId | undefined, item, id, qty, paid, duration, score, contract, order: undefined as string | undefined }] : [];
+  })).concat(bellOrderOptions(world, actor, departs))
+    // A free hauler answers the harbor's relief bell for a dark stall before any other job.
+    .sort((a, b) => Number(!!b.contract?.relief) - Number(!!a.contract?.relief) || b.score - a.score);
   const route = options[0];
   if (!route) return world;
-  let state = schedule(world, actor, route.id, [route], departs, route.duration, undefined, route.contract);
-  const name = world.traders[actor]!.name, danger = dangerOnRoute(world, route.id);
-  const line = name + ": Hauling " + route.qty + " " + route.item + " from " + villages[route.id].name + " to " + merchants[route.stall].name + ".";
-  state = addActivity({ ...state, market: { ...state.market, [route.stall]: { ...state.market[route.stall], thinking: line } } }, line, name);
+  const name = world.traders[actor]!.name;
+  if (route.order) {
+    const order = world.river.orders[route.order]!;
+    const news = name + " is hauling " + route.qty + " " + items[route.item].name.toLowerCase() + " from " + villages[route.id].name + ".";
+    const scheduled = schedule(world, actor, route.id, [{ item: route.item, qty: route.qty, paid: route.paid, order: route.order }], departs, route.duration);
+    const state = withRiver(scheduled, { orders: { ...scheduled.river.orders, [order.id]: { ...order, remaining: order.remaining - route.qty, news } } });
+    return addActivity(state, name + " took " + (world.traders[order.actor]?.name ?? "a player") + "\u2019s Bell order: " +
+      route.qty + " " + items[route.item].name.toLowerCase() + " from " + villages[route.id].name + " at " + order.unitPrice + " coins each.", name);
+  }
+  const stall = route.stall!;
+  let state = schedule(world, actor, route.id, [{ ...route, stall }], departs, route.duration, undefined, route.contract);
+  const danger = dangerOnRoute(world, route.id);
+  const line = name + ": Hauling " + route.qty + " " + route.item + " from " + villages[route.id].name + " to " + merchants[stall].name + ".";
+  state = addActivity({ ...state, market: { ...state.market, [stall]: { ...state.market[stall], thinking: line } } }, line, name);
   const cash = get(state, actor, "coin");
   if (danger >= 2 && cash >= 12) {
     const haul = "haul-" + state.river.serial;
     state = postContract(state, { village: route.id, item: route.item, qty: route.qty, payout: Math.min(Math.floor(cash * .45), 4 + danger * 2),
-      payer: actor, stall: route.stall, deadline: departs + route.duration, kind: "escort", haul });
+      payer: actor, stall, deadline: departs + route.duration, kind: "escort", haul });
   }
   return state;
 }
@@ -420,9 +471,20 @@ function resolveHaul(world: World, haul: Haul) {
   const loss = !haul.guaranteed && roll < state.river.reaches[reach].danger * .04;
   const contract = haul.contract ? state.river.contracts[haul.contract] : undefined;
   const owner = haul.actor === freight ? "Freight barge" : state.traders[haul.actor]?.name ?? "Village boat";
-  for (const { item, qty, paid, stall, unitPrices } of haul.cargo) {
+  for (const { item, qty, paid, stall, unitPrices, order: orderId } of haul.cargo) {
+    const order = orderId ? state.river.orders[orderId] : undefined;
     if (loss) {
       state = addActivity(state, owner + " lost " + qty + " " + item + " at " + reaches[reach].name + ".");
+      if (order) state = settleOrderLoss(state, order, qty, owner + "\u2019s barge sank on " + reaches[reach].name + " with " + qty + " " +
+        items[item].name.toLowerCase() + ". The wreck can be salvaged tomorrow.");
+    } else if (order) {
+      const payout = qty * order.unitPrice;
+      state = applyEffects(state, [move(haul.actor, order.actor, item, qty, "Bell order delivery"),
+        move(bellAccount(order.id), haul.actor, "coin", payout, "Bell order payout")]);
+      const news = owner + " delivered " + qty + " " + items[item].name.toLowerCase() + " to The Landing.";
+      state = withRiver(state, { orders: { ...state.river.orders, [order.id]: { ...order, delivered: order.delivered + qty, news } } });
+      state = addActivity(state, news.replace(" to The Landing.", " for " + (state.traders[order.actor]?.name ?? "a player") + "\u2019s Bell order."), owner);
+      state = tidyOrder(state, order.id);
     } else if (haul.destination) {
       state = applyEffects(state, [move(haul.actor, village(haul.destination), item, qty, "Village boat delivery")]);
     } else if (stall) {
@@ -461,6 +523,23 @@ function resolveHaul(world: World, haul: Haul) {
   return state;
 }
 
+/** A lost Bell-order haul reopens those units for another hauler, or refunds them if the order was cancelled. */
+function settleOrderLoss(world: World, order: BellOrder, qty: number, news: string) {
+  if (order.cancelled) {
+    const state = applyEffects(world, [move(bellAccount(order.id), order.actor, "coin", qty * order.unitPrice, "Bell order refund")]);
+    return tidyOrder(withRiver(state, { orders: { ...state.river.orders, [order.id]: { ...order, news } } }), order.id);
+  }
+  return withRiver(world, { orders: { ...world.river.orders, [order.id]: { ...order, remaining: order.remaining + qty, news: news + " The order is open again." } } });
+}
+
+/** A cancelled order disappears once nothing is aboard a haul for it; its escrow is already back with the player. */
+function tidyOrder(world: World, id: string) {
+  const order = world.river.orders[id];
+  if (!order?.cancelled || orderInTransit(world, id)) return world;
+  const { [id]: _, ...orders } = world.river.orders;
+  return withRiver(world, { orders });
+}
+
 export function advanceRiver(world: World) {
   let state = world;
   for (const haul of Object.values(world.river.hauls).filter(haul => haul.arrives <= world.elapsed)) state = resolveHaul(state, haul);
@@ -494,12 +573,36 @@ export function closeRiver(world: World) {
       move(haul.actor, village(haul.village), item, qty, "Night close cargo return"))), { hauls });
   }
   for (const contract of Object.values(state.river.contracts)) state = removeContract(state, contract);
-  return state;
+  for (const order of Object.values(state.river.orders ?? {})) {
+    const left = get(state, bellAccount(order.id), "coin");
+    if (left) state = applyEffects(state, [move(bellAccount(order.id), order.actor, "coin", left, "Bell order refund")]);
+  }
+  return withRiver(state, { orders: {} });
 }
 
-type RiverIntent = Extract<Intent, { type: "start_run" | "finish_run" | "accept_contract" | "buy_barge_upgrade" }>;
-export const isRiverIntent = (intent: Intent): intent is RiverIntent =>
-  intent.type === "start_run" || intent.type === "finish_run" || intent.type === "accept_contract" || intent.type === "buy_barge_upgrade";
+type RiverIntent = Extract<Intent, { type: "start_run" | "finish_run" | "accept_contract" | "buy_barge_upgrade" | "post_bell_order" | "cancel_bell_order" }>;
+const riverIntents = new Set(["start_run", "finish_run", "accept_contract", "buy_barge_upgrade", "post_bell_order", "cancel_bell_order"]);
+export const isRiverIntent = (intent: Intent): intent is RiverIntent => riverIntents.has(intent.type);
+const myOrder = (world: World, actor: string) => Object.values(world.river.orders ?? {}).find(order => order.actor === actor);
+const bellOrdersOpen = (world: World) => world.mode !== "campaign" || world.night >= 4;
+
+function bellOrderQuote(world: World, actor: string, intent: Extract<RiverIntent, { type: "post_bell_order" | "cancel_bell_order" }>, id: string) {
+  if (!bellOrdersOpen(world)) throw new Error("BELL_ORDER_LOCKED · Bell orders open on Night 4.");
+  if (intent.type === "cancel_bell_order") {
+    const order = myOrder(world, actor);
+    if (!order || order.id !== intent.order_id || order.cancelled) throw new Error("BELL_ORDER_UNKNOWN · You have no open order with that id.");
+    const refund = order.remaining * order.unitPrice;
+    return { effects: refund ? [move(bellAccount(order.id), actor, "coin", refund, "Bell order refund")] : [],
+      summary: "Cancelled your Bell order" + (orderInTransit(world, order.id) ? "; a haul already under way will still deliver" : "") };
+  }
+  const item = intent.item_id as ItemId, source = Object.hasOwn(items, item) ? sourceFor(item) : undefined;
+  if (!source) throw new Error("BELL_ORDER · Only village goods can be ordered.");
+  if (myOrder(world, actor)) throw new Error("BELL_ORDER_LIMIT · You already have a Bell order. Cancel it or wait for the night to end.");
+  const total = intent.quantity * intent.unit_price;
+  if (get(world, actor, "coin") < total) throw new Error("BELL_ORDER_FUNDS · Reserve " + total + " coins to post this order.");
+  return { effects: [move(actor, bellAccount(id), "coin", total, "Bell order escrow")],
+    summary: "Posted a Bell order: " + intent.quantity + " " + items[item].name.toLowerCase() + " at " + intent.unit_price + " coins each" };
+}
 
 function availableContract(world: World, actor: string, id: string) {
   const contract = Object.hasOwn(world.river.contracts, id) ? world.river.contracts[id] : undefined;
@@ -689,9 +792,11 @@ function finishRun(world: World, actor: string, id: string, report: RunReport, n
 
 export function riverQuote(world: World, actor: string, intent: RiverIntent, id: string, now: number) {
   if (world.phase === "results" && intent.type !== "finish_run") throw new Error("The river is closed until the next evening.");
-  if (world.mode === "campaign" && world.night === 1) throw new Error("The barge is under repair until Night 2.");
+  if (world.mode === "campaign" && world.night === 1 && intent.type !== "post_bell_order" && intent.type !== "cancel_bell_order")
+    throw new Error("The barge is under repair until Night 2.");
   if (intent.type === "start_run" && world.phase === "open" && plan(world).duration - world.elapsed < 45)
     throw new Error("RIVER_LATE · Too late to cast off tonight. Try again during preparation.");
+  if (intent.type === "post_bell_order" || intent.type === "cancel_bell_order") return bellOrderQuote(world, actor, intent, id);
   if (Object.values(world.river.runs).some(run => run.actor === actor) && intent.type !== "finish_run")
     throw new Error("Your barge is already upriver.");
   if (intent.type === "accept_contract") {
@@ -715,6 +820,19 @@ export function riverQuote(world: World, actor: string, intent: RiverIntent, id:
 
 export function commitRiver(prior: World, world: World, actor: string, intent: RiverIntent, id: string, now: number) {
   const trader = world.traders[actor]!;
+  if (intent.type === "post_bell_order") {
+    const order: BellOrder = { id, actor, item: intent.item_id as ItemId, quantity: intent.quantity, unitPrice: intent.unit_price,
+      remaining: intent.quantity, delivered: 0, news: "Waiting for a hauler to take the job." };
+    const state = withRiver(world, { orders: { ...world.river.orders, [id]: order } });
+    return addActivity(state, trader.name + " rang the Harbor Bell for " + order.quantity + " " + items[order.item].name.toLowerCase() +
+      " at " + order.unitPrice + " coins each.", trader.name);
+  }
+  if (intent.type === "cancel_bell_order") {
+    const order = world.river.orders[intent.order_id]!;
+    const state = withRiver(world, { orders: { ...world.river.orders, [order.id]: { ...order, remaining: 0, cancelled: true,
+      news: orderInTransit(world, order.id) ? "Cancelled. The haul already under way will still deliver." : "Cancelled and refunded." } } });
+    return tidyOrder(state, order.id);
+  }
   if (intent.type === "buy_barge_upgrade") return { ...world, traders: { ...world.traders,
     [actor]: { ...trader, upgrades: [...trader.upgrades, intent.upgrade_id as BargeUpgradeId] } } };
   if (intent.type === "accept_contract") {
@@ -780,6 +898,15 @@ export function commitRiver(prior: World, world: World, actor: string, intent: R
   return { ...state, traders: { ...state.traders, [actor]: { ...state.traders[actor]!, relationship, lastStop: "shed" } } };
 }
 
+function orderView(world: World, actor: string) {
+  const order = myOrder(world, actor);
+  if (!order) return undefined;
+  const hauling = Object.values(world.river.hauls).flatMap(haul => haul.cargo.filter(leg => leg.order === order.id).map(leg => ({
+    name: world.traders[haul.actor]?.name ?? "A hauler", quantity: leg.qty, eta: Math.max(0, haul.arrives - world.elapsed) })));
+  return { id: order.id, item: order.item, quantity: order.quantity, unitPrice: order.unitPrice, escrow: String(get(world, bellAccount(order.id), "coin")),
+    delivered: order.delivered, waiting: order.remaining, hauling, cancelled: !!order.cancelled, news: order.news };
+}
+
 const almanacEntry = (id: AlmanacId | undefined) => id && { id, name: almanacEvents[id].name,
   village: almanacEvents[id].village, item: almanacEvents[id].item, detail: almanacEvents[id].detail };
 
@@ -810,6 +937,8 @@ export function riverSnapshot(world: World, actor: string): Pick<Snapshot, "vill
         claimed: !!wreck.claimedBy })).filter(wreck => Object.keys(wreck.cargo).length),
       upriver: Object.values(world.river.runs).map(run => ({ actor: run.actor, name: world.traders[run.actor]!.name })),
       almanac: { tonight: almanacEntry(almanacTonight(world)), tomorrow: almanacEntry(almanacTomorrow(world)) },
+      myOrder: orderView(world, actor),
+      bellOrders: Object.values(world.river.orders ?? {}).filter(order => !order.cancelled && order.remaining > 0).length,
     },
     barge: { hold: String(bargeHold(upgrades)), upgrades, trim: trader?.trim ?? "balanced" },
   };
