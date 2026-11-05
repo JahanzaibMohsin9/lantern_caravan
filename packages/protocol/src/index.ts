@@ -5,10 +5,38 @@ export const amount = z.string().regex(/^(0|[1-9]\d*)$/).max(16)
 const quantity = amount.refine(value => Number(value) > 0);
 const id = z.string().min(1).max(120);
 export const ledgerOpSchema = z.discriminatedUnion("op", [
-  z.object({ op: z.literal("mint"), asset: id, amount: quantity, to: id, memo: id }),
-  z.object({ op: z.literal("burn"), asset: id, amount: quantity, from: id, memo: id }),
+  z.object({ op: z.literal("mint"), asset: id, amount: quantity, to: id, memo: id, source: id.optional() }),
+  z.object({ op: z.literal("burn"), asset: id, amount: quantity, from: id, memo: id, sink: id.optional() }),
   z.object({ op: z.literal("transfer"), asset: id, amount: quantity, from: id, to: id, memo: id }),
 ]);
+const units = z.int().min(1).max(20);
+const coins = z.int().nonnegative();
+const cargoCounts = z.record(id, z.int().min(0).max(20));
+export const runReportSchema = z.object({
+  run_id: id, seed: z.int().min(0).max(0xffffffff), durationMs: z.int().min(0).max(150_000),
+  bought: z.array(z.object({ village_id: id, item_id: id, quantity: units, paid: coins })).max(6),
+  soldBack: z.array(z.object({ village_id: id, item_id: id, quantity: units, received: coins })).max(6),
+  delivered: cargoCounts, lost: cargoCounts, flaresUsed: z.int().min(0).max(20),
+  pirates: z.array(z.object({ reach: id, count: z.int().min(1).max(10) })).max(4),
+  boomsBroken: z.array(id).max(4),
+  escort: z.object({ id, completed: z.boolean() }).optional(),
+  savedBoats: z.array(id).max(5).optional(),
+  outcome: z.enum(["moored", "towed", "sunk"]), inputLogHash: z.string().max(120),
+});
+export type RunReport = z.infer<typeof runReportSchema>;
+
+export const manifestSchema = z.object({
+  id, seed: z.int().nonnegative(), deadline: coins, wallet: coins, hold: units,
+  items: z.array(z.object({ village: id, item: id, stock: coins, target: z.int().positive(),
+    prices: z.array(z.int().positive()).max(20), coins, discount: z.boolean() })).max(6),
+  reaches: z.array(z.object({ id, danger: z.int().min(0).max(5), boom: z.boolean() })).max(4),
+  boats: z.array(z.object({ id, name: id, village: id, destination: id.optional(), departs: z.number(), arrives: z.number(), ambient: z.boolean() })),
+  contract: z.object({ id, village: id, item: id, quantity: units, payout: coins,
+    kind: z.enum(["supply", "escort"]), haul: id.optional() }).optional(),
+  upgrades: z.array(id), bounty: coins, glow: z.number().min(0).max(1),
+});
+export type RunManifest = z.infer<typeof manifestSchema>;
+
 export const intentSchema = z.discriminatedUnion("type", [
   z.object({ type: z.enum(["buy", "sell"]), stall_id: id, item_id: id, quantity }),
   z.object({ type: z.literal("craft"), recipe_id: id, quantity }),
@@ -18,6 +46,11 @@ export const intentSchema = z.discriminatedUnion("type", [
   z.object({ type: z.literal("vote_strategy"), stall_id: id, strategy_id: id }),
   z.object({ type: z.literal("buy_upgrade"), upgrade_id: id }),
   z.object({ type: z.literal("start_job") }),
+  z.object({ type: z.literal("start_run"), contract_id: id.optional(), escort_id: id.optional(),
+    barge_plan: z.array(z.object({ village_id: id, item_id: id, quantity })).max(6) }),
+  z.object({ type: z.literal("finish_run"), run_id: id, report: runReportSchema }),
+  z.object({ type: z.literal("accept_contract"), contract_id: id }),
+  z.object({ type: z.literal("buy_barge_upgrade"), upgrade_id: id }),
   z.object({ type: z.literal("finish_job"), job_id: id }),
   z.object({ type: z.literal("accept_buyback"), buyback_id: id }),
   z.object({ type: z.literal("list_shares"), stall_id: id, shares: quantity, price_per_share: quantity }),
@@ -44,10 +77,12 @@ export type StrategyId = "steady" | "bold" | "festival" | "bargain";
 export type Activity = { at: number; night: number; line: string; actor?: string; receipt?: Receipt };
 export type MerchantSnapshot = {
   band: CashBand;
+  stockClosed?: boolean;
   coins: string;
   stock: Record<string, string>;
   prices: Record<string, { buy: string; sell: string; label: string; target: string }>;
   strategy: StrategyId; vote?: StrategyId; thinking: string; relationship: number;
+  suppliedBy?: { name: string; quantity: string }[];
   owned: string; shareholders: { name: string; count: string }[];
   bookValue: string; sharePrice: string; dividend: string; dividendHistory: string[];
   offering?: { id: string; kind: "rescue" | "expansion"; price: string; left: string; total: string; available: string; ends: number };
@@ -58,6 +93,17 @@ export type Snapshot = {
   server_time: number; revision: number; phase: "preparation" | "open" | "results"; elapsed: number; duration: number;
   coins: string; cargo: Record<string, string>; capacity: string; upgrades: string[];
   merchants: Record<string, MerchantSnapshot>;
+  villages: Record<string, { band: CashBand; coins: string; stock: Record<string, string>;
+    prices: Record<string, { buy: string; sell: string; label: string }>; relationship: number }>;
+  river: {
+    reaches: { id: string; name: string; danger: number; boom: boolean; lamps: number }[];
+    contracts: { id: string; stall: string; village: string; item: string; quantity: string; payout: string;
+      deadline: number; mine: boolean; taken: boolean; kind: "supply" | "escort" }[];
+    myRun?: { id: string; deadline: number; manifest: RunManifest };
+    upriver: { actor: string; name: string }[];
+    bountyFund: string;
+  };
+  barge: { hold: string; upgrades: string[] };
   orders: {
     id: string; name: string; item: string; remaining: string; quantity: string; payout: string;
     boat: number; personal: boolean; opens: number; state: "upcoming" | "open" | "filled" | "expired";

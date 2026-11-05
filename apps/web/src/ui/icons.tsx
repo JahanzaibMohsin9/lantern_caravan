@@ -1,9 +1,9 @@
-import { Anchor, Anvil, Box, Droplet, House, Lamp, Layers3, Paintbrush, ScrollText, Sprout, Waves, Wind } from "lucide-react";
+import { Anchor, Anvil, Box, Droplet, Lamp, Layers3, Paintbrush, ScrollText, Sprout, Waves, Wind } from "lucide-react";
 import type { ItemId } from "@lantern/content";
 import type { Stop } from "../world/bridge";
 
 export const stopIcons = {
-  shed: House, paper_mill: ScrollText, oil_wharf: Droplet, workshop: Anvil,
+  shed: Anchor, paper_mill: ScrollText, oil_wharf: Droplet, workshop: Anvil,
   reed_thread: Sprout, indigo_atelier: Paintbrush, board: Anchor, lantern_house: Lamp,
 } satisfies Record<Stop, typeof Box>;
 

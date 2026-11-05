@@ -13,6 +13,7 @@
     "@lantern/content": "*",
     "@lantern/game-core": "*",
     "@lantern/protocol": "*",
+    "@lantern/river-sim": "*",
     "lucide-react": "^0.468.0",
     "phaser": "3.90.0",
     "react": "^19.0.0",

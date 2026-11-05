@@ -96,7 +96,8 @@ describe("first light", () => {
     const state = execute(execute(begin(), { type: "craft", recipe_id: "paper_lantern", quantity: "2" }),
       { type: "sell_crowd", item_id: "lantern_paper", quantity: "2" });
     expect(snapshotFor(state, "test")).toMatchObject({ coins: "44", crowdBudget: "106", delivered: "0" });
-    expect(totals(state, "lantern_paper")).toBe(0);
+    expect(totals(state, "lantern_paper")).toBe(2);
+    expect(state.ledger["sys:crowd"]?.lantern_paper).toBe(2);
   });
 
   test("haggles at a whole-unit price and enforces the cooldown", () => {

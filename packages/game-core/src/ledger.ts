@@ -4,6 +4,9 @@ export type Ledger = Record<string, Record<string, number>>;
 export const balance = (ledger: Ledger, account: string, asset: string) =>
   Object.hasOwn(ledger, account) && Object.hasOwn(ledger[account]!, asset) ? ledger[account]![asset]! : 0;
 
+let audit: ((effect: LedgerOp) => void) | undefined;
+export function setLedgerAudit(check: ((effect: LedgerOp) => void) | undefined) { audit = check; }
+
 export function apply(ledger: Ledger, effects: readonly LedgerOp[]): Ledger {
   const next = { ...ledger };
   function change(account: string, asset: string, delta: number) {
@@ -16,6 +19,7 @@ export function apply(ledger: Ledger, effects: readonly LedgerOp[]): Ledger {
     else delete next[account];
   }
   for (const effect of effects) {
+    audit?.(effect);
     const amount = Number(effect.amount);
     if (!Number.isSafeInteger(amount) || amount <= 0) throw new Error("Invalid ledger amount.");
     if (effect.op !== "mint") change(effect.from, effect.asset, -amount);

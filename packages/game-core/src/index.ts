@@ -12,8 +12,12 @@ import { afterOwnership, bookValue, buybackPrice, closeOwnership, owners, owners
 
 export { createWorld, newNight, addTrader, addActivity, capacity, duration, player, crowd, nightId, nowAt, objective, plan, type World } from "./model";
 export { openNight } from "./ownership";
+export { cancelRun, InvalidRun, isRiverIntent } from "./river";
+import { advanceRiver, closeRiver, commitRiver, isRiverIntent, recordSupply, refreshContracts, riverQuote,
+  riverSnapshot, scheduleFreight, startRivalHaul } from "./river";
 
 function phaseCheck(state: World, intent: Intent) {
+  if (isRiverIntent(intent)) return;
   if (intent.type === "vote_strategy" || intent.type === "buy_upgrade") {
     if (state.phase !== "preparation") throw new Error("Do that during preparation.");
   } else if (state.phase !== "open" || state.elapsed >= plan(state).duration) {
@@ -25,6 +29,12 @@ export function quoteFor(state: World, actor: string, raw: Intent, id: string, n
   const intent = intentSchema.parse(raw);
   phaseCheck(state, intent);
   const trader = getTrader(state, actor);
+  if (isRiverIntent(intent)) {
+    const { effects, summary } = riverQuote(state, actor, intent, id, now);
+    apply(state.ledger, effects);
+    return { quote_id: id, intent, summary, effects, expires_at: now + 15000 };
+  }
+  if (Object.values(state.river.runs).some(run => run.actor === actor)) throw new Error("Moor the barge first.");
   const quantity = "quantity" in intent ? Number(intent.quantity) : 0;
   if (quantity > cartCapacity(trader)) throw new Error(`Your cart holds ${cartCapacity(trader)} items.`);
   let effects: LedgerOp[];
@@ -38,6 +48,7 @@ export function quoteFor(state: World, actor: string, raw: Intent, id: string, n
       const account = shop(stall);
       if (!Object.hasOwn(merchants, stall) || !Object.hasOwn(stockTargets(stall), item)) throw new Error("This stall doesn’t trade that item.");
       if (cashBand(get(state, account, "coin")) === "dark") throw new Error("This stall is closed.");
+      if (intent.type === "buy" && state.market[stall].stockClosed) throw new Error("This stall needs a fresh haul to reopen.");
       const stock = get(state, account, item);
       const buying = intent.type === "buy";
       const from = buying ? account : actor;
@@ -82,7 +93,7 @@ export function quoteFor(state: World, actor: string, raw: Intent, id: string, n
       const total = items[item].price * quantity;
       if (get(state, crowd, "coin") < total) throw new Error("The crowd has spent its budget.");
       summary = `Sell ${quantity} · ${total} coins`;
-      effects = [burn(actor, item, quantity, summary), move(crowd, actor, "coin", total, summary)];
+      effects = [move(actor, crowd, item, quantity, summary), move(crowd, actor, "coin", total, summary)];
       break;
     }
     case "start_job": {
@@ -103,7 +114,7 @@ export function quoteFor(state: World, actor: string, raw: Intent, id: string, n
 
   if (effects.some(effect => effect.op !== "mint" && effect.from === actor && effect.asset === "coin" &&
     Number(effect.amount) > get(state, actor, "coin"))) throw new Error("You’re short on coins.");
-  if (cart(apply(state.ledger, effects), actor) > cartCapacity(trader)) throw new Error("Your cart is full.");
+  if (cart(apply(state.ledger, effects), actor) > Math.max(cartCapacity(trader), cart(state.ledger, actor))) throw new Error("Your cart is full.");
   return { quote_id: id, intent, summary, effects, expires_at: now + 15000 };
 }
 
@@ -125,7 +136,7 @@ export function commitFor(state: World, actor: string, deal: Quote, now: number)
   phaseCheck(state, deal.intent);
   const ledger = apply(state.ledger, deal.effects);
   const old = getTrader(state, actor);
-  if (cart(ledger, actor) > cartCapacity(old)) throw new Error("Your cart is full.");
+  if (!isRiverIntent(deal.intent) && cart(ledger, actor) > Math.max(cartCapacity(old), cart(state.ledger, actor))) throw new Error("Your cart is full.");
   const trader: Trader = { ...old };
   let next: World = { ...state, ledger, revision: state.revision + 1 };
   const intent = deal.intent;
@@ -136,6 +147,7 @@ export function commitFor(state: World, actor: string, deal: Quote, now: number)
       if (effect.from === actor) trader.spent += Number(effect.amount);
     }
   }
+  if (isRiverIntent(intent)) return commitRiver(state, setTrader(next, actor, trader), actor, intent, deal.quote_id, now);
   switch (intent.type) {
     case "buy":
     case "sell": {
@@ -153,8 +165,12 @@ export function commitFor(state: World, actor: string, deal: Quote, now: number)
       if (fair) trader.fair = { ...trader.fair, [stall]: (trader.fair[stall] ?? 0) + 1 };
       if (change) trader.relationship = { ...trader.relationship, [stall]: Math.max(-5, Math.min(10, (trader.relationship[stall] ?? 0) + change)) };
       trader.lastStop = stall;
-      next.market = { ...state.market, [stall]: { ...prior, profit: prior.profit + (buying ? total : -total),
-        unitsSold: prior.unitsSold + (buying ? quantity : 0) } };
+      const empty = buying && Object.keys(stockTargets(stall)).every(key => !get(next, shop(stall), key));
+      next.market = { ...state.market, [stall]: { ...prior, profit: prior.profit + (buying ? total : 0),
+        unitsSold: prior.unitsSold + (buying ? quantity : 0), stockClosed: prior.stockClosed || empty,
+        thinking: empty ? "Out of goods. The stall is waiting for a haul." : prior.thinking } };
+      if (empty) next = addActivity(next, merchants[stall].name + " ran out of goods.");
+      if (!buying) next = recordSupply(next, stall, item, actor, quantity, total);
       break;
     }
     case "craft":
@@ -220,7 +236,7 @@ export function recordAction(state: World, actor: string, line: string, receipt:
 
 export function closeNight(state: World): World {
   if (state.phase !== "open") return state;
-  const closed = closeOwnership(state);
+  const closed = closeOwnership(closeRiver(state));
   return { ...closed, phase: "results", revision: closed.revision + 1 };
 }
 
@@ -234,6 +250,7 @@ export function snapshotFor(state: World, session_id: string, actor = player, se
   if (trader && ((state.mode === "campaign" && state.night === 3 && state.phase === "results" && objective(state, actor).complete)
     || state.mode === "endless")) titles.push("Master of the Row");
   return {
+    ...riverSnapshot(state, actor),
     session_id, night_id: nightId(state), night: state.night, nightName: schedule.name, mode: state.mode, seed: state.seed, server_time,
     revision: state.revision, phase: state.phase, elapsed: state.elapsed, duration: schedule.duration,
     coins: String(get(state, actor, "coin")), capacity: String(trader ? cartCapacity(trader) : 0), upgrades: trader?.upgrades ?? [],
@@ -245,7 +262,8 @@ export function snapshotFor(state: World, session_id: string, actor = player, se
       const offer = Object.values(state.offers).find(offer => offer.stall === stall);
       const buyback = buybackPrice(state, stall);
       return [stall, {
-        band: cashBand(get(state, account, "coin")), coins: String(get(state, account, "coin")), strategy: market.strategy, vote: trader?.votes[stall],
+        band: market.stockClosed ? "dark" : cashBand(get(state, account, "coin")), stockClosed: market.stockClosed, coins: String(get(state, account, "coin")), strategy: market.strategy, vote: trader?.votes[stall],
+        suppliedBy: Object.entries(state.river.supplied[stall] ?? {}).map(([name, quantity]) => ({ name, quantity: String(quantity) })),
         thinking: market.thinking, relationship: trader?.relationship[stall] ?? 0,
         owned: String(holders[actor] ?? 0), shareholders: Object.entries(holders).filter(([, amount]) => amount)
           .map(([owner, amount]) => ({ name: state.traders[owner]!.name, count: String(amount) })),
@@ -299,9 +317,11 @@ function botRoute(world: World, actor: string, order: FestivalOrder) {
     if (!get(state, actor, order.item)) {
       for (const item of recipe.inputs) {
         if (get(state, actor, item)) continue;
-        const seller = merchantIds.filter(stall => stockTargets(stall)[item] && get(state, shop(stall), item) > 0 &&
-          cashBand(get(state, shop(stall), "coin")) !== "dark")
-          .map(stall => ({ stall, price: tradePrice("buy", items[item].price, get(state, shop(stall), item),
+        const open = merchantIds.filter(stall => stockTargets(stall)[item] && get(state, shop(stall), item) > 0 &&
+          !state.market[stall].stockClosed && cashBand(get(state, shop(stall), "coin")) !== "dark");
+        if (state.mode !== "campaign" && (item === "paper" || item === "oil") &&
+          open.reduce((qty, stall) => qty + get(state, shop(stall), item), 0) <= 2) return world;
+        const seller = open.map(stall => ({ stall, price: tradePrice("buy", items[item].price, get(state, shop(stall), item),
             stockTargets(stall)[item]!, ratio(state, stall), 1) })).sort((a, b) => a.price - b.price)[0];
         if (!seller) return world;
         act({ type: "buy", stall_id: seller.stall, item_id: item, quantity: "1" });
@@ -336,26 +356,27 @@ function restock(world: World) {
     if (cash - cost < reserve || cost >= margin) continue;
     const ledger = apply(state.ledger, [move(account, source, "coin", cost, "Wholesale restock"), move(source, account, item, 1, "Wholesale restock")]);
     state = { ...state, ledger, revision: state.revision + 1, market: { ...state.market,
-      [stall]: { ...market, profit: market.profit - cost, thinking: `Restocked ${items[item].name.toLowerCase()} from ${merchants[supplier].name}.` },
+      [stall]: { ...market, thinking: `Restocked ${items[item].name.toLowerCase()} from ${merchants[supplier].name}.` },
       [supplier]: { ...state.market[supplier], profit: state.market[supplier].profit + cost, unitsSold: state.market[supplier].unitsSold + 1 } } };
+    state = recordSupply(state, stall, item, source, 1, cost);
   }
   return state;
 }
 
 function agentTurn(world: World) {
-  let state = world;
+  let state = advanceRiver(world);
   for (const event of plan(world).events.filter(event => event.at > world.elapsed - 10 && event.at <= world.elapsed)) {
-    const effects = event.id === "paper_barge" ? [mint(shop("paper_mill"), "paper", 8, "Paper barge")]
-      : event.id === "oil_late" ? [mint(shop("oil_wharf"), "oil", 8, "Delayed oil barge")] : [];
-    state = addActivity({ ...state, ledger: apply(state.ledger, effects), revision: state.revision + 1 }, event.label + " · " + event.detail);
+    if (event.id === "paper_barge" || event.id === "oil_late") state = scheduleFreight(state);
+    state = addActivity({ ...state, revision: state.revision + 1 }, event.label + " · " + event.detail);
   }
-  state = refreshOfferings(restock(state));
+  if (state.mode !== "campaign" && state.elapsed === 40 && !plan(state).events.some(event => event.id === "paper_barge")) state = scheduleFreight(state);
+  state = refreshContracts(refreshOfferings(restock(state)));
   const actors = Object.keys(state.traders).filter(actor => actor.startsWith("r:"));
   if (!actors.length) return state;
   const campaign = state.mode === "campaign";
   const actor = actors[(Math.floor(state.elapsed / 20) + state.seed + state.night) % actors.length]!;
   const canTrade = state.elapsed >= (campaign && state.night === 3 ? 40 : campaign ? 80 : 20) && state.elapsed % 20 === 0;
-  if (!canTrade) return state;
+  if (!canTrade || Object.values(state.river.hauls).some(haul => haul.actor === actor)) return state;
   const offers = Object.values(state.offers).filter(offer => offer.kind === "rescue" || (!campaign || state.night >= 3));
   for (const offer of offers) {
     const n = Math.min(2 - (offer.contributions[actor] ?? 0), offer.total - pledged(offer));
@@ -381,7 +402,7 @@ function agentTurn(world: World) {
       return commitFor(state, actor, deal, now);
     }
   }
-  return state;
+  return startRivalHaul(state, actor);
 }
 
 export function advanceClock(world: World, elapsed: number, agents = true): World {

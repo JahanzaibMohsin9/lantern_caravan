@@ -49,7 +49,7 @@ export function Objective({ snapshot }: { snapshot: Snapshot }) {
   </div>;
 }
 
-export function Preparation({ snapshot, actions, advance }: { snapshot: Snapshot; actions: Actions; advance: () => void }) {
+export function Preparation({ snapshot, actions, advance, landing }: { snapshot: Snapshot; actions: Actions; advance: () => void; landing?: () => void }) {
   const owned = Object.entries(snapshot.merchants).filter(([, market]) => Number(market.owned));
   const available = (Object.entries(upgrades) as [UpgradeId, typeof upgrades[UpgradeId]][]).filter(([id, upgrade]) =>
     (snapshot.mode === "campaign" ? snapshot.night : 4) >= upgrade.unlock && !snapshot.upgrades.includes(id) &&
@@ -79,6 +79,7 @@ export function Preparation({ snapshot, actions, advance }: { snapshot: Snapshot
             onClick={() => void actions.submit({ type: "buy_upgrade", upgrade_id: id })}>{upgrade.price} <Coins size={13}/></button>
         </div>)}
       </div>}
+      {landing && <button className="subtle wide" disabled={actions.busy} onClick={landing}>The Landing <ArrowRight size={16}/></button>}
       <button className="primary wide" disabled={actions.busy || snapshot.mode === "live"} onClick={advance}>
         {snapshot.mode === "live" ? "Market opens shortly" : "Open the market"} <Play size={16}/>
       </button>

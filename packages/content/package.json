@@ -1,1 +1,1 @@
-{"name":"@lantern/content","private":true,"type":"module","exports":{".":"./src/index.ts","./nights":"./src/nights.ts"}}
+{"name":"@lantern/content","private":true,"type":"module","exports":{".":"./src/index.ts","./nights":"./src/nights.ts","./river":"./src/river.ts"}}

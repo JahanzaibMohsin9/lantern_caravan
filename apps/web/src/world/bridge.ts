@@ -1,7 +1,7 @@
 import type { Snapshot } from "@lantern/protocol";
 
 export const stops = [
-  { id: "shed", name: "Shed", x: 320 },
+  { id: "shed", name: "The Landing", x: 320 },
   { id: "paper_mill", name: "Paper Mill", x: 560 },
   { id: "oil_wharf", name: "Oil Wharf", x: 805 },
   { id: "workshop", name: "Workshop", x: 1050 },
@@ -23,6 +23,7 @@ type Events = {
   lowGraphics: boolean;
   active: boolean;
   blocked: boolean;
+  river: boolean;
   effect: Effect;
   current: Stop;
 };

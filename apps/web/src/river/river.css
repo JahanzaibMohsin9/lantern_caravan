@@ -1,0 +1,47 @@
+
+.row-layer { display: contents; }
+.river-scene { position: fixed; inset: 0; z-index: 30; isolation: isolate; color: #f5e5d5; background: #080e14; }
+.river-water { position: absolute; inset: 0; width: 100%; height: 100%; outline: none; touch-action: none; }
+.river-card, .river-dialog { background: #121923ef; border: 1px solid #786156; border-radius: 12px; box-shadow: 0 8px 28px #0005; }
+.river-card { position: absolute; display: grid; gap: 4px; padding: 10px 13px; }
+.river-card small, .river-dialog small { color: #d1bca9; }
+.river-card strong, .river-card span { display: flex; align-items: center; gap: .4rem; }
+.river-objective { top: 16px; left: 16px; max-width: 35%; }
+.river-clock { top: 16px; left: 50%; transform: translateX(-50%); text-align: center; justify-items: center; }
+.river-clock strong { font-size: 1.5rem; font-variant-numeric: tabular-nums; }
+.river-wallet { top: 16px; right: 16px; text-align: right; justify-items: end; }
+.river-status { bottom: 16px; left: 16px; min-width: 124px; }
+.river-status span { justify-content: space-between; }
+.river-minimap { bottom: 16px; right: 16px; padding: 6px; }
+.river-minimap canvas { border-radius: 6px; }
+.river-buttons { display: flex; gap: 6px; justify-content: center; }
+.river-buttons button { background: #23323d; color: #fff0d5; border: 1px solid #526270; border-radius: 6px; padding: 6px 9px; cursor: pointer; }
+.river-buttons button[aria-pressed="true"] { border-color: #f2c285; background: #594633; }
+.river-controls { position: absolute; bottom: 16px; left: 50%; transform: translateX(-50%); display: grid; gap: 7px; justify-items: center; text-align: center; }
+.river-controls .river-card { position: static; }
+.river-overlay { position: absolute; inset: 0; display: grid; place-items: center; padding: 18px; background: #070c13ac; }
+.river-dialog { width: min(100%, 580px); max-height: 92vh; overflow: auto; padding: 22px; }
+.river-dialog h2 { color: #ffe2b7; font-family: "Fraunces Variable", Georgia, serif; margin: 5px 0 10px; }
+.river-dialog p { margin: 8px 0; }
+.river-dialog > button { margin-top: 14px; }
+.river-trade { display: grid; grid-template-columns: 1fr auto auto; gap: 8px; align-items: center; margin-top: 9px; }
+.river-trade span { display: grid; gap: 2px; }
+.river-full-map { display: block; width: 100%; border-radius: 8px; }
+.river-notice { position: absolute; left: 50%; top: 110px; transform: translateX(-50%); max-width: 50%; padding: 6px 12px; border-radius: 6px; background: #131d28ed; text-align: center; pointer-events: none; }
+.landing { display: grid; gap: 10px; }
+.landing-loads { max-height: 235px; overflow-y: auto; }
+.landing-loads input { width: 4.6rem; padding: .3rem; border-radius: 6px; color: #f5e5d5; background: #1d202d; border: 1px solid #776457; }
+.landing-upgrades summary { color: #e8cfb1; cursor: pointer; padding: 6px 0; }
+.landing-upgrades button { margin: 3px; }
+@media (max-width: 650px) {
+  .river-card { padding: 6px 7px; font-size: .76rem; }
+  .river-objective, .river-status { left: 6px; }
+  .river-wallet, .river-minimap { right: 6px; }
+  .river-minimap canvas { width: 82px; height: auto; }
+  .river-minimap .river-buttons { gap: 2px; }
+  .river-minimap .river-buttons button { padding: 3px; }
+  .river-minimap .river-buttons svg { width: 12px; }
+  .river-status { min-width: 86px; }
+  .river-controls { bottom: 112px; width: 90%; }
+  .river-notice { max-width: 80%; width: max-content; }
+}

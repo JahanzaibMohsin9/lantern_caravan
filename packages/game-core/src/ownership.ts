@@ -223,7 +223,7 @@ export function closeOwnership(world: World): World {
     const market = state.market[stall];
     const shares = supply(state, share(stall));
     const cash = get(state, shop(stall), "coin");
-    const pool = shares && cash >= 5 ? Math.min(cash, Math.max(0, Math.floor(market.profit * .30))) : 0;
+    const pool = shares && cash >= 5 ? Math.min(state.mode === "campaign" ? cash : Math.max(0, cash - 10), Math.max(0, Math.floor(market.profit * .30))) : 0;
     const each = shares ? Math.floor(pool / shares) : 0;
     const effects: LedgerOp[] = [];
     const traders = { ...state.traders };

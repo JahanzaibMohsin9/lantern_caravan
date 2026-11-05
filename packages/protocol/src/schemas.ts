@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { amount, haggleOfferSchema, intentSchema, quoteSchema, type Snapshot } from "./index";
+import { amount, haggleOfferSchema, intentSchema, manifestSchema, quoteSchema, type Snapshot } from "./index";
 
 const text = z.string().min(1).max(120);
 const time = z.int().nonnegative();
@@ -16,8 +16,9 @@ export const actionStatusSchema = z.discriminatedUnion("state", [
 ]);
 const activity = z.object({ at: seconds, night: time, line: z.string(), actor: z.string().optional(), receipt: receipt.optional() });
 const merchant = z.object({
-  band: z.enum(["thriving", "healthy", "tight", "dark"]), coins: amount, stock: amounts,
+  band: z.enum(["thriving", "healthy", "tight", "dark"]), stockClosed: z.boolean().optional(), coins: amount, stock: amounts,
   prices: z.record(z.string(), z.object({ buy: amount, sell: amount, label: text, target: amount })),
+  suppliedBy: z.array(z.object({ name: text, quantity: amount })).optional(),
   strategy, vote: strategy.optional(), thinking: z.string(), relationship: z.int().min(-5).max(10),
   owned: amount, shareholders: z.array(z.object({ name: text, count: amount })),
   bookValue: amount, sharePrice: amount, dividend: amount, dividendHistory: z.array(amount).max(5),
@@ -33,6 +34,17 @@ export const snapshotSchema = z.object({
   server_time: time, revision: time, phase, elapsed: seconds, duration: seconds,
   coins: amount, cargo: amounts, capacity: amount, upgrades: z.array(text),
   merchants: z.record(z.string(), merchant), orders: z.array(order),
+  villages: z.record(z.string(), z.object({ band: merchant.shape.band, coins: amount, stock: amounts,
+    prices: z.record(z.string(), z.object({ buy: amount, sell: amount, label: text })), relationship: z.int() })),
+  river: z.object({
+    reaches: z.array(z.object({ id: text, name: text, danger: z.int().min(0).max(5), boom: z.boolean(), lamps: time })),
+    contracts: z.array(z.object({ id: text, stall: text, village: text, item: text, quantity: amount, payout: amount,
+      deadline: seconds, mine: z.boolean(), taken: z.boolean(), kind: z.enum(["supply", "escort"]) })),
+    myRun: z.object({ id: text, deadline: time, manifest: manifestSchema }).optional(),
+    upriver: z.array(z.object({ actor: text, name: text })),
+    bountyFund: amount,
+  }),
+  barge: z.object({ hold: amount, upgrades: z.array(text) }),
   objective: z.object({ complete: z.boolean(), name: text,
     steps: z.array(z.object({ label: text, count: amount, target: amount, icon: text })) }),
   delivered: amount, crafted: amount, crowdBudget: amount, crowdSold: amount, lifetimeCrafted: amount, lifetimeDividends: amount,

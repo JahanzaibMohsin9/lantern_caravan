@@ -16,12 +16,20 @@ Endless unlocks after the campaign, carries the wallet and shares forward, and a
 
 [Known issues](KNOWN_ISSUES.md) records differences from the reference brief, including the separate offline campaign and the development server's reservation queue.
 
+## River Run milestones 1–3
+
+1. **Simulation.** The TypeScript port runs at 60 Hz with seeded hazards, Caravan Zero's handling and combat, manifest-based trading, escorts, and input-log replay. Vitest covers handling, pricing, recovery, booms, flares, lock gates, escorts, and replay equality.
+2. **Offline run.** The Landing opens in preparation from Night 2. Reserve stock, cast off, trade at a village, and moor to settle cargo through the same quote and receipt flow as the Row. The market clock stays at preparation. Reloading mid-run returns the reservation and closes the run.
+3. **Economy.** Village harvests supply the Row. Freight and rivals move real cargo, shared reach danger affects losses, and the Harbor Bell escrows supply and escort rewards. The campaign keeps its existing three-night schedule and authored opening stock. The 2,000-night checks for all five seeds are recorded in the [balance report](BALANCE_REPORT.md).
+
+Campaign tutorial and schedule changes belong to M4. Multiplayer River Runs and public river history belong to M5. Floodtide scheduling, touch controls, the audio pass, and server replay validation belong to M6.
+
 ## Verification
 
-- A clean `npm ci` restored the Node.js 24 workspace. The production build type-checked the client, server, tools, and tests. The static output is 1.84 MB.
-- `npm test` passed 61 tests covering local rules, the full campaign, 36 golden cases, the development providers, server races and restart recovery, and the 500-night live loop.
-- `npm run test:e2e -- --workers 2` passed six production-build browser tests. Chrome and Firefox each played the campaign from an empty slot through the rescue, vote, finale, reload, and Endless. Each browser also ran the two-context order race and visited Watch and History without signing in.
-- The CLI ran 2,000 nights each for seeds 17, 42, 93, 166, and 271. The five runs recorded zero invariant errors. See [Balance report](BALANCE_REPORT.md).
+- A clean `npm ci` restored the Node.js 24 workspace. The production build type-checked the client, server, tools, and tests. The production JavaScript bundle is about 1.72 MB before compression.
+- `npm test` passed 77 tests covering local rules, the full campaign, 36 golden cases, the development providers, server races and restart recovery, and the 500-night live loop.
+- Eight production-build Playwright tests passed. Chrome and Firefox each played the campaign, ran the two-context order race, visited Watch and History, and hauled oil from Ember Falls to sell at Paper Mill. The haul and sale also passed in both browsers with network access disabled after loading the app.
+- The River Run CLI ran 2,000 nights each for seeds 17, 42, 93, 166, and 271. All five checked runs exited successfully with zero invariant errors. See [Balance report](BALANCE_REPORT.md).
 - The campaign recording shows the Oil Wharf shuttered, the pledge reopening it, and the boats lighting. The README includes three captured game screens and a short GIF.
 
 ## Provider integration

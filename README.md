@@ -17,6 +17,10 @@ Open the URL Vite prints. In **First Light**, your cart starts with two paper an
 
 Click a location or use **1–8** to walk there. **A/D** or **←/→** walks manually, **E** interacts, **I** opens the cart, **J** opens the journal, **H** opens history, and **Esc** closes or pauses. Hover an ingredient for its name or click it to find a stall. A local save is automatic.
 
+From Night 2 onward, open **The Landing** during preparation to plan cargo or check the **Harbor Bell** for contracts and escorts. Cast off, buy your reserved goods at a village, then return to The Landing. Open the market to sell your haul or use it at the Workshop.
+
+On the river, **WASD** or **arrows** steer, **Shift** boosts, **Space** fires at the nearest threat, and the **mouse** aims and fires manually. **E** trades or moors, **Q** spends one oil on a flare, **M** opens the map, **J** opens the Harbor Bell, and **Esc** pauses. Each run has a 2:30 game timer.
+
 | First Light | The Dark Wharf | Festival of Lights |
 | --- | --- | --- |
 | ![The title over the riverside market](docs/media/the-row.png) | ![The closed Oil Wharf and rescue offering](docs/media/dark-wharf.png) | ![The completed festival](docs/media/festival.png) |

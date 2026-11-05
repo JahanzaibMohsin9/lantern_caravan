@@ -2,6 +2,8 @@ import { items, merchants, recipes, type ItemId, type StallId } from "@lantern/c
 import { nightPlan, rivalNames, strategies, type FestivalOrder, type StrategyId, type UpgradeId } from "@lantern/content/nights";
 import type { Activity, CashBand, LedgerOp, Mode, Snapshot } from "@lantern/protocol";
 import { apply, balance, type Ledger } from "./ledger";
+import type { BargeUpgradeId, VillageId } from "@lantern/content/river";
+import { beginRiverNight, freshRiver, starterGoods, type RiverState } from "./river";
 
 export const player = "p:guest";
 export const capacity = 6;
@@ -17,17 +19,17 @@ export const escrow = (order: string) => "esc:order:" + order;
 export const offerEscrow = (offer: string) => "esc:offer:" + offer;
 export const listingEscrow = (listing: string) => "esc:listing:" + listing;
 export const payoutPool = (stall: string) => "pool:div:" + stall;
-export const mint = (to: string, asset: string, amount: number, memo: string): LedgerOp =>
+export const mint = (to: string, asset: string, amount: number, memo: string): Extract<LedgerOp, { op: "mint" }> =>
   ({ op: "mint", to, asset, amount: String(amount), memo });
-export const burn = (from: string, asset: string, amount: number, memo: string): LedgerOp =>
+export const burn = (from: string, asset: string, amount: number, memo: string): Extract<LedgerOp, { op: "burn" }> =>
   ({ op: "burn", from, asset, amount: String(amount), memo });
 export const move = (from: string, to: string, asset: string, amount: number, memo: string): LedgerOp =>
   ({ op: "transfer", from, to, asset, amount: String(amount), memo });
 
 export type Trader = {
-  name: string; upgrades: UpgradeId[]; delivered: Partial<Record<ItemId, number>>;
+  name: string; upgrades: (UpgradeId | BargeUpgradeId)[]; delivered: Partial<Record<ItemId, number>>;
   crafted: number; crowdSold: number; earned: number; spent: number; jobsDone: number;
-  relationship: Partial<Record<StallId, number>>; fair: Partial<Record<StallId, number>>; refused: StallId[];
+  relationship: Partial<Record<StallId | VillageId, number>>; fair: Partial<Record<StallId, number>>; refused: StallId[];
   cooldowns: Partial<Record<StallId, number>>; job?: { id: string; readyAt: number };
   lifetimeCrafted: number; lifetimeDividends: number; boatsHelped: number; rescued: number;
   rescuedTonight: StallId[]; votes: Partial<Record<StallId, StrategyId>>; lastStop?: string;
@@ -36,7 +38,7 @@ export type Trader = {
 
 export type Stall = {
   strategy: StrategyId; profit: number; unitsSold: number; drift: number; thinking: string;
-  lastSharePrice: number; dividendHistory: number[]; rescued: boolean; offerCount: number;
+  lastSharePrice: number; dividendHistory: number[]; rescued: boolean; offerCount: number; stockClosed?: boolean;
 };
 
 export type Offering = {
@@ -50,6 +52,7 @@ export type World = {
   market: Record<StallId, Stall>; offers: Record<string, Offering>; listings: Record<string, Listing>;
   orderWishes: Record<string, string[]>; orderContributors: Record<string, string[]>; wishAuthors: Record<string, string[]>;
   activity: Activity[];
+  river: RiverState;
 };
 
 const defaults: Record<StallId, StrategyId> = {
@@ -81,9 +84,9 @@ export function getTrader(state: World, actor: string): Trader {
 export function addTrader(state: World, actor: string, name: string): World {
   if (Object.hasOwn(state.traders, actor)) return state;
   const startingCoins = actor.startsWith("r:") ? 26 : 30;
-  const ledger = apply(state.ledger, [mint(actor, "coin", startingCoins, "Starting grant"),
-    mint(actor, "paper", 2, "Starting grant"), mint(actor, "oil", 2, "Starting grant")]);
-  return { ...state, ledger, revision: state.revision + 1, traders: { ...state.traders, [actor]: freshTrader(name) } };
+  const supplied = starterGoods(state, actor);
+  const ledger = apply(supplied.ledger, [mint(actor, "coin", startingCoins, "Starting grant")]);
+  return { ...supplied, ledger, revision: supplied.revision + 1, traders: { ...state.traders, [actor]: freshTrader(name) } };
 }
 
 export function newStall(stall: StallId): Stall {
@@ -130,14 +133,13 @@ export function fundNight(state: World) {
 export function createWorld(mode: Mode = "campaign", seed = 42): World {
   const world: World = {
     phase: "preparation", mode, night: 1, seed, revision: 0, elapsed: 0, tickAt: 0,
-    ledger: apply({}, merchantIds.flatMap(stall => [
-      mint(shop(stall), "coin", 40, "Starting float"),
-      ...Object.entries(stockTargets(stall)).map(([item, quantity]) => mint(shop(stall), item, quantity, "Opening stock")),
-    ])),
+    ledger: apply({}, merchantIds.map(stall => mint(shop(stall), "coin", 40, "Starting float"))),
+    river: freshRiver(seed),
     traders: {}, market: Object.fromEntries(merchantIds.map(stall => [stall, newStall(stall)])) as World["market"],
     offers: {}, listings: {}, orderWishes: {}, orderContributors: {}, wishAuthors: {}, activity: [],
   };
-  let next = mode === "live" ? world : addTrader(world, player, "You");
+  const supplied = beginRiverNight(world);
+  let next = mode === "live" ? supplied : addTrader(supplied, player, "You");
   for (const [actor, name] of Object.entries(rivalNames).slice(0, mode === "live" ? 3 : 2)) next = addTrader(next, actor, name);
   return { ...next, revision: 0, ledger: fundNight(next) };
 }
@@ -154,49 +156,44 @@ export function newNight(previous: World, mode: Mode = previous.mode): World {
     })),
     offers: {}, orderWishes: {}, orderContributors: {}, wishAuthors: {},
     market: Object.fromEntries(merchantIds.map(stall => [stall, { ...previous.market[stall],
-      profit: 0, unitsSold: 0, rescued: false, offerCount: 0, thinking: "Unpacking the evening shipment." }])) as World["market"],
+      profit: 0, unitsSold: 0, rescued: false, offerCount: 0, stockClosed: mode === "campaign" ? false : previous.market[stall].stockClosed, thinking: "Watching the river for freight." }])) as World["market"],
     traders: Object.fromEntries(Object.entries(previous.traders).map(([actor, trader]) => [actor, {
       ...freshTrader(trader.name), upgrades: trader.upgrades, relationship: trader.relationship,
       lifetimeCrafted: trader.lifetimeCrafted, lifetimeDividends: trader.lifetimeDividends,
       boatsHelped: trader.boatsHelped, rescued: trader.rescued, dividends: trader.dividends,
     }])),
   };
-  const shipment = merchantIds.flatMap(stall => Object.entries(stockTargets(stall)).flatMap(([item, target]) => {
-    const destination = shop(stall);
-    const count = get(next, destination, item);
-    const lateOil = mode !== "campaign" && plan(next).events.some(event => event.id === "oil_late");
-    const goal = stall === "oil_wharf" && item === "oil" && ((mode === "campaign" && night === 2) || lateOil) ? 6 : target;
-    if (count < goal) return [mint(destination, item, goal - count, "Evening shipment")];
-    if (goal < target && count > goal) return [move(destination, "sys:freight", item, count - goal, "Oil shipment lost to the storm")];
-    return [];
-  }));
+  const upkeep: LedgerOp[] = [];
   if (mode === "campaign" && night === 2) {
     const cash = get(next, shop("oil_wharf"), "coin");
-    if (cash > 2) shipment.push(move(shop("oil_wharf"), "sys:freight", "coin", cash - 2, "Storm repairs"));
+    if (cash > 2) upkeep.push(move(shop("oil_wharf"), "sys:freight", "coin", cash - 2, "Storm repairs"));
     const savings = get(next, player, "coin");
-    if (savings < 14) shipment.push(mint(player, "coin", 14 - savings, "Wharf relief grant"));
+    if (savings < 14) upkeep.push(mint(player, "coin", 14 - savings, "Wharf relief grant"));
   }
   if (mode !== "campaign") {
-    const affected = night % 5 === 0 ? merchantIds[(Math.floor(night / 5) + next.seed) % 4] : undefined;
+    const storm = night % 5 === 0 ? merchantIds[(Math.floor(night / 5) + next.seed) % 4] : undefined;
+    const protectedSupply = storm && (["paper", "oil"] as const).some(item => get(next, shop(storm), item) > 0 &&
+      !merchantIds.some(stall => stall !== storm && get(next, shop(stall), "coin") >= 5 && get(next, shop(stall), item) > 0));
+    const affected = protectedSupply ? undefined : storm;
     const costs = [4, 6, 3, 2, 2];
     merchantIds.forEach((stall, index) => {
       const account = shop(stall);
       const cash = get(next, account, "coin");
       if (cash < 5) {
-        shipment.push(mint(account, "coin", 12 - cash, "Harbor relief"));
+        upkeep.push(mint(account, "coin", 20 - cash, "Harbor relief"));
         return;
       }
       const rent = affected === stall ? cash - 3
-        : Math.min(Math.max(0, cash - 12), costs[index]! + Math.floor(Math.max(0, cash - 44) / 3));
-      if (rent > 0) shipment.push(move(account, "sys:freight", "coin", rent, affected === stall ? "Storm repairs" : "Stall upkeep"));
+        : Math.min(Math.max(0, cash - 20), costs[index]! + Math.floor(Math.max(0, cash - 44) / 3));
+      if (rent > 0) upkeep.push(move(account, "sys:freight", "coin", rent, affected === stall ? "Storm repairs" : "Stall upkeep"));
     });
   }
   for (const actor of Object.keys(next.traders).filter(id => id.startsWith("r:"))) {
     const float = get(next, actor, "coin");
-    if (float < 22) shipment.push(mint(actor, "coin", 22 - float, "Resident supply budget"));
+    if (float < 22) upkeep.push(mint(actor, "coin", 22 - float, "Resident supply budget"));
   }
-  next.ledger = apply(fundNight(next), shipment);
-  return next;
+  next.ledger = apply(fundNight(next), upkeep);
+  return beginRiverNight(next);
 }
 
 export function objective(state: World, actor: string): Snapshot["objective"] {

@@ -4,7 +4,7 @@ import {
   Activity, ChartNoAxesCombined, Eye, Globe2, Package, Pause, Play, Settings2, Sparkles, Users, Volume2, VolumeX, Waves,
 } from "lucide-react";
 import { merchants, type ItemId, type StallId } from "@lantern/content";
-import type { HaggleOffer, Intent, ProfileSummary, Quote, Snapshot } from "@lantern/protocol";
+import type { HaggleOffer, Intent, ProfileSummary, Quote, RunReport, Snapshot } from "@lantern/protocol";
 import { backend, devAuth, guest, live, liveDefault, publicView } from "../config";
 import type { HttpBackend } from "../backend/http";
 import { slots } from "../backend/saves";
@@ -15,6 +15,8 @@ import { LanternMark, stopIcons } from "./icons";
 import { Board, formatTime, Inventory, PanelFrame, Trade, Workshop } from "./Panels";
 import { guideFor, Journal, NightReport, nightLabel, Objective, Preparation, Profiles } from "./Campaign";
 import { MarketHistoryPanel, Rooms, Simulator } from "./MarketExtras";
+import { Landing } from "../river/Landing";
+import { RiverRun } from "../river/RiverRun";
 
 const tell = (error: unknown) => error instanceof Error ? error.message : "Please try again.";
 const id = () => crypto.randomUUID();
@@ -55,6 +57,8 @@ export function App() {
   const [lowGraphics, setLowGraphics] = useState(() => localPreference("lantern-low", "false") === "true");
   const [largePanels, setLargePanels] = useState(() => localPreference("lantern-large-panels", "false") === "true");
   const previousMarket = useRef<Snapshot | undefined>(undefined);
+  const riverRun = entered && !online ? snapshot.river.myRun : undefined;
+  const landingOpen = entered && !online && snapshot.phase === "preparation";
   const nightOpen = entered && snapshot.phase === "open";
   const roaming = nightOpen || (entered && online && snapshot.spectator);
   const paused = panel === "pause" || panel === "settings";
@@ -104,6 +108,7 @@ export function App() {
 
   useEffect(() => { bridge.send("snapshot", snapshot); }, [snapshot]);
   useEffect(() => { bridge.send("active", roaming); }, [roaming]);
+  useEffect(() => { bridge.send("river", !!riverRun); }, [riverRun]);
   useEffect(() => { bridge.send("blocked", !!panel); }, [panel]);
   useEffect(() => { bridge.send("reduced", reduced); }, [reduced]);
   useEffect(() => { bridge.send("lowGraphics", lowGraphics); }, [lowGraphics]);
@@ -211,7 +216,7 @@ export function App() {
 
   useEffect(() => {
     function onKey(event: KeyboardEvent) {
-      if (event.repeat || event.metaKey || event.ctrlKey || event.altKey) return;
+      if (riverRun || event.repeat || event.metaKey || event.ctrlKey || event.altKey) return;
       const key = event.key.toLowerCase();
       if (key === "escape") {
         if (panel) setPanel(undefined);
@@ -222,6 +227,7 @@ export function App() {
         (event.target.matches("input, select, textarea") || event.target.isContentEditable))) return;
       if (key === "j") setPanel(panel === "journal" ? undefined : "journal");
       if (key === "h") setPanel(panel === "history" ? undefined : "history");
+      if (landingOpen && key === "1") { setPanel("shed"); return; }
       if (!roaming) return;
       const stop = /^[1-8]$/.test(key) ? stops[Number(key) - 1] : undefined;
       if (stop) visit(stop.id);
@@ -230,7 +236,7 @@ export function App() {
     }
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
-  }, [entered, roaming, paused, panel, current]);
+  }, [entered, roaming, paused, panel, current, landingOpen, riverRun]);
 
   async function run<T>(task: () => Promise<T>): Promise<T | undefined> {
     if (locked.current) return;
@@ -318,6 +324,22 @@ export function App() {
     return true;
   }
 
+  function castOff(intent: Extract<Intent, { type: "start_run" }>) {
+    void run(async () => {
+      await settle(await backend.getQuote(snapshot.session_id, snapshot.night_id, intent));
+      setPanel(undefined);
+    });
+  }
+
+  function finishRiver(report: RunReport) {
+    void run(async () => {
+      const intent = { type: "finish_run", run_id: report.run_id, report } as const;
+      await settle(await backend.getQuote(snapshot.session_id, snapshot.night_id, intent));
+      setCurrent("shed");
+      setPanel("shed");
+    });
+  }
+
   const actions = {
     busy: busy || snapshot.spectator || (online && live.confirming),
     submit: async (intent: Intent) => {
@@ -347,6 +369,8 @@ export function App() {
   const job = snapshot.job;
 
   return <main className="game-shell" data-reduced={reduced} data-large-panels={largePanels}>
+    {riverRun && <RiverRun key={riverRun.id} manifest={riverRun.manifest} snapshot={snapshot} finish={finishRiver} busy={busy} reduced={reduced}/>}
+    <div className="row-layer" inert={!!riverRun}>
     <header className="topbar">
       <div className="brand"><span className="brand-mark"><LanternMark/></span><div><strong>Lantern Row</strong><span>RIVERSIDE NIGHT MARKET</span></div></div>
       <div className="night-tag"><MoonStar size={16}/><span>{nightLabel(snapshot.night).toUpperCase()}</span><span className="divider"/><b>{snapshot.nightName}</b></div>
@@ -408,7 +432,7 @@ export function App() {
         </div>
       </div>
 
-      {entered && !panel && !snapshot.spectator && snapshot.phase === "preparation" && <Preparation snapshot={snapshot} actions={actions} advance={advance}/>}
+      {entered && !panel && !snapshot.spectator && snapshot.phase === "preparation" && <Preparation snapshot={snapshot} actions={actions} advance={advance} landing={landingOpen ? () => setPanel("shed") : undefined}/>}
       {entered && !panel && !snapshot.spectator && snapshot.phase === "results" && <NightReport snapshot={snapshot} busy={busy} advance={advance} title={title}
         live={() => setPanel("rooms")}
         retry={() => void run(async () => { await backend.retry(); setPanel(undefined); })}/>}
@@ -438,11 +462,12 @@ export function App() {
           void run(async () => { await backend.deleteProfile(slot); setProfiles(await backend.listProfiles()); });
         }}/>
       </PanelFrame>}
-      {panel === "shed" && <PanelFrame title="West Dock" eyebrow="WEST END" icon={<Anchor size={24}/>} onClose={close}>
+      {panel === "shed" && <PanelFrame title="The Landing" eyebrow="WEST END" icon={<Anchor size={24}/>} onClose={close}>
+        <Landing snapshot={snapshot} busy={actions.busy} submit={actions.submit} castOff={castOff}/>
         {job ? <button className="primary wide" disabled={busy || snapshot.elapsed < job.readyAt} onClick={() =>
           void actions.submit({ type: "finish_job", job_id: job.id })}>{snapshot.elapsed < job.readyAt ?
             "Boat arrives in " + formatTime(job.readyAt - snapshot.elapsed) : "Deliver parcel · 4 coins"} <Anchor size={16}/></button>
-          : <button className="subtle wide" onClick={() => visit("board")}>Visit Order Board <ArrowRight size={16}/></button>}
+          : snapshot.phase === "open" && <button className="subtle wide" onClick={() => visit("board")}>Visit Order Board <ArrowRight size={16}/></button>}
       </PanelFrame>}
       {panel === "pause" && <PanelFrame title="Paused" eyebrow={snapshot.nightName} icon={<Pause size={24}/>} onClose={close}>
         {online && <p className="hint">The market keeps running. Room {snapshot.session_id}.</p>}
@@ -493,8 +518,8 @@ export function App() {
         {stops.map((stop, index) => {
           const Icon = stopIcons[stop.id];
           const dark = snapshot.merchants[stop.id]?.band === "dark";
-          return <button className={current === stop.id ? "route-stop here" : "route-stop"} key={stop.id} onClick={() => visit(stop.id)}
-            disabled={!roaming || paused} aria-current={current === stop.id ? "location" : undefined} title={`${stop.name} (${index + 1})${dark ? " · Closed" : ""}`}>
+          return <button className={current === stop.id ? "route-stop here" : "route-stop"} key={stop.id} onClick={() => stop.id === "shed" && landingOpen ? setPanel("shed") : visit(stop.id)}
+            disabled={(!roaming && !(stop.id === "shed" && landingOpen)) || paused} aria-current={current === stop.id ? "location" : undefined} title={`${stop.name} (${index + 1})${dark ? " · Closed" : ""}`}>
             <Icon size={18}/><span>{stop.name}</span>{dark ? <span className="route-dark" aria-label="Closed">◇</span> : <kbd>{index + 1}</kbd>}
           </button>;
         })}
@@ -507,5 +532,6 @@ export function App() {
         {snapshot.saveStatus === "unsaved" && " · Unsaved"}</span>
       <span>LANTERN ROW <span className="divider"/> v1.0</span>
     </footer>
+    </div>
   </main>;
 }

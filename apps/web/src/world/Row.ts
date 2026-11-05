@@ -25,6 +25,9 @@ class RowScene extends Phaser.Scene {
     reflection: Phaser.GameObjects.Image; wish: Phaser.GameObjects.Text; lit: boolean; y: number }[] = [];
   private motes: Phaser.GameObjects.Arc[] = [];
   private ambience!: Phaser.GameObjects.Image;
+  private barge!: Phaser.GameObjects.Image;
+  private bargeLamp!: Phaser.GameObjects.Image;
+  private castOff = false;
   private visitors = new Map<string, { cart: Phaser.GameObjects.Image; name: Phaser.GameObjects.Text; x: number; to: number }>();
   private x: number = center;
   private cameraX: number = center;
@@ -107,6 +110,9 @@ class RowScene extends Phaser.Scene {
       });
     });
 
+    this.barge = this.add.image(stops[0].x, 552, "row-boat").setScale(.85).setDepth(3);
+    this.bargeLamp = this.add.image(stops[0].x + 36, 541, "row-glow").setDisplaySize(68, 56)
+      .setTint(boatColor).setBlendMode(Phaser.BlendModes.ADD).setAlpha(.48).setDepth(4);
     this.avatar = this.add.image(this.x, WALK + 10, "row-cart").setOrigin(.5, .78).setDepth(5);
     this.add.image(0, 0, "row-reeds").setOrigin(0).setDepth(7);
     const keyboard = this.input.keyboard!;
@@ -131,6 +137,25 @@ class RowScene extends Phaser.Scene {
         this.motes.forEach(dot => dot.setVisible(!low));
       }),
       bridge.on("blocked", blocked => { this.blocked = blocked; }),
+      bridge.on("river", running => {
+        const returning = this.castOff && !running;
+        this.castOff = running;
+        this.barge.setVisible(!running);
+        this.bargeLamp.setVisible(!running);
+        if (running) {
+          this.scene.pause();
+        } else {
+          this.scene.resume();
+          if (!returning) return;
+          this.x = stops[0].x;
+          this.destination = undefined;
+          if (!this.reduced) {
+            this.barge.x = stops[0].x - 110;
+            this.bargeLamp.x = stops[0].x - 74;
+            this.tweens.add({ targets: [this.barge, this.bargeLamp], x: "+=110", duration: 1100, ease: "Sine.easeOut" });
+          }
+        }
+      }),
       bridge.on("effect", effect => this.feedback(effect)),
     ];
     this.events.once(Phaser.Scenes.Events.SHUTDOWN, () => cleanup.forEach(unsubscribe => unsubscribe()));
@@ -182,6 +207,8 @@ class RowScene extends Phaser.Scene {
   }
 
   private renderMarket(snapshot: Snapshot) {
+    this.barge.setAlpha(snapshot.mode === "campaign" && snapshot.night === 1 ? .7 : 1);
+    this.bargeLamp.setVisible(!this.castOff && (snapshot.mode !== "campaign" || snapshot.night >= 2));
     const key = `${snapshot.session_id}/${snapshot.night_id}/${snapshot.revision}`;
     if (this.renderKey === key) return;
     this.renderKey = key;

@@ -150,6 +150,9 @@
             },
             "memo": {
               "$ref": "#/$defs/__schema0"
+            },
+            "source": {
+              "$ref": "#/$defs/__schema0"
             }
           },
           "required": [
@@ -178,6 +181,9 @@
               "$ref": "#/$defs/__schema0"
             },
             "memo": {
+              "$ref": "#/$defs/__schema0"
+            },
+            "sink": {
               "$ref": "#/$defs/__schema0"
             }
           },
@@ -411,6 +417,192 @@
           "properties": {
             "type": {
               "type": "string",
+              "const": "start_run"
+            },
+            "contract_id": {
+              "$ref": "#/$defs/__schema0"
+            },
+            "escort_id": {
+              "$ref": "#/$defs/__schema0"
+            },
+            "barge_plan": {
+              "maxItems": 6,
+              "type": "array",
+              "items": {
+                "$ref": "#/$defs/__schema2"
+              }
+            }
+          },
+          "required": [
+            "type",
+            "barge_plan"
+          ],
+          "additionalProperties": false
+        },
+        {
+          "type": "object",
+          "properties": {
+            "type": {
+              "type": "string",
+              "const": "finish_run"
+            },
+            "run_id": {
+              "$ref": "#/$defs/__schema0"
+            },
+            "report": {
+              "type": "object",
+              "properties": {
+                "run_id": {
+                  "$ref": "#/$defs/__schema0"
+                },
+                "seed": {
+                  "type": "integer",
+                  "minimum": 0,
+                  "maximum": 4294967295
+                },
+                "durationMs": {
+                  "type": "integer",
+                  "minimum": 0,
+                  "maximum": 150000
+                },
+                "bought": {
+                  "maxItems": 6,
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/$defs/__schema3"
+                  }
+                },
+                "soldBack": {
+                  "maxItems": 6,
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/$defs/__schema6"
+                  }
+                },
+                "delivered": {
+                  "$ref": "#/$defs/__schema7"
+                },
+                "lost": {
+                  "$ref": "#/$defs/__schema7"
+                },
+                "flaresUsed": {
+                  "type": "integer",
+                  "minimum": 0,
+                  "maximum": 20
+                },
+                "pirates": {
+                  "maxItems": 4,
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/$defs/__schema8"
+                  }
+                },
+                "boomsBroken": {
+                  "maxItems": 4,
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/$defs/__schema0"
+                  }
+                },
+                "escort": {
+                  "type": "object",
+                  "properties": {
+                    "id": {
+                      "$ref": "#/$defs/__schema0"
+                    },
+                    "completed": {
+                      "type": "boolean"
+                    }
+                  },
+                  "required": [
+                    "id",
+                    "completed"
+                  ],
+                  "additionalProperties": false
+                },
+                "savedBoats": {
+                  "maxItems": 5,
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/$defs/__schema0"
+                  }
+                },
+                "outcome": {
+                  "type": "string",
+                  "enum": [
+                    "moored",
+                    "towed",
+                    "sunk"
+                  ]
+                },
+                "inputLogHash": {
+                  "type": "string",
+                  "maxLength": 120
+                }
+              },
+              "required": [
+                "run_id",
+                "seed",
+                "durationMs",
+                "bought",
+                "soldBack",
+                "delivered",
+                "lost",
+                "flaresUsed",
+                "pirates",
+                "boomsBroken",
+                "outcome",
+                "inputLogHash"
+              ],
+              "additionalProperties": false
+            }
+          },
+          "required": [
+            "type",
+            "run_id",
+            "report"
+          ],
+          "additionalProperties": false
+        },
+        {
+          "type": "object",
+          "properties": {
+            "type": {
+              "type": "string",
+              "const": "accept_contract"
+            },
+            "contract_id": {
+              "$ref": "#/$defs/__schema0"
+            }
+          },
+          "required": [
+            "type",
+            "contract_id"
+          ],
+          "additionalProperties": false
+        },
+        {
+          "type": "object",
+          "properties": {
+            "type": {
+              "type": "string",
+              "const": "buy_barge_upgrade"
+            },
+            "upgrade_id": {
+              "$ref": "#/$defs/__schema0"
+            }
+          },
+          "required": [
+            "type",
+            "upgrade_id"
+          ],
+          "additionalProperties": false
+        },
+        {
+          "type": "object",
+          "properties": {
+            "type": {
+              "type": "string",
               "const": "finish_job"
             },
             "job_id": {
@@ -496,6 +688,113 @@
           "type": "string",
           "maxLength": 16,
           "pattern": "^(0|[1-9]\\d*)$"
+        },
+        "__schema2": {
+          "type": "object",
+          "properties": {
+            "village_id": {
+              "$ref": "#/$defs/__schema0"
+            },
+            "item_id": {
+              "$ref": "#/$defs/__schema0"
+            },
+            "quantity": {
+              "$ref": "#/$defs/__schema1"
+            }
+          },
+          "required": [
+            "village_id",
+            "item_id",
+            "quantity"
+          ],
+          "additionalProperties": false
+        },
+        "__schema3": {
+          "type": "object",
+          "properties": {
+            "village_id": {
+              "$ref": "#/$defs/__schema0"
+            },
+            "item_id": {
+              "$ref": "#/$defs/__schema0"
+            },
+            "quantity": {
+              "$ref": "#/$defs/__schema4"
+            },
+            "paid": {
+              "$ref": "#/$defs/__schema5"
+            }
+          },
+          "required": [
+            "village_id",
+            "item_id",
+            "quantity",
+            "paid"
+          ],
+          "additionalProperties": false
+        },
+        "__schema4": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 20
+        },
+        "__schema5": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 9007199254740991
+        },
+        "__schema6": {
+          "type": "object",
+          "properties": {
+            "village_id": {
+              "$ref": "#/$defs/__schema0"
+            },
+            "item_id": {
+              "$ref": "#/$defs/__schema0"
+            },
+            "quantity": {
+              "$ref": "#/$defs/__schema4"
+            },
+            "received": {
+              "$ref": "#/$defs/__schema5"
+            }
+          },
+          "required": [
+            "village_id",
+            "item_id",
+            "quantity",
+            "received"
+          ],
+          "additionalProperties": false
+        },
+        "__schema7": {
+          "type": "object",
+          "propertyNames": {
+            "$ref": "#/$defs/__schema0"
+          },
+          "additionalProperties": {
+            "type": "integer",
+            "minimum": 0,
+            "maximum": 20
+          }
+        },
+        "__schema8": {
+          "type": "object",
+          "properties": {
+            "reach": {
+              "$ref": "#/$defs/__schema0"
+            },
+            "count": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 10
+            }
+          },
+          "required": [
+            "reach",
+            "count"
+          ],
+          "additionalProperties": false
         }
       }
     },
@@ -679,6 +978,192 @@
               "properties": {
                 "type": {
                   "type": "string",
+                  "const": "start_run"
+                },
+                "contract_id": {
+                  "$ref": "#/$defs/__schema0"
+                },
+                "escort_id": {
+                  "$ref": "#/$defs/__schema0"
+                },
+                "barge_plan": {
+                  "maxItems": 6,
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/$defs/__schema2"
+                  }
+                }
+              },
+              "required": [
+                "type",
+                "barge_plan"
+              ],
+              "additionalProperties": false
+            },
+            {
+              "type": "object",
+              "properties": {
+                "type": {
+                  "type": "string",
+                  "const": "finish_run"
+                },
+                "run_id": {
+                  "$ref": "#/$defs/__schema0"
+                },
+                "report": {
+                  "type": "object",
+                  "properties": {
+                    "run_id": {
+                      "$ref": "#/$defs/__schema0"
+                    },
+                    "seed": {
+                      "type": "integer",
+                      "minimum": 0,
+                      "maximum": 4294967295
+                    },
+                    "durationMs": {
+                      "type": "integer",
+                      "minimum": 0,
+                      "maximum": 150000
+                    },
+                    "bought": {
+                      "maxItems": 6,
+                      "type": "array",
+                      "items": {
+                        "$ref": "#/$defs/__schema3"
+                      }
+                    },
+                    "soldBack": {
+                      "maxItems": 6,
+                      "type": "array",
+                      "items": {
+                        "$ref": "#/$defs/__schema6"
+                      }
+                    },
+                    "delivered": {
+                      "$ref": "#/$defs/__schema7"
+                    },
+                    "lost": {
+                      "$ref": "#/$defs/__schema7"
+                    },
+                    "flaresUsed": {
+                      "type": "integer",
+                      "minimum": 0,
+                      "maximum": 20
+                    },
+                    "pirates": {
+                      "maxItems": 4,
+                      "type": "array",
+                      "items": {
+                        "$ref": "#/$defs/__schema8"
+                      }
+                    },
+                    "boomsBroken": {
+                      "maxItems": 4,
+                      "type": "array",
+                      "items": {
+                        "$ref": "#/$defs/__schema0"
+                      }
+                    },
+                    "escort": {
+                      "type": "object",
+                      "properties": {
+                        "id": {
+                          "$ref": "#/$defs/__schema0"
+                        },
+                        "completed": {
+                          "type": "boolean"
+                        }
+                      },
+                      "required": [
+                        "id",
+                        "completed"
+                      ],
+                      "additionalProperties": false
+                    },
+                    "savedBoats": {
+                      "maxItems": 5,
+                      "type": "array",
+                      "items": {
+                        "$ref": "#/$defs/__schema0"
+                      }
+                    },
+                    "outcome": {
+                      "type": "string",
+                      "enum": [
+                        "moored",
+                        "towed",
+                        "sunk"
+                      ]
+                    },
+                    "inputLogHash": {
+                      "type": "string",
+                      "maxLength": 120
+                    }
+                  },
+                  "required": [
+                    "run_id",
+                    "seed",
+                    "durationMs",
+                    "bought",
+                    "soldBack",
+                    "delivered",
+                    "lost",
+                    "flaresUsed",
+                    "pirates",
+                    "boomsBroken",
+                    "outcome",
+                    "inputLogHash"
+                  ],
+                  "additionalProperties": false
+                }
+              },
+              "required": [
+                "type",
+                "run_id",
+                "report"
+              ],
+              "additionalProperties": false
+            },
+            {
+              "type": "object",
+              "properties": {
+                "type": {
+                  "type": "string",
+                  "const": "accept_contract"
+                },
+                "contract_id": {
+                  "$ref": "#/$defs/__schema0"
+                }
+              },
+              "required": [
+                "type",
+                "contract_id"
+              ],
+              "additionalProperties": false
+            },
+            {
+              "type": "object",
+              "properties": {
+                "type": {
+                  "type": "string",
+                  "const": "buy_barge_upgrade"
+                },
+                "upgrade_id": {
+                  "$ref": "#/$defs/__schema0"
+                }
+              },
+              "required": [
+                "type",
+                "upgrade_id"
+              ],
+              "additionalProperties": false
+            },
+            {
+              "type": "object",
+              "properties": {
+                "type": {
+                  "type": "string",
                   "const": "finish_job"
                 },
                 "job_id": {
@@ -777,6 +1262,9 @@
                   },
                   "memo": {
                     "$ref": "#/$defs/__schema0"
+                  },
+                  "source": {
+                    "$ref": "#/$defs/__schema0"
                   }
                 },
                 "required": [
@@ -805,6 +1293,9 @@
                     "$ref": "#/$defs/__schema0"
                   },
                   "memo": {
+                    "$ref": "#/$defs/__schema0"
+                  },
+                  "sink": {
                     "$ref": "#/$defs/__schema0"
                   }
                 },
@@ -880,6 +1371,113 @@
           "type": "string",
           "maxLength": 16,
           "pattern": "^(0|[1-9]\\d*)$"
+        },
+        "__schema2": {
+          "type": "object",
+          "properties": {
+            "village_id": {
+              "$ref": "#/$defs/__schema0"
+            },
+            "item_id": {
+              "$ref": "#/$defs/__schema0"
+            },
+            "quantity": {
+              "$ref": "#/$defs/__schema1"
+            }
+          },
+          "required": [
+            "village_id",
+            "item_id",
+            "quantity"
+          ],
+          "additionalProperties": false
+        },
+        "__schema3": {
+          "type": "object",
+          "properties": {
+            "village_id": {
+              "$ref": "#/$defs/__schema0"
+            },
+            "item_id": {
+              "$ref": "#/$defs/__schema0"
+            },
+            "quantity": {
+              "$ref": "#/$defs/__schema4"
+            },
+            "paid": {
+              "$ref": "#/$defs/__schema5"
+            }
+          },
+          "required": [
+            "village_id",
+            "item_id",
+            "quantity",
+            "paid"
+          ],
+          "additionalProperties": false
+        },
+        "__schema4": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 20
+        },
+        "__schema5": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 9007199254740991
+        },
+        "__schema6": {
+          "type": "object",
+          "properties": {
+            "village_id": {
+              "$ref": "#/$defs/__schema0"
+            },
+            "item_id": {
+              "$ref": "#/$defs/__schema0"
+            },
+            "quantity": {
+              "$ref": "#/$defs/__schema4"
+            },
+            "received": {
+              "$ref": "#/$defs/__schema5"
+            }
+          },
+          "required": [
+            "village_id",
+            "item_id",
+            "quantity",
+            "received"
+          ],
+          "additionalProperties": false
+        },
+        "__schema7": {
+          "type": "object",
+          "propertyNames": {
+            "$ref": "#/$defs/__schema0"
+          },
+          "additionalProperties": {
+            "type": "integer",
+            "minimum": 0,
+            "maximum": 20
+          }
+        },
+        "__schema8": {
+          "type": "object",
+          "properties": {
+            "reach": {
+              "$ref": "#/$defs/__schema0"
+            },
+            "count": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 10
+            }
+          },
+          "required": [
+            "reach",
+            "count"
+          ],
+          "additionalProperties": false
         }
       }
     },
@@ -999,13 +1597,10 @@
             "type": "object",
             "properties": {
               "band": {
-                "type": "string",
-                "enum": [
-                  "thriving",
-                  "healthy",
-                  "tight",
-                  "dark"
-                ]
+                "$ref": "#/$defs/__schema5"
+              },
+              "stockClosed": {
+                "type": "boolean"
               },
               "coins": {
                 "$ref": "#/$defs/__schema3"
@@ -1043,11 +1638,30 @@
                   "additionalProperties": false
                 }
               },
+              "suppliedBy": {
+                "type": "array",
+                "items": {
+                  "type": "object",
+                  "properties": {
+                    "name": {
+                      "$ref": "#/$defs/__schema0"
+                    },
+                    "quantity": {
+                      "$ref": "#/$defs/__schema3"
+                    }
+                  },
+                  "required": [
+                    "name",
+                    "quantity"
+                  ],
+                  "additionalProperties": false
+                }
+              },
               "strategy": {
-                "$ref": "#/$defs/__schema5"
+                "$ref": "#/$defs/__schema6"
               },
               "vote": {
-                "$ref": "#/$defs/__schema5"
+                "$ref": "#/$defs/__schema6"
               },
               "thinking": {
                 "type": "string"
@@ -1242,6 +1856,364 @@
             ],
             "additionalProperties": false
           }
+        },
+        "villages": {
+          "type": "object",
+          "propertyNames": {
+            "type": "string"
+          },
+          "additionalProperties": {
+            "type": "object",
+            "properties": {
+              "band": {
+                "$ref": "#/$defs/__schema5"
+              },
+              "coins": {
+                "$ref": "#/$defs/__schema3"
+              },
+              "stock": {
+                "$ref": "#/$defs/__schema4"
+              },
+              "prices": {
+                "type": "object",
+                "propertyNames": {
+                  "type": "string"
+                },
+                "additionalProperties": {
+                  "type": "object",
+                  "properties": {
+                    "buy": {
+                      "$ref": "#/$defs/__schema3"
+                    },
+                    "sell": {
+                      "$ref": "#/$defs/__schema3"
+                    },
+                    "label": {
+                      "$ref": "#/$defs/__schema0"
+                    }
+                  },
+                  "required": [
+                    "buy",
+                    "sell",
+                    "label"
+                  ],
+                  "additionalProperties": false
+                }
+              },
+              "relationship": {
+                "type": "integer",
+                "minimum": -9007199254740991,
+                "maximum": 9007199254740991
+              }
+            },
+            "required": [
+              "band",
+              "coins",
+              "stock",
+              "prices",
+              "relationship"
+            ],
+            "additionalProperties": false
+          }
+        },
+        "river": {
+          "type": "object",
+          "properties": {
+            "reaches": {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "properties": {
+                  "id": {
+                    "$ref": "#/$defs/__schema0"
+                  },
+                  "name": {
+                    "$ref": "#/$defs/__schema0"
+                  },
+                  "danger": {
+                    "type": "integer",
+                    "minimum": 0,
+                    "maximum": 5
+                  },
+                  "boom": {
+                    "type": "boolean"
+                  },
+                  "lamps": {
+                    "$ref": "#/$defs/__schema1"
+                  }
+                },
+                "required": [
+                  "id",
+                  "name",
+                  "danger",
+                  "boom",
+                  "lamps"
+                ],
+                "additionalProperties": false
+              }
+            },
+            "contracts": {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "properties": {
+                  "id": {
+                    "$ref": "#/$defs/__schema0"
+                  },
+                  "stall": {
+                    "$ref": "#/$defs/__schema0"
+                  },
+                  "village": {
+                    "$ref": "#/$defs/__schema0"
+                  },
+                  "item": {
+                    "$ref": "#/$defs/__schema0"
+                  },
+                  "quantity": {
+                    "$ref": "#/$defs/__schema3"
+                  },
+                  "payout": {
+                    "$ref": "#/$defs/__schema3"
+                  },
+                  "deadline": {
+                    "$ref": "#/$defs/__schema2"
+                  },
+                  "mine": {
+                    "type": "boolean"
+                  },
+                  "taken": {
+                    "type": "boolean"
+                  },
+                  "kind": {
+                    "type": "string",
+                    "enum": [
+                      "supply",
+                      "escort"
+                    ]
+                  }
+                },
+                "required": [
+                  "id",
+                  "stall",
+                  "village",
+                  "item",
+                  "quantity",
+                  "payout",
+                  "deadline",
+                  "mine",
+                  "taken",
+                  "kind"
+                ],
+                "additionalProperties": false
+              }
+            },
+            "myRun": {
+              "type": "object",
+              "properties": {
+                "id": {
+                  "$ref": "#/$defs/__schema0"
+                },
+                "deadline": {
+                  "$ref": "#/$defs/__schema1"
+                },
+                "manifest": {
+                  "type": "object",
+                  "properties": {
+                    "id": {
+                      "$ref": "#/$defs/__schema7"
+                    },
+                    "seed": {
+                      "type": "integer",
+                      "minimum": 0,
+                      "maximum": 9007199254740991
+                    },
+                    "deadline": {
+                      "$ref": "#/$defs/__schema8"
+                    },
+                    "wallet": {
+                      "$ref": "#/$defs/__schema8"
+                    },
+                    "hold": {
+                      "$ref": "#/$defs/__schema9"
+                    },
+                    "items": {
+                      "maxItems": 6,
+                      "type": "array",
+                      "items": {
+                        "$ref": "#/$defs/__schema10"
+                      }
+                    },
+                    "reaches": {
+                      "maxItems": 4,
+                      "type": "array",
+                      "items": {
+                        "$ref": "#/$defs/__schema12"
+                      }
+                    },
+                    "boats": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "id": {
+                            "$ref": "#/$defs/__schema7"
+                          },
+                          "name": {
+                            "$ref": "#/$defs/__schema7"
+                          },
+                          "village": {
+                            "$ref": "#/$defs/__schema7"
+                          },
+                          "destination": {
+                            "$ref": "#/$defs/__schema7"
+                          },
+                          "departs": {
+                            "type": "number"
+                          },
+                          "arrives": {
+                            "type": "number"
+                          },
+                          "ambient": {
+                            "type": "boolean"
+                          }
+                        },
+                        "required": [
+                          "id",
+                          "name",
+                          "village",
+                          "departs",
+                          "arrives",
+                          "ambient"
+                        ],
+                        "additionalProperties": false
+                      }
+                    },
+                    "contract": {
+                      "type": "object",
+                      "properties": {
+                        "id": {
+                          "$ref": "#/$defs/__schema7"
+                        },
+                        "village": {
+                          "$ref": "#/$defs/__schema7"
+                        },
+                        "item": {
+                          "$ref": "#/$defs/__schema7"
+                        },
+                        "quantity": {
+                          "$ref": "#/$defs/__schema9"
+                        },
+                        "payout": {
+                          "$ref": "#/$defs/__schema8"
+                        },
+                        "kind": {
+                          "type": "string",
+                          "enum": [
+                            "supply",
+                            "escort"
+                          ]
+                        },
+                        "haul": {
+                          "$ref": "#/$defs/__schema7"
+                        }
+                      },
+                      "required": [
+                        "id",
+                        "village",
+                        "item",
+                        "quantity",
+                        "payout",
+                        "kind"
+                      ],
+                      "additionalProperties": false
+                    },
+                    "upgrades": {
+                      "type": "array",
+                      "items": {
+                        "$ref": "#/$defs/__schema7"
+                      }
+                    },
+                    "bounty": {
+                      "$ref": "#/$defs/__schema8"
+                    },
+                    "glow": {
+                      "type": "number",
+                      "minimum": 0,
+                      "maximum": 1
+                    }
+                  },
+                  "required": [
+                    "id",
+                    "seed",
+                    "deadline",
+                    "wallet",
+                    "hold",
+                    "items",
+                    "reaches",
+                    "boats",
+                    "upgrades",
+                    "bounty",
+                    "glow"
+                  ],
+                  "additionalProperties": false
+                }
+              },
+              "required": [
+                "id",
+                "deadline",
+                "manifest"
+              ],
+              "additionalProperties": false
+            },
+            "upriver": {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "properties": {
+                  "actor": {
+                    "$ref": "#/$defs/__schema0"
+                  },
+                  "name": {
+                    "$ref": "#/$defs/__schema0"
+                  }
+                },
+                "required": [
+                  "actor",
+                  "name"
+                ],
+                "additionalProperties": false
+              }
+            },
+            "bountyFund": {
+              "$ref": "#/$defs/__schema3"
+            }
+          },
+          "required": [
+            "reaches",
+            "contracts",
+            "upriver",
+            "bountyFund"
+          ],
+          "additionalProperties": false
+        },
+        "barge": {
+          "type": "object",
+          "properties": {
+            "hold": {
+              "$ref": "#/$defs/__schema3"
+            },
+            "upgrades": {
+              "type": "array",
+              "items": {
+                "$ref": "#/$defs/__schema0"
+              }
+            }
+          },
+          "required": [
+            "hold",
+            "upgrades"
+          ],
+          "additionalProperties": false
         },
         "objective": {
           "type": "object",
@@ -1524,6 +2496,9 @@
         "upgrades",
         "merchants",
         "orders",
+        "villages",
+        "river",
+        "barge",
         "objective",
         "delivered",
         "crafted",
@@ -1578,11 +2553,104 @@
         "__schema5": {
           "type": "string",
           "enum": [
+            "thriving",
+            "healthy",
+            "tight",
+            "dark"
+          ]
+        },
+        "__schema6": {
+          "type": "string",
+          "enum": [
             "steady",
             "bold",
             "festival",
             "bargain"
           ]
+        },
+        "__schema7": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 120
+        },
+        "__schema8": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 9007199254740991
+        },
+        "__schema9": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 20
+        },
+        "__schema10": {
+          "type": "object",
+          "properties": {
+            "village": {
+              "$ref": "#/$defs/__schema7"
+            },
+            "item": {
+              "$ref": "#/$defs/__schema7"
+            },
+            "stock": {
+              "$ref": "#/$defs/__schema8"
+            },
+            "target": {
+              "type": "integer",
+              "exclusiveMinimum": 0,
+              "maximum": 9007199254740991
+            },
+            "prices": {
+              "maxItems": 20,
+              "type": "array",
+              "items": {
+                "$ref": "#/$defs/__schema11"
+              }
+            },
+            "coins": {
+              "$ref": "#/$defs/__schema8"
+            },
+            "discount": {
+              "type": "boolean"
+            }
+          },
+          "required": [
+            "village",
+            "item",
+            "stock",
+            "target",
+            "prices",
+            "coins",
+            "discount"
+          ],
+          "additionalProperties": false
+        },
+        "__schema11": {
+          "type": "integer",
+          "exclusiveMinimum": 0,
+          "maximum": 9007199254740991
+        },
+        "__schema12": {
+          "type": "object",
+          "properties": {
+            "id": {
+              "$ref": "#/$defs/__schema7"
+            },
+            "danger": {
+              "type": "integer",
+              "minimum": 0,
+              "maximum": 5
+            },
+            "boom": {
+              "type": "boolean"
+            }
+          },
+          "required": [
+            "id",
+            "danger",
+            "boom"
+          ],
+          "additionalProperties": false
         }
       }
     },
@@ -2160,13 +3228,10 @@
               "type": "object",
               "properties": {
                 "band": {
-                  "type": "string",
-                  "enum": [
-                    "thriving",
-                    "healthy",
-                    "tight",
-                    "dark"
-                  ]
+                  "$ref": "#/$defs/__schema5"
+                },
+                "stockClosed": {
+                  "type": "boolean"
                 },
                 "coins": {
                   "$ref": "#/$defs/__schema3"
@@ -2204,11 +3269,30 @@
                     "additionalProperties": false
                   }
                 },
+                "suppliedBy": {
+                  "type": "array",
+                  "items": {
+                    "type": "object",
+                    "properties": {
+                      "name": {
+                        "$ref": "#/$defs/__schema0"
+                      },
+                      "quantity": {
+                        "$ref": "#/$defs/__schema3"
+                      }
+                    },
+                    "required": [
+                      "name",
+                      "quantity"
+                    ],
+                    "additionalProperties": false
+                  }
+                },
                 "strategy": {
-                  "$ref": "#/$defs/__schema5"
+                  "$ref": "#/$defs/__schema6"
                 },
                 "vote": {
-                  "$ref": "#/$defs/__schema5"
+                  "$ref": "#/$defs/__schema6"
                 },
                 "thinking": {
                   "type": "string"
@@ -2403,6 +3487,364 @@
               ],
               "additionalProperties": false
             }
+          },
+          "villages": {
+            "type": "object",
+            "propertyNames": {
+              "type": "string"
+            },
+            "additionalProperties": {
+              "type": "object",
+              "properties": {
+                "band": {
+                  "$ref": "#/$defs/__schema5"
+                },
+                "coins": {
+                  "$ref": "#/$defs/__schema3"
+                },
+                "stock": {
+                  "$ref": "#/$defs/__schema4"
+                },
+                "prices": {
+                  "type": "object",
+                  "propertyNames": {
+                    "type": "string"
+                  },
+                  "additionalProperties": {
+                    "type": "object",
+                    "properties": {
+                      "buy": {
+                        "$ref": "#/$defs/__schema3"
+                      },
+                      "sell": {
+                        "$ref": "#/$defs/__schema3"
+                      },
+                      "label": {
+                        "$ref": "#/$defs/__schema0"
+                      }
+                    },
+                    "required": [
+                      "buy",
+                      "sell",
+                      "label"
+                    ],
+                    "additionalProperties": false
+                  }
+                },
+                "relationship": {
+                  "type": "integer",
+                  "minimum": -9007199254740991,
+                  "maximum": 9007199254740991
+                }
+              },
+              "required": [
+                "band",
+                "coins",
+                "stock",
+                "prices",
+                "relationship"
+              ],
+              "additionalProperties": false
+            }
+          },
+          "river": {
+            "type": "object",
+            "properties": {
+              "reaches": {
+                "type": "array",
+                "items": {
+                  "type": "object",
+                  "properties": {
+                    "id": {
+                      "$ref": "#/$defs/__schema0"
+                    },
+                    "name": {
+                      "$ref": "#/$defs/__schema0"
+                    },
+                    "danger": {
+                      "type": "integer",
+                      "minimum": 0,
+                      "maximum": 5
+                    },
+                    "boom": {
+                      "type": "boolean"
+                    },
+                    "lamps": {
+                      "$ref": "#/$defs/__schema1"
+                    }
+                  },
+                  "required": [
+                    "id",
+                    "name",
+                    "danger",
+                    "boom",
+                    "lamps"
+                  ],
+                  "additionalProperties": false
+                }
+              },
+              "contracts": {
+                "type": "array",
+                "items": {
+                  "type": "object",
+                  "properties": {
+                    "id": {
+                      "$ref": "#/$defs/__schema0"
+                    },
+                    "stall": {
+                      "$ref": "#/$defs/__schema0"
+                    },
+                    "village": {
+                      "$ref": "#/$defs/__schema0"
+                    },
+                    "item": {
+                      "$ref": "#/$defs/__schema0"
+                    },
+                    "quantity": {
+                      "$ref": "#/$defs/__schema3"
+                    },
+                    "payout": {
+                      "$ref": "#/$defs/__schema3"
+                    },
+                    "deadline": {
+                      "$ref": "#/$defs/__schema2"
+                    },
+                    "mine": {
+                      "type": "boolean"
+                    },
+                    "taken": {
+                      "type": "boolean"
+                    },
+                    "kind": {
+                      "type": "string",
+                      "enum": [
+                        "supply",
+                        "escort"
+                      ]
+                    }
+                  },
+                  "required": [
+                    "id",
+                    "stall",
+                    "village",
+                    "item",
+                    "quantity",
+                    "payout",
+                    "deadline",
+                    "mine",
+                    "taken",
+                    "kind"
+                  ],
+                  "additionalProperties": false
+                }
+              },
+              "myRun": {
+                "type": "object",
+                "properties": {
+                  "id": {
+                    "$ref": "#/$defs/__schema0"
+                  },
+                  "deadline": {
+                    "$ref": "#/$defs/__schema1"
+                  },
+                  "manifest": {
+                    "type": "object",
+                    "properties": {
+                      "id": {
+                        "$ref": "#/$defs/__schema7"
+                      },
+                      "seed": {
+                        "type": "integer",
+                        "minimum": 0,
+                        "maximum": 9007199254740991
+                      },
+                      "deadline": {
+                        "$ref": "#/$defs/__schema8"
+                      },
+                      "wallet": {
+                        "$ref": "#/$defs/__schema8"
+                      },
+                      "hold": {
+                        "$ref": "#/$defs/__schema9"
+                      },
+                      "items": {
+                        "maxItems": 6,
+                        "type": "array",
+                        "items": {
+                          "$ref": "#/$defs/__schema10"
+                        }
+                      },
+                      "reaches": {
+                        "maxItems": 4,
+                        "type": "array",
+                        "items": {
+                          "$ref": "#/$defs/__schema12"
+                        }
+                      },
+                      "boats": {
+                        "type": "array",
+                        "items": {
+                          "type": "object",
+                          "properties": {
+                            "id": {
+                              "$ref": "#/$defs/__schema7"
+                            },
+                            "name": {
+                              "$ref": "#/$defs/__schema7"
+                            },
+                            "village": {
+                              "$ref": "#/$defs/__schema7"
+                            },
+                            "destination": {
+                              "$ref": "#/$defs/__schema7"
+                            },
+                            "departs": {
+                              "type": "number"
+                            },
+                            "arrives": {
+                              "type": "number"
+                            },
+                            "ambient": {
+                              "type": "boolean"
+                            }
+                          },
+                          "required": [
+                            "id",
+                            "name",
+                            "village",
+                            "departs",
+                            "arrives",
+                            "ambient"
+                          ],
+                          "additionalProperties": false
+                        }
+                      },
+                      "contract": {
+                        "type": "object",
+                        "properties": {
+                          "id": {
+                            "$ref": "#/$defs/__schema7"
+                          },
+                          "village": {
+                            "$ref": "#/$defs/__schema7"
+                          },
+                          "item": {
+                            "$ref": "#/$defs/__schema7"
+                          },
+                          "quantity": {
+                            "$ref": "#/$defs/__schema9"
+                          },
+                          "payout": {
+                            "$ref": "#/$defs/__schema8"
+                          },
+                          "kind": {
+                            "type": "string",
+                            "enum": [
+                              "supply",
+                              "escort"
+                            ]
+                          },
+                          "haul": {
+                            "$ref": "#/$defs/__schema7"
+                          }
+                        },
+                        "required": [
+                          "id",
+                          "village",
+                          "item",
+                          "quantity",
+                          "payout",
+                          "kind"
+                        ],
+                        "additionalProperties": false
+                      },
+                      "upgrades": {
+                        "type": "array",
+                        "items": {
+                          "$ref": "#/$defs/__schema7"
+                        }
+                      },
+                      "bounty": {
+                        "$ref": "#/$defs/__schema8"
+                      },
+                      "glow": {
+                        "type": "number",
+                        "minimum": 0,
+                        "maximum": 1
+                      }
+                    },
+                    "required": [
+                      "id",
+                      "seed",
+                      "deadline",
+                      "wallet",
+                      "hold",
+                      "items",
+                      "reaches",
+                      "boats",
+                      "upgrades",
+                      "bounty",
+                      "glow"
+                    ],
+                    "additionalProperties": false
+                  }
+                },
+                "required": [
+                  "id",
+                  "deadline",
+                  "manifest"
+                ],
+                "additionalProperties": false
+              },
+              "upriver": {
+                "type": "array",
+                "items": {
+                  "type": "object",
+                  "properties": {
+                    "actor": {
+                      "$ref": "#/$defs/__schema0"
+                    },
+                    "name": {
+                      "$ref": "#/$defs/__schema0"
+                    }
+                  },
+                  "required": [
+                    "actor",
+                    "name"
+                  ],
+                  "additionalProperties": false
+                }
+              },
+              "bountyFund": {
+                "$ref": "#/$defs/__schema3"
+              }
+            },
+            "required": [
+              "reaches",
+              "contracts",
+              "upriver",
+              "bountyFund"
+            ],
+            "additionalProperties": false
+          },
+          "barge": {
+            "type": "object",
+            "properties": {
+              "hold": {
+                "$ref": "#/$defs/__schema3"
+              },
+              "upgrades": {
+                "type": "array",
+                "items": {
+                  "$ref": "#/$defs/__schema0"
+                }
+              }
+            },
+            "required": [
+              "hold",
+              "upgrades"
+            ],
+            "additionalProperties": false
           },
           "objective": {
             "type": "object",
@@ -2685,6 +4127,9 @@
           "upgrades",
           "merchants",
           "orders",
+          "villages",
+          "river",
+          "barge",
           "objective",
           "delivered",
           "crafted",
@@ -2739,11 +4184,104 @@
           "__schema5": {
             "type": "string",
             "enum": [
+              "thriving",
+              "healthy",
+              "tight",
+              "dark"
+            ]
+          },
+          "__schema6": {
+            "type": "string",
+            "enum": [
               "steady",
               "bold",
               "festival",
               "bargain"
             ]
+          },
+          "__schema7": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 120
+          },
+          "__schema8": {
+            "type": "integer",
+            "minimum": 0,
+            "maximum": 9007199254740991
+          },
+          "__schema9": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 20
+          },
+          "__schema10": {
+            "type": "object",
+            "properties": {
+              "village": {
+                "$ref": "#/$defs/__schema7"
+              },
+              "item": {
+                "$ref": "#/$defs/__schema7"
+              },
+              "stock": {
+                "$ref": "#/$defs/__schema8"
+              },
+              "target": {
+                "type": "integer",
+                "exclusiveMinimum": 0,
+                "maximum": 9007199254740991
+              },
+              "prices": {
+                "maxItems": 20,
+                "type": "array",
+                "items": {
+                  "$ref": "#/$defs/__schema11"
+                }
+              },
+              "coins": {
+                "$ref": "#/$defs/__schema8"
+              },
+              "discount": {
+                "type": "boolean"
+              }
+            },
+            "required": [
+              "village",
+              "item",
+              "stock",
+              "target",
+              "prices",
+              "coins",
+              "discount"
+            ],
+            "additionalProperties": false
+          },
+          "__schema11": {
+            "type": "integer",
+            "exclusiveMinimum": 0,
+            "maximum": 9007199254740991
+          },
+          "__schema12": {
+            "type": "object",
+            "properties": {
+              "id": {
+                "$ref": "#/$defs/__schema7"
+              },
+              "danger": {
+                "type": "integer",
+                "minimum": 0,
+                "maximum": 5
+              },
+              "boom": {
+                "type": "boolean"
+              }
+            },
+            "required": [
+              "id",
+              "danger",
+              "boom"
+            ],
+            "additionalProperties": false
           }
         }
       }
@@ -2932,6 +4470,192 @@
                 "properties": {
                   "type": {
                     "type": "string",
+                    "const": "start_run"
+                  },
+                  "contract_id": {
+                    "$ref": "#/$defs/__schema1"
+                  },
+                  "escort_id": {
+                    "$ref": "#/$defs/__schema1"
+                  },
+                  "barge_plan": {
+                    "maxItems": 6,
+                    "type": "array",
+                    "items": {
+                      "$ref": "#/$defs/__schema3"
+                    }
+                  }
+                },
+                "required": [
+                  "type",
+                  "barge_plan"
+                ],
+                "additionalProperties": false
+              },
+              {
+                "type": "object",
+                "properties": {
+                  "type": {
+                    "type": "string",
+                    "const": "finish_run"
+                  },
+                  "run_id": {
+                    "$ref": "#/$defs/__schema1"
+                  },
+                  "report": {
+                    "type": "object",
+                    "properties": {
+                      "run_id": {
+                        "$ref": "#/$defs/__schema1"
+                      },
+                      "seed": {
+                        "type": "integer",
+                        "minimum": 0,
+                        "maximum": 4294967295
+                      },
+                      "durationMs": {
+                        "type": "integer",
+                        "minimum": 0,
+                        "maximum": 150000
+                      },
+                      "bought": {
+                        "maxItems": 6,
+                        "type": "array",
+                        "items": {
+                          "$ref": "#/$defs/__schema4"
+                        }
+                      },
+                      "soldBack": {
+                        "maxItems": 6,
+                        "type": "array",
+                        "items": {
+                          "$ref": "#/$defs/__schema7"
+                        }
+                      },
+                      "delivered": {
+                        "$ref": "#/$defs/__schema8"
+                      },
+                      "lost": {
+                        "$ref": "#/$defs/__schema8"
+                      },
+                      "flaresUsed": {
+                        "type": "integer",
+                        "minimum": 0,
+                        "maximum": 20
+                      },
+                      "pirates": {
+                        "maxItems": 4,
+                        "type": "array",
+                        "items": {
+                          "$ref": "#/$defs/__schema9"
+                        }
+                      },
+                      "boomsBroken": {
+                        "maxItems": 4,
+                        "type": "array",
+                        "items": {
+                          "$ref": "#/$defs/__schema1"
+                        }
+                      },
+                      "escort": {
+                        "type": "object",
+                        "properties": {
+                          "id": {
+                            "$ref": "#/$defs/__schema1"
+                          },
+                          "completed": {
+                            "type": "boolean"
+                          }
+                        },
+                        "required": [
+                          "id",
+                          "completed"
+                        ],
+                        "additionalProperties": false
+                      },
+                      "savedBoats": {
+                        "maxItems": 5,
+                        "type": "array",
+                        "items": {
+                          "$ref": "#/$defs/__schema1"
+                        }
+                      },
+                      "outcome": {
+                        "type": "string",
+                        "enum": [
+                          "moored",
+                          "towed",
+                          "sunk"
+                        ]
+                      },
+                      "inputLogHash": {
+                        "type": "string",
+                        "maxLength": 120
+                      }
+                    },
+                    "required": [
+                      "run_id",
+                      "seed",
+                      "durationMs",
+                      "bought",
+                      "soldBack",
+                      "delivered",
+                      "lost",
+                      "flaresUsed",
+                      "pirates",
+                      "boomsBroken",
+                      "outcome",
+                      "inputLogHash"
+                    ],
+                    "additionalProperties": false
+                  }
+                },
+                "required": [
+                  "type",
+                  "run_id",
+                  "report"
+                ],
+                "additionalProperties": false
+              },
+              {
+                "type": "object",
+                "properties": {
+                  "type": {
+                    "type": "string",
+                    "const": "accept_contract"
+                  },
+                  "contract_id": {
+                    "$ref": "#/$defs/__schema1"
+                  }
+                },
+                "required": [
+                  "type",
+                  "contract_id"
+                ],
+                "additionalProperties": false
+              },
+              {
+                "type": "object",
+                "properties": {
+                  "type": {
+                    "type": "string",
+                    "const": "buy_barge_upgrade"
+                  },
+                  "upgrade_id": {
+                    "$ref": "#/$defs/__schema1"
+                  }
+                },
+                "required": [
+                  "type",
+                  "upgrade_id"
+                ],
+                "additionalProperties": false
+              },
+              {
+                "type": "object",
+                "properties": {
+                  "type": {
+                    "type": "string",
                     "const": "finish_job"
                   },
                   "job_id": {
@@ -3030,6 +4754,113 @@
             "type": "string",
             "maxLength": 16,
             "pattern": "^(0|[1-9]\\d*)$"
+          },
+          "__schema3": {
+            "type": "object",
+            "properties": {
+              "village_id": {
+                "$ref": "#/$defs/__schema1"
+              },
+              "item_id": {
+                "$ref": "#/$defs/__schema1"
+              },
+              "quantity": {
+                "$ref": "#/$defs/__schema2"
+              }
+            },
+            "required": [
+              "village_id",
+              "item_id",
+              "quantity"
+            ],
+            "additionalProperties": false
+          },
+          "__schema4": {
+            "type": "object",
+            "properties": {
+              "village_id": {
+                "$ref": "#/$defs/__schema1"
+              },
+              "item_id": {
+                "$ref": "#/$defs/__schema1"
+              },
+              "quantity": {
+                "$ref": "#/$defs/__schema5"
+              },
+              "paid": {
+                "$ref": "#/$defs/__schema6"
+              }
+            },
+            "required": [
+              "village_id",
+              "item_id",
+              "quantity",
+              "paid"
+            ],
+            "additionalProperties": false
+          },
+          "__schema5": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 20
+          },
+          "__schema6": {
+            "type": "integer",
+            "minimum": 0,
+            "maximum": 9007199254740991
+          },
+          "__schema7": {
+            "type": "object",
+            "properties": {
+              "village_id": {
+                "$ref": "#/$defs/__schema1"
+              },
+              "item_id": {
+                "$ref": "#/$defs/__schema1"
+              },
+              "quantity": {
+                "$ref": "#/$defs/__schema5"
+              },
+              "received": {
+                "$ref": "#/$defs/__schema6"
+              }
+            },
+            "required": [
+              "village_id",
+              "item_id",
+              "quantity",
+              "received"
+            ],
+            "additionalProperties": false
+          },
+          "__schema8": {
+            "type": "object",
+            "propertyNames": {
+              "$ref": "#/$defs/__schema1"
+            },
+            "additionalProperties": {
+              "type": "integer",
+              "minimum": 0,
+              "maximum": 20
+            }
+          },
+          "__schema9": {
+            "type": "object",
+            "properties": {
+              "reach": {
+                "$ref": "#/$defs/__schema1"
+              },
+              "count": {
+                "type": "integer",
+                "minimum": 1,
+                "maximum": 10
+              }
+            },
+            "required": [
+              "reach",
+              "count"
+            ],
+            "additionalProperties": false
           }
         }
       },
@@ -3213,6 +5044,192 @@
                 "properties": {
                   "type": {
                     "type": "string",
+                    "const": "start_run"
+                  },
+                  "contract_id": {
+                    "$ref": "#/$defs/__schema0"
+                  },
+                  "escort_id": {
+                    "$ref": "#/$defs/__schema0"
+                  },
+                  "barge_plan": {
+                    "maxItems": 6,
+                    "type": "array",
+                    "items": {
+                      "$ref": "#/$defs/__schema2"
+                    }
+                  }
+                },
+                "required": [
+                  "type",
+                  "barge_plan"
+                ],
+                "additionalProperties": false
+              },
+              {
+                "type": "object",
+                "properties": {
+                  "type": {
+                    "type": "string",
+                    "const": "finish_run"
+                  },
+                  "run_id": {
+                    "$ref": "#/$defs/__schema0"
+                  },
+                  "report": {
+                    "type": "object",
+                    "properties": {
+                      "run_id": {
+                        "$ref": "#/$defs/__schema0"
+                      },
+                      "seed": {
+                        "type": "integer",
+                        "minimum": 0,
+                        "maximum": 4294967295
+                      },
+                      "durationMs": {
+                        "type": "integer",
+                        "minimum": 0,
+                        "maximum": 150000
+                      },
+                      "bought": {
+                        "maxItems": 6,
+                        "type": "array",
+                        "items": {
+                          "$ref": "#/$defs/__schema3"
+                        }
+                      },
+                      "soldBack": {
+                        "maxItems": 6,
+                        "type": "array",
+                        "items": {
+                          "$ref": "#/$defs/__schema6"
+                        }
+                      },
+                      "delivered": {
+                        "$ref": "#/$defs/__schema7"
+                      },
+                      "lost": {
+                        "$ref": "#/$defs/__schema7"
+                      },
+                      "flaresUsed": {
+                        "type": "integer",
+                        "minimum": 0,
+                        "maximum": 20
+                      },
+                      "pirates": {
+                        "maxItems": 4,
+                        "type": "array",
+                        "items": {
+                          "$ref": "#/$defs/__schema8"
+                        }
+                      },
+                      "boomsBroken": {
+                        "maxItems": 4,
+                        "type": "array",
+                        "items": {
+                          "$ref": "#/$defs/__schema0"
+                        }
+                      },
+                      "escort": {
+                        "type": "object",
+                        "properties": {
+                          "id": {
+                            "$ref": "#/$defs/__schema0"
+                          },
+                          "completed": {
+                            "type": "boolean"
+                          }
+                        },
+                        "required": [
+                          "id",
+                          "completed"
+                        ],
+                        "additionalProperties": false
+                      },
+                      "savedBoats": {
+                        "maxItems": 5,
+                        "type": "array",
+                        "items": {
+                          "$ref": "#/$defs/__schema0"
+                        }
+                      },
+                      "outcome": {
+                        "type": "string",
+                        "enum": [
+                          "moored",
+                          "towed",
+                          "sunk"
+                        ]
+                      },
+                      "inputLogHash": {
+                        "type": "string",
+                        "maxLength": 120
+                      }
+                    },
+                    "required": [
+                      "run_id",
+                      "seed",
+                      "durationMs",
+                      "bought",
+                      "soldBack",
+                      "delivered",
+                      "lost",
+                      "flaresUsed",
+                      "pirates",
+                      "boomsBroken",
+                      "outcome",
+                      "inputLogHash"
+                    ],
+                    "additionalProperties": false
+                  }
+                },
+                "required": [
+                  "type",
+                  "run_id",
+                  "report"
+                ],
+                "additionalProperties": false
+              },
+              {
+                "type": "object",
+                "properties": {
+                  "type": {
+                    "type": "string",
+                    "const": "accept_contract"
+                  },
+                  "contract_id": {
+                    "$ref": "#/$defs/__schema0"
+                  }
+                },
+                "required": [
+                  "type",
+                  "contract_id"
+                ],
+                "additionalProperties": false
+              },
+              {
+                "type": "object",
+                "properties": {
+                  "type": {
+                    "type": "string",
+                    "const": "buy_barge_upgrade"
+                  },
+                  "upgrade_id": {
+                    "$ref": "#/$defs/__schema0"
+                  }
+                },
+                "required": [
+                  "type",
+                  "upgrade_id"
+                ],
+                "additionalProperties": false
+              },
+              {
+                "type": "object",
+                "properties": {
+                  "type": {
+                    "type": "string",
                     "const": "finish_job"
                   },
                   "job_id": {
@@ -3311,6 +5328,9 @@
                     },
                     "memo": {
                       "$ref": "#/$defs/__schema0"
+                    },
+                    "source": {
+                      "$ref": "#/$defs/__schema0"
                     }
                   },
                   "required": [
@@ -3339,6 +5359,9 @@
                       "$ref": "#/$defs/__schema0"
                     },
                     "memo": {
+                      "$ref": "#/$defs/__schema0"
+                    },
+                    "sink": {
                       "$ref": "#/$defs/__schema0"
                     }
                   },
@@ -3414,6 +5437,113 @@
             "type": "string",
             "maxLength": 16,
             "pattern": "^(0|[1-9]\\d*)$"
+          },
+          "__schema2": {
+            "type": "object",
+            "properties": {
+              "village_id": {
+                "$ref": "#/$defs/__schema0"
+              },
+              "item_id": {
+                "$ref": "#/$defs/__schema0"
+              },
+              "quantity": {
+                "$ref": "#/$defs/__schema1"
+              }
+            },
+            "required": [
+              "village_id",
+              "item_id",
+              "quantity"
+            ],
+            "additionalProperties": false
+          },
+          "__schema3": {
+            "type": "object",
+            "properties": {
+              "village_id": {
+                "$ref": "#/$defs/__schema0"
+              },
+              "item_id": {
+                "$ref": "#/$defs/__schema0"
+              },
+              "quantity": {
+                "$ref": "#/$defs/__schema4"
+              },
+              "paid": {
+                "$ref": "#/$defs/__schema5"
+              }
+            },
+            "required": [
+              "village_id",
+              "item_id",
+              "quantity",
+              "paid"
+            ],
+            "additionalProperties": false
+          },
+          "__schema4": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 20
+          },
+          "__schema5": {
+            "type": "integer",
+            "minimum": 0,
+            "maximum": 9007199254740991
+          },
+          "__schema6": {
+            "type": "object",
+            "properties": {
+              "village_id": {
+                "$ref": "#/$defs/__schema0"
+              },
+              "item_id": {
+                "$ref": "#/$defs/__schema0"
+              },
+              "quantity": {
+                "$ref": "#/$defs/__schema4"
+              },
+              "received": {
+                "$ref": "#/$defs/__schema5"
+              }
+            },
+            "required": [
+              "village_id",
+              "item_id",
+              "quantity",
+              "received"
+            ],
+            "additionalProperties": false
+          },
+          "__schema7": {
+            "type": "object",
+            "propertyNames": {
+              "$ref": "#/$defs/__schema0"
+            },
+            "additionalProperties": {
+              "type": "integer",
+              "minimum": 0,
+              "maximum": 20
+            }
+          },
+          "__schema8": {
+            "type": "object",
+            "properties": {
+              "reach": {
+                "$ref": "#/$defs/__schema0"
+              },
+              "count": {
+                "type": "integer",
+                "minimum": 1,
+                "maximum": 10
+              }
+            },
+            "required": [
+              "reach",
+              "count"
+            ],
+            "additionalProperties": false
           }
         }
       }
@@ -3677,6 +5807,192 @@
                     "properties": {
                       "type": {
                         "type": "string",
+                        "const": "start_run"
+                      },
+                      "contract_id": {
+                        "$ref": "#/$defs/__schema0"
+                      },
+                      "escort_id": {
+                        "$ref": "#/$defs/__schema0"
+                      },
+                      "barge_plan": {
+                        "maxItems": 6,
+                        "type": "array",
+                        "items": {
+                          "$ref": "#/$defs/__schema2"
+                        }
+                      }
+                    },
+                    "required": [
+                      "type",
+                      "barge_plan"
+                    ],
+                    "additionalProperties": false
+                  },
+                  {
+                    "type": "object",
+                    "properties": {
+                      "type": {
+                        "type": "string",
+                        "const": "finish_run"
+                      },
+                      "run_id": {
+                        "$ref": "#/$defs/__schema0"
+                      },
+                      "report": {
+                        "type": "object",
+                        "properties": {
+                          "run_id": {
+                            "$ref": "#/$defs/__schema0"
+                          },
+                          "seed": {
+                            "type": "integer",
+                            "minimum": 0,
+                            "maximum": 4294967295
+                          },
+                          "durationMs": {
+                            "type": "integer",
+                            "minimum": 0,
+                            "maximum": 150000
+                          },
+                          "bought": {
+                            "maxItems": 6,
+                            "type": "array",
+                            "items": {
+                              "$ref": "#/$defs/__schema3"
+                            }
+                          },
+                          "soldBack": {
+                            "maxItems": 6,
+                            "type": "array",
+                            "items": {
+                              "$ref": "#/$defs/__schema6"
+                            }
+                          },
+                          "delivered": {
+                            "$ref": "#/$defs/__schema7"
+                          },
+                          "lost": {
+                            "$ref": "#/$defs/__schema7"
+                          },
+                          "flaresUsed": {
+                            "type": "integer",
+                            "minimum": 0,
+                            "maximum": 20
+                          },
+                          "pirates": {
+                            "maxItems": 4,
+                            "type": "array",
+                            "items": {
+                              "$ref": "#/$defs/__schema8"
+                            }
+                          },
+                          "boomsBroken": {
+                            "maxItems": 4,
+                            "type": "array",
+                            "items": {
+                              "$ref": "#/$defs/__schema0"
+                            }
+                          },
+                          "escort": {
+                            "type": "object",
+                            "properties": {
+                              "id": {
+                                "$ref": "#/$defs/__schema0"
+                              },
+                              "completed": {
+                                "type": "boolean"
+                              }
+                            },
+                            "required": [
+                              "id",
+                              "completed"
+                            ],
+                            "additionalProperties": false
+                          },
+                          "savedBoats": {
+                            "maxItems": 5,
+                            "type": "array",
+                            "items": {
+                              "$ref": "#/$defs/__schema0"
+                            }
+                          },
+                          "outcome": {
+                            "type": "string",
+                            "enum": [
+                              "moored",
+                              "towed",
+                              "sunk"
+                            ]
+                          },
+                          "inputLogHash": {
+                            "type": "string",
+                            "maxLength": 120
+                          }
+                        },
+                        "required": [
+                          "run_id",
+                          "seed",
+                          "durationMs",
+                          "bought",
+                          "soldBack",
+                          "delivered",
+                          "lost",
+                          "flaresUsed",
+                          "pirates",
+                          "boomsBroken",
+                          "outcome",
+                          "inputLogHash"
+                        ],
+                        "additionalProperties": false
+                      }
+                    },
+                    "required": [
+                      "type",
+                      "run_id",
+                      "report"
+                    ],
+                    "additionalProperties": false
+                  },
+                  {
+                    "type": "object",
+                    "properties": {
+                      "type": {
+                        "type": "string",
+                        "const": "accept_contract"
+                      },
+                      "contract_id": {
+                        "$ref": "#/$defs/__schema0"
+                      }
+                    },
+                    "required": [
+                      "type",
+                      "contract_id"
+                    ],
+                    "additionalProperties": false
+                  },
+                  {
+                    "type": "object",
+                    "properties": {
+                      "type": {
+                        "type": "string",
+                        "const": "buy_barge_upgrade"
+                      },
+                      "upgrade_id": {
+                        "$ref": "#/$defs/__schema0"
+                      }
+                    },
+                    "required": [
+                      "type",
+                      "upgrade_id"
+                    ],
+                    "additionalProperties": false
+                  },
+                  {
+                    "type": "object",
+                    "properties": {
+                      "type": {
+                        "type": "string",
                         "const": "finish_job"
                       },
                       "job_id": {
@@ -3775,6 +6091,9 @@
                         },
                         "memo": {
                           "$ref": "#/$defs/__schema0"
+                        },
+                        "source": {
+                          "$ref": "#/$defs/__schema0"
                         }
                       },
                       "required": [
@@ -3803,6 +6122,9 @@
                           "$ref": "#/$defs/__schema0"
                         },
                         "memo": {
+                          "$ref": "#/$defs/__schema0"
+                        },
+                        "sink": {
                           "$ref": "#/$defs/__schema0"
                         }
                       },
@@ -3894,6 +6216,113 @@
             "type": "string",
             "maxLength": 16,
             "pattern": "^(0|[1-9]\\d*)$"
+          },
+          "__schema2": {
+            "type": "object",
+            "properties": {
+              "village_id": {
+                "$ref": "#/$defs/__schema0"
+              },
+              "item_id": {
+                "$ref": "#/$defs/__schema0"
+              },
+              "quantity": {
+                "$ref": "#/$defs/__schema1"
+              }
+            },
+            "required": [
+              "village_id",
+              "item_id",
+              "quantity"
+            ],
+            "additionalProperties": false
+          },
+          "__schema3": {
+            "type": "object",
+            "properties": {
+              "village_id": {
+                "$ref": "#/$defs/__schema0"
+              },
+              "item_id": {
+                "$ref": "#/$defs/__schema0"
+              },
+              "quantity": {
+                "$ref": "#/$defs/__schema4"
+              },
+              "paid": {
+                "$ref": "#/$defs/__schema5"
+              }
+            },
+            "required": [
+              "village_id",
+              "item_id",
+              "quantity",
+              "paid"
+            ],
+            "additionalProperties": false
+          },
+          "__schema4": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 20
+          },
+          "__schema5": {
+            "type": "integer",
+            "minimum": 0,
+            "maximum": 9007199254740991
+          },
+          "__schema6": {
+            "type": "object",
+            "properties": {
+              "village_id": {
+                "$ref": "#/$defs/__schema0"
+              },
+              "item_id": {
+                "$ref": "#/$defs/__schema0"
+              },
+              "quantity": {
+                "$ref": "#/$defs/__schema4"
+              },
+              "received": {
+                "$ref": "#/$defs/__schema5"
+              }
+            },
+            "required": [
+              "village_id",
+              "item_id",
+              "quantity",
+              "received"
+            ],
+            "additionalProperties": false
+          },
+          "__schema7": {
+            "type": "object",
+            "propertyNames": {
+              "$ref": "#/$defs/__schema0"
+            },
+            "additionalProperties": {
+              "type": "integer",
+              "minimum": 0,
+              "maximum": 20
+            }
+          },
+          "__schema8": {
+            "type": "object",
+            "properties": {
+              "reach": {
+                "$ref": "#/$defs/__schema0"
+              },
+              "count": {
+                "type": "integer",
+                "minimum": 1,
+                "maximum": 10
+              }
+            },
+            "required": [
+              "reach",
+              "count"
+            ],
+            "additionalProperties": false
           }
         }
       }
@@ -4190,13 +6619,10 @@
               "type": "object",
               "properties": {
                 "band": {
-                  "type": "string",
-                  "enum": [
-                    "thriving",
-                    "healthy",
-                    "tight",
-                    "dark"
-                  ]
+                  "$ref": "#/$defs/__schema5"
+                },
+                "stockClosed": {
+                  "type": "boolean"
                 },
                 "coins": {
                   "$ref": "#/$defs/__schema3"
@@ -4234,11 +6660,30 @@
                     "additionalProperties": false
                   }
                 },
+                "suppliedBy": {
+                  "type": "array",
+                  "items": {
+                    "type": "object",
+                    "properties": {
+                      "name": {
+                        "$ref": "#/$defs/__schema0"
+                      },
+                      "quantity": {
+                        "$ref": "#/$defs/__schema3"
+                      }
+                    },
+                    "required": [
+                      "name",
+                      "quantity"
+                    ],
+                    "additionalProperties": false
+                  }
+                },
                 "strategy": {
-                  "$ref": "#/$defs/__schema5"
+                  "$ref": "#/$defs/__schema6"
                 },
                 "vote": {
-                  "$ref": "#/$defs/__schema5"
+                  "$ref": "#/$defs/__schema6"
                 },
                 "thinking": {
                   "type": "string"
@@ -4433,6 +6878,364 @@
               ],
               "additionalProperties": false
             }
+          },
+          "villages": {
+            "type": "object",
+            "propertyNames": {
+              "type": "string"
+            },
+            "additionalProperties": {
+              "type": "object",
+              "properties": {
+                "band": {
+                  "$ref": "#/$defs/__schema5"
+                },
+                "coins": {
+                  "$ref": "#/$defs/__schema3"
+                },
+                "stock": {
+                  "$ref": "#/$defs/__schema4"
+                },
+                "prices": {
+                  "type": "object",
+                  "propertyNames": {
+                    "type": "string"
+                  },
+                  "additionalProperties": {
+                    "type": "object",
+                    "properties": {
+                      "buy": {
+                        "$ref": "#/$defs/__schema3"
+                      },
+                      "sell": {
+                        "$ref": "#/$defs/__schema3"
+                      },
+                      "label": {
+                        "$ref": "#/$defs/__schema0"
+                      }
+                    },
+                    "required": [
+                      "buy",
+                      "sell",
+                      "label"
+                    ],
+                    "additionalProperties": false
+                  }
+                },
+                "relationship": {
+                  "type": "integer",
+                  "minimum": -9007199254740991,
+                  "maximum": 9007199254740991
+                }
+              },
+              "required": [
+                "band",
+                "coins",
+                "stock",
+                "prices",
+                "relationship"
+              ],
+              "additionalProperties": false
+            }
+          },
+          "river": {
+            "type": "object",
+            "properties": {
+              "reaches": {
+                "type": "array",
+                "items": {
+                  "type": "object",
+                  "properties": {
+                    "id": {
+                      "$ref": "#/$defs/__schema0"
+                    },
+                    "name": {
+                      "$ref": "#/$defs/__schema0"
+                    },
+                    "danger": {
+                      "type": "integer",
+                      "minimum": 0,
+                      "maximum": 5
+                    },
+                    "boom": {
+                      "type": "boolean"
+                    },
+                    "lamps": {
+                      "$ref": "#/$defs/__schema1"
+                    }
+                  },
+                  "required": [
+                    "id",
+                    "name",
+                    "danger",
+                    "boom",
+                    "lamps"
+                  ],
+                  "additionalProperties": false
+                }
+              },
+              "contracts": {
+                "type": "array",
+                "items": {
+                  "type": "object",
+                  "properties": {
+                    "id": {
+                      "$ref": "#/$defs/__schema0"
+                    },
+                    "stall": {
+                      "$ref": "#/$defs/__schema0"
+                    },
+                    "village": {
+                      "$ref": "#/$defs/__schema0"
+                    },
+                    "item": {
+                      "$ref": "#/$defs/__schema0"
+                    },
+                    "quantity": {
+                      "$ref": "#/$defs/__schema3"
+                    },
+                    "payout": {
+                      "$ref": "#/$defs/__schema3"
+                    },
+                    "deadline": {
+                      "$ref": "#/$defs/__schema2"
+                    },
+                    "mine": {
+                      "type": "boolean"
+                    },
+                    "taken": {
+                      "type": "boolean"
+                    },
+                    "kind": {
+                      "type": "string",
+                      "enum": [
+                        "supply",
+                        "escort"
+                      ]
+                    }
+                  },
+                  "required": [
+                    "id",
+                    "stall",
+                    "village",
+                    "item",
+                    "quantity",
+                    "payout",
+                    "deadline",
+                    "mine",
+                    "taken",
+                    "kind"
+                  ],
+                  "additionalProperties": false
+                }
+              },
+              "myRun": {
+                "type": "object",
+                "properties": {
+                  "id": {
+                    "$ref": "#/$defs/__schema0"
+                  },
+                  "deadline": {
+                    "$ref": "#/$defs/__schema1"
+                  },
+                  "manifest": {
+                    "type": "object",
+                    "properties": {
+                      "id": {
+                        "$ref": "#/$defs/__schema7"
+                      },
+                      "seed": {
+                        "type": "integer",
+                        "minimum": 0,
+                        "maximum": 9007199254740991
+                      },
+                      "deadline": {
+                        "$ref": "#/$defs/__schema8"
+                      },
+                      "wallet": {
+                        "$ref": "#/$defs/__schema8"
+                      },
+                      "hold": {
+                        "$ref": "#/$defs/__schema9"
+                      },
+                      "items": {
+                        "maxItems": 6,
+                        "type": "array",
+                        "items": {
+                          "$ref": "#/$defs/__schema10"
+                        }
+                      },
+                      "reaches": {
+                        "maxItems": 4,
+                        "type": "array",
+                        "items": {
+                          "$ref": "#/$defs/__schema12"
+                        }
+                      },
+                      "boats": {
+                        "type": "array",
+                        "items": {
+                          "type": "object",
+                          "properties": {
+                            "id": {
+                              "$ref": "#/$defs/__schema7"
+                            },
+                            "name": {
+                              "$ref": "#/$defs/__schema7"
+                            },
+                            "village": {
+                              "$ref": "#/$defs/__schema7"
+                            },
+                            "destination": {
+                              "$ref": "#/$defs/__schema7"
+                            },
+                            "departs": {
+                              "type": "number"
+                            },
+                            "arrives": {
+                              "type": "number"
+                            },
+                            "ambient": {
+                              "type": "boolean"
+                            }
+                          },
+                          "required": [
+                            "id",
+                            "name",
+                            "village",
+                            "departs",
+                            "arrives",
+                            "ambient"
+                          ],
+                          "additionalProperties": false
+                        }
+                      },
+                      "contract": {
+                        "type": "object",
+                        "properties": {
+                          "id": {
+                            "$ref": "#/$defs/__schema7"
+                          },
+                          "village": {
+                            "$ref": "#/$defs/__schema7"
+                          },
+                          "item": {
+                            "$ref": "#/$defs/__schema7"
+                          },
+                          "quantity": {
+                            "$ref": "#/$defs/__schema9"
+                          },
+                          "payout": {
+                            "$ref": "#/$defs/__schema8"
+                          },
+                          "kind": {
+                            "type": "string",
+                            "enum": [
+                              "supply",
+                              "escort"
+                            ]
+                          },
+                          "haul": {
+                            "$ref": "#/$defs/__schema7"
+                          }
+                        },
+                        "required": [
+                          "id",
+                          "village",
+                          "item",
+                          "quantity",
+                          "payout",
+                          "kind"
+                        ],
+                        "additionalProperties": false
+                      },
+                      "upgrades": {
+                        "type": "array",
+                        "items": {
+                          "$ref": "#/$defs/__schema7"
+                        }
+                      },
+                      "bounty": {
+                        "$ref": "#/$defs/__schema8"
+                      },
+                      "glow": {
+                        "type": "number",
+                        "minimum": 0,
+                        "maximum": 1
+                      }
+                    },
+                    "required": [
+                      "id",
+                      "seed",
+                      "deadline",
+                      "wallet",
+                      "hold",
+                      "items",
+                      "reaches",
+                      "boats",
+                      "upgrades",
+                      "bounty",
+                      "glow"
+                    ],
+                    "additionalProperties": false
+                  }
+                },
+                "required": [
+                  "id",
+                  "deadline",
+                  "manifest"
+                ],
+                "additionalProperties": false
+              },
+              "upriver": {
+                "type": "array",
+                "items": {
+                  "type": "object",
+                  "properties": {
+                    "actor": {
+                      "$ref": "#/$defs/__schema0"
+                    },
+                    "name": {
+                      "$ref": "#/$defs/__schema0"
+                    }
+                  },
+                  "required": [
+                    "actor",
+                    "name"
+                  ],
+                  "additionalProperties": false
+                }
+              },
+              "bountyFund": {
+                "$ref": "#/$defs/__schema3"
+              }
+            },
+            "required": [
+              "reaches",
+              "contracts",
+              "upriver",
+              "bountyFund"
+            ],
+            "additionalProperties": false
+          },
+          "barge": {
+            "type": "object",
+            "properties": {
+              "hold": {
+                "$ref": "#/$defs/__schema3"
+              },
+              "upgrades": {
+                "type": "array",
+                "items": {
+                  "$ref": "#/$defs/__schema0"
+                }
+              }
+            },
+            "required": [
+              "hold",
+              "upgrades"
+            ],
+            "additionalProperties": false
           },
           "objective": {
             "type": "object",
@@ -4715,6 +7518,9 @@
           "upgrades",
           "merchants",
           "orders",
+          "villages",
+          "river",
+          "barge",
           "objective",
           "delivered",
           "crafted",
@@ -4769,11 +7575,104 @@
           "__schema5": {
             "type": "string",
             "enum": [
+              "thriving",
+              "healthy",
+              "tight",
+              "dark"
+            ]
+          },
+          "__schema6": {
+            "type": "string",
+            "enum": [
               "steady",
               "bold",
               "festival",
               "bargain"
             ]
+          },
+          "__schema7": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 120
+          },
+          "__schema8": {
+            "type": "integer",
+            "minimum": 0,
+            "maximum": 9007199254740991
+          },
+          "__schema9": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 20
+          },
+          "__schema10": {
+            "type": "object",
+            "properties": {
+              "village": {
+                "$ref": "#/$defs/__schema7"
+              },
+              "item": {
+                "$ref": "#/$defs/__schema7"
+              },
+              "stock": {
+                "$ref": "#/$defs/__schema8"
+              },
+              "target": {
+                "type": "integer",
+                "exclusiveMinimum": 0,
+                "maximum": 9007199254740991
+              },
+              "prices": {
+                "maxItems": 20,
+                "type": "array",
+                "items": {
+                  "$ref": "#/$defs/__schema11"
+                }
+              },
+              "coins": {
+                "$ref": "#/$defs/__schema8"
+              },
+              "discount": {
+                "type": "boolean"
+              }
+            },
+            "required": [
+              "village",
+              "item",
+              "stock",
+              "target",
+              "prices",
+              "coins",
+              "discount"
+            ],
+            "additionalProperties": false
+          },
+          "__schema11": {
+            "type": "integer",
+            "exclusiveMinimum": 0,
+            "maximum": 9007199254740991
+          },
+          "__schema12": {
+            "type": "object",
+            "properties": {
+              "id": {
+                "$ref": "#/$defs/__schema7"
+              },
+              "danger": {
+                "type": "integer",
+                "minimum": 0,
+                "maximum": 5
+              },
+              "boom": {
+                "type": "boolean"
+              }
+            },
+            "required": [
+              "id",
+              "danger",
+              "boom"
+            ],
+            "additionalProperties": false
           }
         }
       }

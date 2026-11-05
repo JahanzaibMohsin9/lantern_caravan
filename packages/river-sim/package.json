@@ -1,0 +1,1 @@
+{"name":"@lantern/river-sim","private":true,"type":"module","exports":{".":"./src/sim.ts","./report":"./src/report.ts"},"dependencies":{"@lantern/content":"*","@lantern/game-core":"*","@lantern/protocol":"*"}}

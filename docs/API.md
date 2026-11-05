@@ -32,6 +32,29 @@ Replies echo `version` and `request_id`. A success has `ok: true`, a `result`, a
 
 Quotes are bound to an actor, room, and night and expire after 15 game seconds. Submit the quote with a client action UUID. Reuse that UUID for transport retries. The same UUID with a different quote returns `ACTION_CONFLICT`. A successful action can have a receipt with a label and optional details URL. A timeout leaves the action unresolved. Poll `get_action_status` and keep the UUID until the action is confirmed or rejected.
 
+## River Run intents
+
+Milestones 1–3 support the four intents in LocalBackend during preparation. Quotes expire after 15 wall-clock seconds for these intents. Submit and check the receipt as for a Row trade.
+
+| Intent | Fields and effects |
+| --- | --- |
+| `start_run` | Up to six `barge_plan` rows with `village_id`, `item_id`, and string `quantity`. Optional `contract_id` or `escort_id`. Submission moves reserved goods to run escrow and exposes the manifest in `snapshot.river.myRun`. |
+| `finish_run` | `run_id` and `report`. Settles bought and returned cargo, losses, flares, bounties, contract or escort payout, and towing. |
+| `accept_contract` | `contract_id`. Claims one already funded Harbor Bell contract. A supply contract adds its cargo reservation automatically at departure. |
+| `buy_barge_upgrade` | `upgrade_id`. Buys a persistent barge tier with coins. Tier II requires tier I. |
+
+The manifest contains the run ID, seed, wallet, hold, reserved item price curves, reach conditions, visible hauls, contract, and nominal deadline. The 150-second game timer excludes time paused in the local scene. A report contains `run_id`, `seed`, `durationMs`, `bought`, `soldBack`, `delivered`, `lost`, `flaresUsed`, `pirates`, `boomsBroken`, optional `escort` and `savedBoats`, `outcome`, and `inputLogHash`. Report quantities and durations are numeric. The hash supports replay debugging. Server replay validation is scheduled for M6.
+
+| Error prefix | Cause |
+| --- | --- |
+| `RIVER_PLAN` | The route names the wrong producer or lacks stock for the contract. |
+| `RIVER_CONTRACT_UNAVAILABLE`, `RIVER_CONTRACT_LIMIT` | The contract expired, belongs to another actor, or conflicts with the actor's existing contract. |
+| `RIVER_RUN_UNKNOWN`, `RIVER_REPORT`, `RIVER_TIME` | Run identity, seed, or elapsed duration failed validation. |
+| `RIVER_CARGO`, `RIVER_PRICE`, `RIVER_FUNDS` | Cargo conservation, manifest price, or coin coverage failed. |
+| `RIVER_COMBAT`, `RIVER_BOAT`, `RIVER_ESCORT` | The claimed event exceeds the manifest's hazards, boats, or timing. |
+
+An invalid report for the actor's active run returns reserved goods and refunds its contract. Reloading an interrupted local run performs the same cleanup. A confirmed finish leaves delivered goods in the player's ledger, including any units above the cart's normal loading limit. The player can sell, craft, and otherwise reduce the load from there.
+
 ## Replace a development implementation
 
 ### IdentityProvider

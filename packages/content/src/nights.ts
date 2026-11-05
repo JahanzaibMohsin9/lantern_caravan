@@ -50,8 +50,8 @@ export function nightPlan(night: number, mode: "campaign" | "endless" | "live", 
   }
   const shift = Math.abs((seed ^ Math.imul(night, 113)) % 4);
   const traffic: NightEvent[] = [
-    { id: "oil_late", label: "Late oil barge", detail: "Oil stocks recover after the barge arrives.", at: 100 },
-    { id: "paper_barge", label: "Paper barge", detail: "Eight rolls arrive at Paper Mill.", at: 60 },
+    { id: "oil_late", label: "Late oil barge", detail: "Freight checks the Row for shortages.", at: 100 },
+    { id: "paper_barge", label: "Paper barge", detail: "Freight checks the Row for shortages.", at: 60 },
     { id: "quiet_patch", label: "Quiet patch", detail: "Crowd buying pauses for 45 seconds.", at: 100 },
   ];
   return { name: mode === "live" ? "The Live Row" : "Afterglow", duration: 300, events: shift % 2 ? events : traffic,

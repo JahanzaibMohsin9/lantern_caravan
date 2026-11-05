@@ -34,8 +34,8 @@ export type Actions = {
 export function Trade({ stall, snapshot, actions, preferred }: { stall: StallId; snapshot: Snapshot; actions: Actions; preferred?: ItemId }) {
   const data = snapshot.merchants[stall]!;
   const merchant = merchants[stall];
-  const [tab, setTab] = useState<"trade" | "ownership">(data.band === "dark" ? "ownership" : "trade");
-  const [side, setSide] = useState<"buy" | "sell">("buy");
+  const [tab, setTab] = useState<"trade" | "ownership">(data.band === "dark" && !data.stockClosed ? "ownership" : "trade");
+  const [side, setSide] = useState<"buy" | "sell">(data.stockClosed ? "sell" : "buy");
   const [item, setItem] = useState<ItemId>(() => preferred && Object.hasOwn(merchant.goods, preferred) ? preferred
     : Object.keys(merchant.goods)[0] as ItemId ?? "lantern_paper");
   const [quantity, setQuantity] = useState(1);
@@ -57,9 +57,9 @@ export function Trade({ stall, snapshot, actions, preferred }: { stall: StallId;
     </div>}
     {stall === "lantern_house" ? <Crowd snapshot={snapshot} actions={actions}/>
       : tab === "ownership" ? <Ownership stall={stall} snapshot={snapshot} actions={actions}/>
-      : data.band === "dark" ? <button className="subtle" onClick={() => setTab("ownership")}>View rescue offering <ArrowRight size={16}/></button> : <>
+      : data.band === "dark" && !data.stockClosed ? <button className="subtle" onClick={() => setTab("ownership")}>View rescue offering <ArrowRight size={16}/></button> : <>
       <div className="tabs" aria-label="Trade direction">
-        <button className={side === "buy" ? "selected" : ""} aria-pressed={side === "buy"} onClick={() => { setSide("buy"); reset(); }}><ArrowDownLeft size={15}/> Buy</button>
+        <button className={side === "buy" ? "selected" : ""} aria-pressed={side === "buy"} disabled={data.stockClosed} onClick={() => { setSide("buy"); reset(); }}><ArrowDownLeft size={15}/> Buy</button>
         <button className={side === "sell" ? "selected" : ""} aria-pressed={side === "sell"} onClick={() => { setSide("sell"); reset(); }}><ArrowUpRight size={15}/> Sell</button>
       </div>
       <div className="stock">
@@ -151,6 +151,7 @@ function Ownership({ stall, snapshot, actions }: { stall: StallId; snapshot: Sna
     return slice;
   });
   return <>
+    {!!data.suppliedBy?.length && <p className="hint">Supplied tonight by {data.suppliedBy.map(provider => provider.name + " " + provider.quantity).join(", ")}.</p>}
     {offering && <div className="ownership-offer">
       <div className="split"><strong>{offering.kind === "rescue" ? "Rescue offering" : "Expansion offering"}</strong><small>{formatTime(offering.ends - snapshot.elapsed)}</small></div>
       <div className="split"><span>{offering.left} of {offering.total} shares left</span><b className="gold">{offering.price} <Coins size={14}/> each</b></div>
@@ -247,7 +248,7 @@ export function Board({ snapshot, actions }: { snapshot: Snapshot; actions: Acti
     </select></label>
     {snapshot.jobAvailable && <button className="subtle wide" disabled={actions.busy} onClick={() =>
       void actions.submit({ type: "start_job" })}><Anchor size={16}/> Dock job · 4 coins</button>}
-    {snapshot.job && <p className="hint"><Anchor size={15}/> Take your parcel to the West Dock.</p>}
+    {snapshot.job && <p className="hint"><Anchor size={15}/> Take your parcel to The Landing.</p>}
     </>}
   </>;
 }

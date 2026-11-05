@@ -1,5 +1,5 @@
 import { items } from "@lantern/content";
-import { advanceClock, closeNight, commit, createWorld, newNight, nightId, nowAt, objective, openNight, player,
+import { advanceClock, cancelRun, InvalidRun, isRiverIntent, closeNight, commit, createWorld, newNight, nightId, nowAt, objective, openNight, player,
   quote, recordAction, snapshotFor, validateQuote, type World } from "@lantern/game-core";
 import { haggle as bargain } from "@lantern/game-core/haggle";
 import type { ActionStatus, CreateSessionReq, HaggleOffer, HistoryRange, Intent,
@@ -35,7 +35,7 @@ export class LocalBackend implements MarketBackend {
 
   private changeSession(slot: string, world: World, checkpoint = world) {
     this.slot = slot;
-    this.world = world;
+    this.world = cancelRun(world, player);
     this.checkpoint = checkpoint;
     this.quotes.clear();
     this.actions.clear();
@@ -45,7 +45,7 @@ export class LocalBackend implements MarketBackend {
 
   async createSession(req: CreateSessionReq) {
     if (!slots.some(slot => slot === req.slot)) throw new Error("Choose a profile slot.");
-    this.changeSession(req.slot, createWorld());
+    this.changeSession(req.slot, createWorld(req.mode === "endless" ? "endless" : "campaign"));
     await this.save();
     return { sessionId: this.slot };
   }
@@ -62,6 +62,7 @@ export class LocalBackend implements MarketBackend {
     try {
       const { world, checkpoint } = unpack(row.current);
       this.changeSession(slot, world, checkpoint);
+      if (this.world !== world) await this.save();
     } catch (error) {
       if (!row.backup) throw error;
       const { world, checkpoint } = unpack(row.backup);
@@ -148,7 +149,7 @@ export class LocalBackend implements MarketBackend {
   private remember(deal: Quote, baseline = deal.effects) {
     const now = nowAt(this.world);
     for (const [id, entry] of this.quotes) {
-      if (entry.deal.expires_at <= now) this.quotes.delete(id);
+      if (entry.deal.expires_at <= (isRiverIntent(entry.deal.intent) ? Date.now() : now)) this.quotes.delete(id);
     }
     this.quotes.set(deal.quote_id, { deal: structuredClone(deal), baseline: structuredClone(baseline) });
     return deal;
@@ -156,7 +157,18 @@ export class LocalBackend implements MarketBackend {
 
   async getQuote(sessionId: string, night: string, intent: Intent) {
     this.check(sessionId, night);
-    return this.remember(quote(this.world, intent, crypto.randomUUID(), nowAt(this.world)));
+    try {
+      return this.remember(quote(this.world, intent, crypto.randomUUID(), isRiverIntent(intent) ? Date.now() : nowAt(this.world)));
+    } catch (error) {
+      const malformed = intent.type === "finish_run" && error instanceof Error && error.name === "ZodError" &&
+        this.view().river.myRun?.id === intent.run_id;
+      if (error instanceof InvalidRun || malformed) {
+        this.world = cancelRun(this.world, player);
+        await this.save();
+      }
+      if (malformed) throw new InvalidRun("RIVER_REPORT · The report is malformed.");
+      throw error;
+    }
   }
 
   async haggle(sessionId: string, night: string, offer: HaggleOffer) {
@@ -179,7 +191,7 @@ export class LocalBackend implements MarketBackend {
     }
     const entry = this.quotes.get(quoteId);
     if (!entry) throw new Error("Ask for a fresh quote.");
-    const now = nowAt(this.world);
+    const now = isRiverIntent(entry.deal.intent) ? Date.now() : nowAt(this.world);
     validateQuote(this.world, player, entry.deal, entry.baseline, now);
     const receipt = { id: actionId, label: "Local receipt" };
     this.world = recordAction(commit(this.world, entry.deal, now), player, entry.deal.summary, receipt);
@@ -203,7 +215,7 @@ export class LocalBackend implements MarketBackend {
     this.check(sessionId);
     if (this.phases.has(actionId)) return this.view();
     const goal = objective(this.world, player).complete;
-    if (this.world.phase === "preparation") this.world = openNight(this.world);
+    if (this.world.phase === "preparation") this.world = openNight(cancelRun(this.world, player));
     else if (this.world.phase === "open" && goal) this.world = closeNight(this.world);
     else if (this.world.phase === "results" && (goal || this.world.mode === "endless")) {
       this.world = newNight(this.world, this.world.night === 3 ? "endless" : this.world.mode);
