@@ -12,24 +12,25 @@ export const stops = [
 ] as const;
 
 export type Stop = typeof stops[number]["id"];
-export type Panel = Stop | "inventory" | "settings" | "pause";
-export type Effect = "buy" | "sell" | "craft" | "deliver" | "boat" | "deal" | "refuse";
+export type Panel = Stop | "inventory" | "settings" | "pause" | "journal" | "profiles" | "rooms" | "history" | "simulator";
+export type Effect = "buy" | "sell" | "craft" | "deliver" | "boat" | "deal" | "refuse" | "relit" | "finale";
 
 type Events = {
   visit: Stop;
   arrive: Stop;
   snapshot: Snapshot;
   reduced: boolean;
+  lowGraphics: boolean;
   active: boolean;
   blocked: boolean;
   effect: Effect;
   current: Stop;
 };
 const target = new EventTarget();
-const last: Partial<Pick<Events, "snapshot" | "active" | "blocked" | "reduced">> = {};
+const last: Partial<Pick<Events, "snapshot" | "active" | "blocked" | "reduced" | "lowGraphics">> = {};
 export const bridge = {
   send<K extends keyof Events>(name: K, detail: Events[K]) {
-    if (name === "snapshot" || name === "active" || name === "blocked" || name === "reduced") {
+    if (name === "snapshot" || name === "active" || name === "blocked" || name === "reduced" || name === "lowGraphics") {
       Object.assign(last, { [name]: detail });
     }
     target.dispatchEvent(new CustomEvent(name, { detail }));

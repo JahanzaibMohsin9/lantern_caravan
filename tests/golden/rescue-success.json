@@ -1,0 +1,122 @@
+{
+  "fixture": {
+    "seed": 42,
+    "scenario": "dark",
+    "steps": [
+      {
+        "at": 0,
+        "intent": {
+          "type": "buy_offering",
+          "offering_id": "2-oil_wharf-1",
+          "shares": "2"
+        }
+      },
+      {
+        "at": 0,
+        "intent": {
+          "type": "buy",
+          "stall_id": "oil_wharf",
+          "item_id": "oil",
+          "quantity": "1"
+        }
+      }
+    ]
+  },
+  "expected": {
+    "statuses": [
+      {
+        "state": "confirmed",
+        "quote": {
+          "quote_id": "quote-0",
+          "intent": {
+            "type": "buy_offering",
+            "offering_id": "2-oil_wharf-1",
+            "shares": "2"
+          },
+          "summary": "Pledge 2 · 10 coins",
+          "effects": [
+            {
+              "op": "transfer",
+              "from": "p:guest",
+              "to": "esc:offer:2-oil_wharf-1",
+              "asset": "coin",
+              "amount": "10",
+              "memo": "Pledge 2 · 10 coins"
+            },
+            {
+              "op": "transfer",
+              "from": "esc:offer:2-oil_wharf-1",
+              "to": "m:oil_wharf",
+              "asset": "coin",
+              "amount": "20",
+              "memo": "Offering funded"
+            },
+            {
+              "op": "mint",
+              "to": "r:juno",
+              "asset": "share:oil_wharf",
+              "amount": "2",
+              "memo": "Shares issued"
+            },
+            {
+              "op": "mint",
+              "to": "p:guest",
+              "asset": "share:oil_wharf",
+              "amount": "2",
+              "memo": "Shares issued"
+            }
+          ],
+          "expires_at": 15000
+        }
+      },
+      {
+        "state": "confirmed",
+        "quote": {
+          "quote_id": "quote-1",
+          "intent": {
+            "type": "buy",
+            "stall_id": "oil_wharf",
+            "item_id": "oil",
+            "quantity": "1"
+          },
+          "summary": "Buy 1 · 6 coins",
+          "effects": [
+            {
+              "op": "transfer",
+              "from": "m:oil_wharf",
+              "to": "p:guest",
+              "asset": "oil",
+              "amount": "1",
+              "memo": "Buy 1 · 6 coins"
+            },
+            {
+              "op": "transfer",
+              "from": "p:guest",
+              "to": "m:oil_wharf",
+              "asset": "coin",
+              "amount": "6",
+              "memo": "Buy 1 · 6 coins"
+            }
+          ],
+          "expires_at": 15000
+        }
+      }
+    ],
+    "balances": {
+      "coins": "14",
+      "cargo": {
+        "paper": "2",
+        "oil": "3",
+        "reed": "0",
+        "cord": "0",
+        "dye": "0",
+        "lantern_paper": "0",
+        "lantern_float": "0",
+        "lantern_color": "0"
+      },
+      "shares": "2",
+      "delivered": "0",
+      "crafted": "0"
+    }
+  }
+}

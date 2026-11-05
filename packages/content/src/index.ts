@@ -34,6 +34,15 @@ export const orders = [
 export const wishes = [
   "May the river be kind", "For my grandmother", "Safe travels home",
   "A good year for the Row", "For the ones we miss", "A little light for tomorrow",
+  "May the rain come softly", "For my brother across the water", "A place to call home", "Courage for the morning",
+  "For a safe crossing", "Let the lanterns find you", "For a quiet winter", "For a full table",
+  "May old friends return", "For my first boat", "A wish for a stranger", "For a kinder tide",
+  "May the orchard bloom", "For the hands that taught me", "May the harvest hold", "A new song for the Row",
+  "For our next meeting", "For those still at sea", "A little luck for the workshop", "May we laugh again",
+  "For the night watch", "For my neighbor", "Light for the long way home", "For the year we made it",
+  "For a safe delivery", "May the dock stay dry", "For the next generation", "May this find the right shore",
+  "For all who carried me", "For an evening together", "One bright thing", "For the dawn crew",
+  "For the river birds", "May we have enough",
 ] as const;
 
 export type ItemId = keyof typeof items;

@@ -1,12 +1,30 @@
-# Running First Light
+# Running Lantern Row
 
-Install Node.js 24 and run these commands from the project folder.
+Install Node.js 24, then run `npm ci` from the repository root. Use the URL printed by Vite.
 
-```sh
-npm ci
-npm run dev
-```
+| Command | Use |
+| --- | --- |
+| `npm run dev` | Local campaign, Endless, and simulator with no account or environment setup |
+| `npm run dev:server` | Dev API on port 4318 and Vite client with a live title background |
+| `npm run build` | Type-check source, tools, and tests, then build `apps/web/dist` |
+| `npm test` | Rules, golden cases, campaign bot, server settlement, and accelerated live loop |
+| `npx playwright install chromium firefox` | Install browsers for browser tests |
+| `npm run test:e2e` | Build and drive the game in Chromium and Firefox |
+| `npm run simulate -- --nights 2000 --seed 42 --traders 3 --check` | Headless balance check, with JSON and CSV in `sim-output/` |
+| `npm run schema` | Regenerate the shared JSON Schema bundle |
 
-Vite prints the local URL. Play in a desktop browser. Progress lives in IndexedDB for the browser and origin you use.
+The Playwright config starts its own preview and test server when their ports are free. Stop other Lantern Row processes on ports 4399 and 4318 to exercise the isolated test server. Set `LANTERN_CHROME_CHANNEL=chrome` to use an installed Chrome instead of bundled Chromium. Set `LANTERN_RECORD=1` to keep playthrough recordings. The dev client exposes `window.__lantern` and a `?debug=1` overlay with phase, FPS, seed, revision, and time controls.
 
-Run `npm test` for the local rules tests. Run `npm run build` to type-check and generate `apps/web/dist`. Serve that directory over HTTP on localhost or HTTPS on a static host.
+## Static client and dev server
+
+Serve `apps/web/dist` over HTTP on localhost or over HTTPS. Set `VITE_SERVER_URL` at build time to point the static client at the API. Set `VITE_BACKEND=server` for the live title background and `VITE_AUTH=dev` for the reference sign-in. The local campaign remains available in both builds.
+
+The API binds to `127.0.0.1:4318` by default. Run `npm run dev -w @lantern/server` for the API alone. `PORT`, `HOST`, and `LANTERN_DATA_DIR` configure it. For a different API port, set `VITE_SERVER_URL` to the same origin when running or building the web client. Keep the data directory on a persistent disk and run one authoritative server process for it. For a remote shared setup, terminate HTTPS in front of the API and client.
+
+Use environment variables in the shell or pass Node an environment file. The checked-in `.env.example` lists dev provider options. The displayed name login is for a trusted development environment.
+
+## Save files
+
+Three local slots use IndexedDB for the current browser and origin. The game keeps a previous valid copy. Settings can export and import JSON. Keep a backup before switching browser origins or clearing site storage.
+
+Server rooms live under `apps/server/data/` by default. Preserve the dev signing key and settlement files with the room files when moving that directory. The server persists reservations before handing them to the settlement provider.

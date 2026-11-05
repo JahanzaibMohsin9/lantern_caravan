@@ -1,11 +1,19 @@
 # Architecture
 
-First Light runs locally in one browser tab.
+```text
+React UI ── MarketBackend ── LocalBackend ── game-core ── IndexedDB
+   │                └────── HttpBackend ── Node HTTP ── game-core
+   │                                           ├── IdentityProvider
+   └──── typed events ─── Phaser               ├── SettlementProvider
+                                               └── StateStore
+```
 
-- `packages/content` holds the authored goods, merchants, recipes, orders, and wishes.
-- `packages/protocol` validates intents, haggling offers, quotes, and ledger operations. `first-light.schema.json` contains the JSON Schema export for those four contracts.
-- `packages/game-core` handles pricing and settlement without browser or storage access. Balances live in one integer ledger. The engine accepts time from its caller and returns a new world on commit.
-- `apps/web/src/backend/local.ts` binds quotes to a session, night, and revision. Local actions settle synchronously in memory, deduplicate action IDs for the open session, then write the resulting world to IndexedDB. The save encodes amounts as strings and keeps a backup in the same transaction.
-- `apps/web/src/ui` presents market snapshots. The typed event bridge in `apps/web/src/world/bridge.ts` sends snapshots and effects to the Phaser scene and reports avatar arrivals back to React. Walking only controls which panel is shown.
+- `packages/content` contains authored items, stalls, strategies, recipes, events, wishes, and the campaign schedule.
+- `packages/game-core` is deterministic. It takes a seed and supplied game time, keeps every asset in an integer ledger, validates a quote, and commits to a fresh world. NPC trades and crafting use the same rules as a player. Merchant wholesale restocks apply validated ledger operations directly. Empty wallets are removed.
+- `packages/protocol` owns the typed seams and Zod contracts. Money, quantities, and share counts cross JSON boundaries as strings. Time and revisions remain numbers.
+- `LocalBackend` settles immediately, stores the previous good save beside the current one, and snapshots the start of each night for retry. This keeps a scenario's grant and earlier progress stable.
+- `HttpBackend` uses bearer credentials, polls every two seconds, and refreshes after actions or when the window regains focus. It stores an action UUID before sending and resolves unresolved IDs on rejoin.
+- `apps/server/src/live.ts` owns room time, seats, quotes, and pending reservations. Its serialized queue orders contesting actions. Each player action follows prepare, submit, and status. A persisted reservation protects the quoted ledger effects and resolves after restart. Agent changes commit immediately and the server coalesces their net effects at night close for `settleBatch`.
+- The Phaser scene receives read-only snapshots and reports arrivals. Moving a character is presentation. The UI can draw the market, boat lights, and avatar positions with the same snapshot in both modes.
 
-The shared server, reservation lifecycle, full provider interfaces, and multi-room persistence are later milestones.
+The reference FileStateStore targets one server process per data directory. The live clock is wall-clock based, while the local clock advances during active play and freezes on pause or a hidden tab.

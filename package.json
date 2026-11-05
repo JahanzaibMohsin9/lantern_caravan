@@ -1,17 +1,29 @@
 {
   "name": "lantern-row",
   "private": true,
-  "version": "0.1.0",
+  "version": "1.0.0",
   "type": "module",
-  "engines": { "node": "24.x" },
-  "workspaces": ["apps/*", "packages/*"],
+  "engines": {
+    "node": "24.x"
+  },
+  "workspaces": [
+    "apps/*",
+    "packages/*"
+  ],
   "scripts": {
     "dev": "npm run dev -w @lantern/web",
     "build": "tsc --noEmit && npm run build -w @lantern/web",
-    "test": "vitest run"
+    "test": "vitest run",
+    "test:e2e": "npm run build && playwright test",
+    "dev:server": "tsx tools/dev-server.ts",
+    "simulate": "tsx tools/simulate/index.ts",
+    "schema": "tsx tools/protocol-schema.ts"
   },
   "devDependencies": {
+    "@playwright/test": "^1.64.1",
     "@types/node": "^24.0.0",
+    "fake-indexeddb": "^6.2.7",
+    "tsx": "^4.23.15",
     "typescript": "~5.9.3",
     "vitest": "^4.0.0"
   }

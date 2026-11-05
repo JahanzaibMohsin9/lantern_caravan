@@ -1,0 +1,84 @@
+{
+  "fixture": {
+    "seed": 42,
+    "scenario": "first",
+    "steps": [
+      {
+        "at": 0,
+        "intent": {
+          "type": "craft",
+          "recipe_id": "paper_lantern",
+          "quantity": "1"
+        }
+      },
+      {
+        "at": 0,
+        "intent": {
+          "type": "fill_order",
+          "order_id": "swallow",
+          "quantity": "1"
+        }
+      }
+    ]
+  },
+  "expected": {
+    "statuses": [
+      {
+        "state": "confirmed",
+        "quote": {
+          "quote_id": "quote-0",
+          "intent": {
+            "type": "craft",
+            "recipe_id": "paper_lantern",
+            "quantity": "1"
+          },
+          "summary": "Craft 1 · Paper lantern",
+          "effects": [
+            {
+              "op": "burn",
+              "from": "p:guest",
+              "asset": "paper",
+              "amount": "1",
+              "memo": "Craft 1 · Paper lantern"
+            },
+            {
+              "op": "burn",
+              "from": "p:guest",
+              "asset": "oil",
+              "amount": "1",
+              "memo": "Craft 1 · Paper lantern"
+            },
+            {
+              "op": "mint",
+              "to": "p:guest",
+              "asset": "lantern_paper",
+              "amount": "1",
+              "memo": "Craft 1 · Paper lantern"
+            }
+          ],
+          "expires_at": 15000
+        }
+      },
+      {
+        "state": "rejected",
+        "error": "This order hasn’t opened yet."
+      }
+    ],
+    "balances": {
+      "coins": "30",
+      "cargo": {
+        "paper": "1",
+        "oil": "1",
+        "reed": "0",
+        "cord": "0",
+        "dye": "0",
+        "lantern_paper": "1",
+        "lantern_float": "0",
+        "lantern_color": "0"
+      },
+      "shares": "0",
+      "delivered": "0",
+      "crafted": "1"
+    }
+  }
+}

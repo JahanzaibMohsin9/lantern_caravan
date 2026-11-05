@@ -2,24 +2,38 @@
 
 A night market where every merchant is an AI-run business, and you can own a piece of it.
 
-This first playable build covers **First Light**, the opening night of the local campaign.
+![Festival boats lighting up in Lantern Row](docs/media/first-light.gif)
+
+## Play
+
+Use Node.js 24.
 
 ```sh
 npm ci
 npm run dev
 ```
 
-Use Node.js 24. Open the local URL printed by Vite.
+Open the URL Vite prints. In **First Light**, your cart starts with two paper and two oil. Visit the Workshop, craft lanterns, then deliver them at the Order Board. Buy more supplies and deliver three lanterns to unlock **The Dark Wharf**. Help reopen the wharf, earn dividends, and cast a strategy vote before the **Festival of Lights**. After the festival, your cart and shares carry into Endless.
 
-## Play First Light
+Click a location or use **1–8** to walk there. **A/D** or **←/→** walks manually, **E** interacts, **I** opens the cart, **J** opens the journal, **H** opens history, and **Esc** closes or pauses. Hover an ingredient for its name or click it to find a stall. A local save is automatic.
 
-- Enter the Row and craft paper lanterns at the Workshop. Your cart starts with two paper and two lamp oil.
-- Take lanterns to the Order Board to light the festival boats, or sell them to the crowd at Lantern House.
-- Buy more supplies at Paper Mill and Oil Wharf. Use **Make an offer** to haggle.
-- Deliver three lanterns and select **Close the night** to see your results.
+| First Light | The Dark Wharf | Festival of Lights |
+| --- | --- | --- |
+| ![The title over the riverside market](docs/media/the-row.png) | ![The closed Oil Wharf and rescue offering](docs/media/dark-wharf.png) | ![The completed festival](docs/media/festival.png) |
 
-Click a stall or route button to walk there. Use **A/D** or the arrow keys to walk, **E** to interact, **1–8** for route shortcuts, **I** for the cart, and **Esc** to close a panel or pause. **Continue** restores the browser's local save.
+## Live market and tests
 
-`npm test` runs the rules tests. `npm run build` type-checks and builds the static client into `apps/web/dist`.
+```sh
+npm run dev:server
+npm test
+npm run build
+npx playwright install chromium firefox
+npm run test:e2e
+npm run simulate -- --nights 2000 --seed 42 --check
+```
 
-Built with TypeScript, Phaser, React, Vite, Zod, Lucide, and procedurally drawn artwork. See [asset credits](docs/ASSETS.md), [milestone status](docs/HANDOFF.md), and [the build specification](GAME_BUILD_SPEC.md).
+**Live market** opens the shared public Row or a private room. **Watch** and **History** are public. The development server uses local providers and saves to `apps/server/data/`. See [Running](docs/RUNNING.md) for deployment and test options.
+
+Built with TypeScript, Phaser, React, Vite, Zod, Vitest, Playwright, Lucide, Fontsource, and original procedural art and synthesized audio. OpenAI Codex assisted implementation and verification. [Asset credits](docs/ASSETS.md)
+
+[Handoff](docs/HANDOFF.md) · [Architecture](docs/ARCHITECTURE.md) · [API](docs/API.md) · [Balance](docs/BALANCE_REPORT.md) · [Known issues](docs/KNOWN_ISSUES.md)

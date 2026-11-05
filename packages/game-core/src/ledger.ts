@@ -9,7 +9,11 @@ export function apply(ledger: Ledger, effects: readonly LedgerOp[]): Ledger {
   function change(account: string, asset: string, delta: number) {
     const total = balance(next, account, asset) + delta;
     if (!Number.isSafeInteger(total) || total < 0) throw new Error("That balance is no longer available.");
-    next[account] = { ...next[account], [asset]: total };
+    const wallet = { ...next[account] };
+    if (total) wallet[asset] = total;
+    else delete wallet[asset];
+    if (Object.keys(wallet).length) next[account] = wallet;
+    else delete next[account];
   }
   for (const effect of effects) {
     const amount = Number(effect.amount);

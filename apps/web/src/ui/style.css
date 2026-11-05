@@ -152,7 +152,8 @@ kbd { font: 750 10px/1 "Manrope Variable", sans-serif; border: 1px solid #574653
 .recipe-feature strong { font: 630 20px/1 var(--display); }
 .recipe-icon { color: var(--gold); filter: drop-shadow(0 0 9px #fba96999); }
 .ingredients { display: flex; gap: 6px; }
-.ingredients span { color: #ddc4bc; background: #27212e; border: 1px solid #514151; border-radius: 4px; padding: 3px 5px; font-size: 10px; white-space: nowrap; }
+.ingredients button { color: #ddc4bc; background: #27212e; border: 1px solid #514151; border-radius: 4px; padding: 3px 5px; font-size: 10px; white-space: nowrap; }
+.ingredients button:hover { border-color: #dba77c; }
 .button-pair > button { flex: 1; }
 .locked, .hint { display: flex; align-items: center; gap: 7px; color: #b8a6b5; padding: 5px 0; font-size: 11px; }
 .locked { border-top: 1px solid #372e3d; }
@@ -163,6 +164,64 @@ kbd { font: 750 10px/1 "Manrope Variable", sans-serif; border: 1px solid #574653
 .wish-label select { max-width: 68%; font-size: 11px; }
 .settings-row { min-height: 33px; border-bottom: 1px solid #423646; }
 .settings-row input { accent-color: #f1b889; }
+
+.hero-actions { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; }
+.hero-actions .subtle.enter > svg:last-child { margin-left: 0; }
+.objective-step { display: inline-flex; align-items: center; gap: 1px; padding: 3px 5px; border-radius: 4px; background: #2d2533; }
+.objective-step small { margin-left: 2px; white-space: nowrap; }
+.event-flag { position: absolute; top: 18px; right: 18px; z-index: 2; display: flex; align-items: center; flex-wrap: wrap; gap: 6px; padding: 8px 10px; border: 1px solid #796052; border-radius: 8px; background: #241c2ae8; color: #ffcc9f; font-size: 11px; }
+.event-flag span { color: #d6c0ba; }
+.ownership-offer { display: grid; gap: 8px; background: #322531; border: 1px solid #815a4c; border-radius: 8px; padding: 9px; }
+.offer-risk { background: #241d27; border-left: 2px solid #bb8a66; padding: 6px 7px; }
+.ownership-metrics { display: grid; grid-template-columns: repeat(3,1fr); gap: 5px; }
+.ownership-metrics > div { display: grid; gap: 3px; justify-items: center; background: #272231; border: 1px solid #483947; border-radius: 6px; padding: 6px 4px; }
+.ownership-metrics b { color: var(--amber); font: 700 17px var(--display); }
+.ownership-chart { display: flex; align-items: center; gap: 12px; padding: 5px; }
+.ownership-ring { position: relative; width: 43px; height: 43px; border-radius: 50%; }
+.ownership-ring::after { content: ""; position: absolute; inset: 9px; background: #1c1b28; border-radius: 50%; }
+.ownership-chart ul { display: grid; grid-template-columns: 1fr 1fr; gap: 2px 13px; margin: 0; padding: 0; list-style: none; }
+.ownership-chart li { display: flex; align-items: center; gap: 4px; font-size: 10px; }
+.ownership-chart li i { width: 6px; height: 6px; border-radius: 50%; }
+.history-bars > span { display: flex; align-items: end; gap: 3px; }
+.history-bars i { display: block; width: 6px; border-radius: 2px 2px 0 0; background: #cb9674; }
+.live-dot { width: 6px; height: 6px; border-radius: 50%; background: #ffc58e; box-shadow: 0 0 8px #eea677; }
+.route-dark { color: #e0a0aa; }
+.recipe-tabs button:disabled { opacity: .46; }
+.ingredients button.stocked { border-color: #66816b; }
+.preparation { width: min(420px, 100%); max-height: 100%; overflow: auto; }
+.prep-list { width: 100%; display: grid; gap: 4px; }
+.prep-list > .eyebrow { margin: 3px 0; }
+.prep-list .order-row { min-height: 35px; }
+.result-details { display: flex; gap: 12px; color: var(--muted); font-size: 11px; }
+.result-details b { color: #e8cab2; }
+.festival-finale { background: radial-gradient(ellipse at 50% 38%, #261a2966 0%, #1d15234d 38%, #100f1a98 100%); }
+.festival-finale .results { border-color: #c08768; box-shadow: 0 0 55px #ee9b6359, 0 10px 64px #090811c9; }
+.file-button { position: relative; flex: 1; cursor: pointer; }
+.file-button:focus-within { outline: 2px solid var(--amber); }
+.file-button input { position: absolute; inset: 0; opacity: 0; width: 100%; cursor: pointer; }
+.title-chips { display: flex; flex-wrap: wrap; gap: 4px; }
+.title-chips span { padding: 4px; border-radius: 4px; border: 1px solid #755344; color: #ffca98; }
+.panel details summary { cursor: pointer; color: #e1bda8; margin-bottom: 5px; }
+.panel a { color: var(--gold); }
+.share-form { display: grid; grid-template-columns: 1fr 59px auto; gap: 4px; }
+.share-form input { min-width: 0; border: 1px solid #574458; background: #141420; border-radius: 5px; }
+.hero-links { display: flex; flex-wrap: wrap; gap: 1px; margin: 8px 0 0 -5px; }
+.hero-links button { display: flex; align-items: center; gap: 4px; padding: 5px; border: 1px solid transparent; border-radius: 5px; color: #e4c5ba; background: #211c2900; font-size: 10px; font-weight: 750; }
+.hero-links button:hover { background: #372837; border-color: #79545a; }
+.room-code { display: flex; align-items: center; gap: 5px; }
+.room-code input, .room-form input { background: #151420; border: 1px solid #655061; border-radius: 5px; color: #efd8c3; padding: 7px; min-width: 0; }
+.room-code input { flex: 1; width: 100%; }
+.room-code label { display: flex; gap: 4px; align-items: center; flex: 1; min-width: 0; }
+.market-chart, .chart-empty { padding: 7px; border: 1px solid #47364b; border-radius: 7px; background: #272030; }
+.market-chart svg { display: block; width: 100%; margin-top: 2px; }
+.chart-empty { color: var(--muted); font-size: 11px; }
+.debug-panel { position: absolute; z-index: 8; bottom: 45px; right: 12px; background: #241b29f0; border: 1px solid #71505f; border-radius: 6px; display: flex; align-items: center; gap: 6px; padding: 5px; font-size: 10px; }
+@media (min-width: 680px) {
+  [data-large-panels="true"] .panel, [data-large-panels="true"] .results { zoom: 1.12; }
+}
+@media (max-width: 640px) {
+  .event-flag { top: auto; right: 10px; bottom: 49px; max-width: 230px; }
+}
 
 .toast { position: absolute; z-index: 7; bottom: 48px; left: 50%; transform: translateX(-50%); max-width: 83%; display: flex; align-items: center; gap: 8px; padding: 8px 11px; border: 1px solid #7c6655; border-radius: 7px; background: #30272df5; color: #ffe0ad; font-size: 12px; font-weight: 800; box-shadow: 0 4px 25px #0a0b14b0; }
 .toast.error { border-color: #88585f; color: #ffd1cc; }

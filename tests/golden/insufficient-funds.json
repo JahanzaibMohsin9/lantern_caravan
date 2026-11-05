@@ -1,0 +1,50 @@
+{
+  "fixture": {
+    "seed": 42,
+    "scenario": "first",
+    "setup": [
+      {
+        "op": "burn",
+        "from": "p:guest",
+        "asset": "coin",
+        "amount": "30",
+        "memo": "Fixture money"
+      }
+    ],
+    "steps": [
+      {
+        "at": 0,
+        "intent": {
+          "type": "buy",
+          "stall_id": "oil_wharf",
+          "item_id": "oil",
+          "quantity": "1"
+        }
+      }
+    ]
+  },
+  "expected": {
+    "statuses": [
+      {
+        "state": "rejected",
+        "error": "You’re short on coins."
+      }
+    ],
+    "balances": {
+      "coins": "0",
+      "cargo": {
+        "paper": "2",
+        "oil": "2",
+        "reed": "0",
+        "cord": "0",
+        "dye": "0",
+        "lantern_paper": "0",
+        "lantern_float": "0",
+        "lantern_color": "0"
+      },
+      "shares": "0",
+      "delivered": "0",
+      "crafted": "0"
+    }
+  }
+}

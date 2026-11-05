@@ -1,0 +1,71 @@
+{
+  "fixture": {
+    "seed": 42,
+    "scenario": "first",
+    "steps": [
+      {
+        "at": 0,
+        "offer": {
+          "side": "buy",
+          "stall_id": "oil_wharf",
+          "item_id": "oil",
+          "quantity": "1",
+          "price_per_unit": "5"
+        },
+        "accept": true
+      }
+    ]
+  },
+  "expected": {
+    "statuses": [
+      {
+        "state": "confirmed",
+        "quote": {
+          "quote_id": "quote-0",
+          "intent": {
+            "type": "buy",
+            "stall_id": "oil_wharf",
+            "item_id": "oil",
+            "quantity": "1"
+          },
+          "summary": "Buy 1 · 5 coins",
+          "effects": [
+            {
+              "op": "transfer",
+              "from": "m:oil_wharf",
+              "to": "p:guest",
+              "asset": "oil",
+              "amount": "1",
+              "memo": "Buy 1 · 5 coins"
+            },
+            {
+              "op": "transfer",
+              "from": "p:guest",
+              "to": "m:oil_wharf",
+              "asset": "coin",
+              "amount": "5",
+              "memo": "Buy 1 · 5 coins"
+            }
+          ],
+          "expires_at": 15000
+        }
+      }
+    ],
+    "balances": {
+      "coins": "25",
+      "cargo": {
+        "paper": "2",
+        "oil": "3",
+        "reed": "0",
+        "cord": "0",
+        "dye": "0",
+        "lantern_paper": "0",
+        "lantern_float": "0",
+        "lantern_color": "0"
+      },
+      "shares": "0",
+      "delivered": "0",
+      "crafted": "0"
+    }
+  }
+}

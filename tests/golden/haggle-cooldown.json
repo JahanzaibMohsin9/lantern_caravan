@@ -1,0 +1,55 @@
+{
+  "fixture": {
+    "seed": 42,
+    "scenario": "first",
+    "steps": [
+      {
+        "at": 0,
+        "offer": {
+          "side": "buy",
+          "stall_id": "oil_wharf",
+          "item_id": "oil",
+          "quantity": "1",
+          "price_per_unit": "1"
+        }
+      },
+      {
+        "at": 5000,
+        "offer": {
+          "side": "buy",
+          "stall_id": "oil_wharf",
+          "item_id": "oil",
+          "quantity": "1",
+          "price_per_unit": "5"
+        }
+      }
+    ]
+  },
+  "expected": {
+    "statuses": [
+      {
+        "state": "refuse"
+      },
+      {
+        "state": "rejected",
+        "error": "Try another offer in 15s."
+      }
+    ],
+    "balances": {
+      "coins": "30",
+      "cargo": {
+        "paper": "2",
+        "oil": "2",
+        "reed": "0",
+        "cord": "0",
+        "dye": "0",
+        "lantern_paper": "0",
+        "lantern_float": "0",
+        "lantern_color": "0"
+      },
+      "shares": "0",
+      "delivered": "0",
+      "crafted": "0"
+    }
+  }
+}

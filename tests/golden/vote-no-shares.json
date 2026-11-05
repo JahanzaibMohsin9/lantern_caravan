@@ -1,0 +1,40 @@
+{
+  "fixture": {
+    "seed": 42,
+    "scenario": "prepared",
+    "steps": [
+      {
+        "at": 0,
+        "intent": {
+          "type": "vote_strategy",
+          "stall_id": "oil_wharf",
+          "strategy_id": "festival"
+        }
+      }
+    ]
+  },
+  "expected": {
+    "statuses": [
+      {
+        "state": "rejected",
+        "error": "You need shares in this stall to vote."
+      }
+    ],
+    "balances": {
+      "coins": "30",
+      "cargo": {
+        "paper": "2",
+        "oil": "2",
+        "reed": "0",
+        "cord": "0",
+        "dye": "0",
+        "lantern_paper": "0",
+        "lantern_float": "0",
+        "lantern_color": "0"
+      },
+      "shares": "0",
+      "delivered": "0",
+      "crafted": "0"
+    }
+  }
+}

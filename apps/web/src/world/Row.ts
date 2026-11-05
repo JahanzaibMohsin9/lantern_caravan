@@ -6,6 +6,8 @@ import { bridge, stops, type Effect, type Stop } from "./bridge";
 const center = stops[3].x;
 const boatPositions = [1458, 1695, 914, 625, 1161, 1945];
 const boatColor = 0xffb474;
+const boatTints: Record<string, string> = { lantern_paper: "#ffb874", lantern_float: "#98e4c8", lantern_color: "#dda1f0" };
+const rivalTints = ["#e4a38b", "#a4afed", "#a0d69d", "#efb5d2"];
 const labelColors = { dark: "#cba5ab", tight: "#e6c184", healthy: "#bfccb0", thriving: "#ffe0a3" };
 const labelNames = { dark: "◇ Closed", tight: "◐ Tight", healthy: "● Healthy", thriving: "✧ Thriving" };
 
@@ -20,17 +22,19 @@ class RowScene extends Phaser.Scene {
   private captions: Phaser.GameObjects.Text[] = [];
   private pools: Phaser.GameObjects.Image[] = [];
   private boats: { hull: Phaser.GameObjects.Image; light: Phaser.GameObjects.Image; lantern: Phaser.GameObjects.Image;
-    reflection: Phaser.GameObjects.Image; lit: boolean; y: number }[] = [];
+    reflection: Phaser.GameObjects.Image; wish: Phaser.GameObjects.Text; lit: boolean; y: number }[] = [];
   private motes: Phaser.GameObjects.Arc[] = [];
   private ambience!: Phaser.GameObjects.Image;
+  private visitors = new Map<string, { cart: Phaser.GameObjects.Image; name: Phaser.GameObjects.Text; x: number; to: number }>();
   private x: number = center;
   private cameraX: number = center;
   private destination: typeof stops[number] | undefined;
   private lastStop: Stop = "workshop";
   private active = false;
   private reduced = false;
+  private lowGraphics = false;
   private blocked = false;
-  private revision = -1;
+  private renderKey = "";
 
   constructor() { super("The Row"); }
 
@@ -50,6 +54,7 @@ class RowScene extends Phaser.Scene {
     this.texture("row-boat", 150, 72, boat);
     this.texture("row-boat-lanterns", 96, 64, boatLanterns);
     this.texture("row-cart", 80, 65, playerCart);
+    this.texture("row-cart-lights", 80, 65, ctx => playerCart(ctx, 1, "#8ee6cb", true));
     this.texture("row-reeds", WIDTH, HEIGHT, foreground);
     this.ambience = this.add.image(center, 291, "row-glow").setDisplaySize(1400, 520).setTint(0xffc084)
       .setBlendMode(Phaser.BlendModes.ADD).setAlpha(0).setDepth(1);
@@ -84,8 +89,15 @@ class RowScene extends Phaser.Scene {
 
     boatPositions.forEach((x, i) => {
       const y = 559 + (i % 2) * 34;
+      const wish = this.add.text(x, y - 41, "", {
+        color: "#f1d6bc", backgroundColor: "#211b2be8", fontFamily: "Manrope Variable, sans-serif",
+        fontSize: "12px", wordWrap: { width: 208 }, align: "center", padding: { x: 8, y: 5 },
+      }).setOrigin(.5, 1).setVisible(false).setDepth(9);
+      this.add.zone(x, y, 130, 46).setInteractive()
+        .on("pointerover", () => { if (wish.text && !this.blocked) wish.setVisible(true); })
+        .on("pointerout", () => wish.setVisible(false));
       this.boats.push({
-        y, lit: false,
+        y, lit: false, wish,
         reflection: this.add.image(x, y + 65, "row-reflection").setDisplaySize(184, 82).setTint(boatColor)
           .setBlendMode(Phaser.BlendModes.ADD).setAlpha(0).setDepth(1),
         hull: this.add.image(x, y, "row-boat").setDepth(2),
@@ -112,6 +124,12 @@ class RowScene extends Phaser.Scene {
       }),
       bridge.on("snapshot", snapshot => this.renderMarket(snapshot)),
       bridge.on("reduced", reduced => { this.reduced = reduced; }),
+      bridge.on("lowGraphics", low => {
+        this.lowGraphics = low;
+        this.pools.forEach(pool => pool.setVisible(!low));
+        this.boats.forEach(boat => boat.reflection.setVisible(!low));
+        this.motes.forEach(dot => dot.setVisible(!low));
+      }),
       bridge.on("blocked", blocked => { this.blocked = blocked; }),
       bridge.on("effect", effect => this.feedback(effect)),
     ];
@@ -164,8 +182,31 @@ class RowScene extends Phaser.Scene {
   }
 
   private renderMarket(snapshot: Snapshot) {
-    if (this.revision === snapshot.revision) return;
-    this.revision = snapshot.revision;
+    const key = `${snapshot.session_id}/${snapshot.night_id}/${snapshot.revision}`;
+    if (this.renderKey === key) return;
+    this.renderKey = key;
+    this.avatar.setTexture(snapshot.upgrades.includes("lantern_strings") ? "row-cart-lights" : "row-cart");
+    const traders = snapshot.traders.filter(trader => trader.lastStop);
+    for (const [id, visitor] of this.visitors) {
+      if (traders.some(trader => trader.id === id)) continue;
+      visitor.cart.destroy();
+      visitor.name.destroy();
+      this.visitors.delete(id);
+    }
+    traders.forEach((trader, i) => {
+      const stop = stops.find(stop => stop.id === trader.lastStop);
+      const to = (stop?.x ?? center) - 55 + (i % 4) * 17;
+      let visitor = this.visitors.get(trader.id);
+      if (!visitor) {
+        const color = rivalTints[i % rivalTints.length]!;
+        const key = this.texture(`row-trader-${i % rivalTints.length}`, 80, 65, ctx => playerCart(ctx, 2 + i, color));
+        const x = this.reduced ? to : to + 120;
+        visitor = { x, to, cart: this.add.image(x, WALK - 2, key).setOrigin(.5, .78).setScale(.72).setDepth(4),
+          name: this.add.text(x + 14, WALK - 58, trader.name, { fontSize: "10px", color, stroke: "#171622", strokeThickness: 3 }).setOrigin(.5).setDepth(5) };
+        this.visitors.set(trader.id, visitor);
+      }
+      visitor.to = to;
+    });
     const light = { dark: 0, tight: .3, healthy: .66, thriving: 1 };
     let health = 0;
     stops.forEach((stop, index) => {
@@ -174,14 +215,30 @@ class RowScene extends Phaser.Scene {
       const stock = Math.min(11, Object.values(market.stock).reduce((sum, amount) => sum + Number(amount), 0));
       const band = market.band;
       health += light[band];
-      this.bodies[index]!.setTexture(this.stallTexture(index, band, stop.id === "lantern_house" ? 8 : stock));
+      const body = this.bodies[index]!;
+      if (body.getData("band") === "dark" && band !== "dark" && this.active && !this.reduced && !this.lowGraphics) {
+        const burst = this.add.image(stop.x, WALK - 60, "row-glow").setScale(1.3).setTint(0xffbb75)
+          .setBlendMode(Phaser.BlendModes.ADD).setDepth(5);
+        this.tweens.add({ targets: burst, scale: 2.1, alpha: 0, duration: 1250, onComplete: () => burst.destroy() });
+      }
+      body.setData("band", band).setTexture(this.stallTexture(index, band, stop.id === "lantern_house" ? 8 : stock));
       this.captions[index]!.setText(labelNames[band]).setColor(labelColors[band]);
       this.pools[index]!.setAlpha(light[band] * .7);
     });
     const litCount = snapshot.orders.filter(order => order.state === "filled").length;
     this.ambience.setAlpha((.4 * health / Object.keys(snapshot.merchants).length + .6 * litCount / 6) * .36);
     this.boats.forEach((entry, index) => {
-      const lit = snapshot.orders.some(order => order.boat === index && order.state === "filled");
+      const order = snapshot.orders.find(order => order.boat === index && order.state === "filled");
+      const lit = !!order;
+      entry.wish.setText(order?.wishes.map((wish, i) => `“${wish}”${order.wishAuthors[i] ? " · " + order.wishAuthors[i] : ""}`).join("\n") ?? "");
+      if (!entry.wish.text) entry.wish.setVisible(false);
+      if (order) {
+        const color = boatTints[order.item] ?? "#ffb874";
+        const tint = Phaser.Display.Color.HexStringToColor(color).color;
+        entry.light.setTint(tint);
+        entry.reflection.setTint(tint);
+        entry.lantern.setTexture(this.texture(`row-lantern-${order.item}`, 96, 64, ctx => boatLanterns(ctx, color)));
+      }
       if (lit === entry.lit) return;
       entry.lit = lit;
       this.tweens.killTweensOf([entry.light, entry.lantern, entry.reflection]);
@@ -200,8 +257,46 @@ class RowScene extends Phaser.Scene {
   }
 
   private feedback(effect: Effect) {
-    if (this.reduced || effect === "boat") return;
-    const color = effect === "buy" ? 0x93e5c6 : effect === "refuse" ? 0xd88e88 : 0xffcb91;
+    if (this.reduced || this.lowGraphics || effect === "boat") return;
+    if (effect === "finale") {
+      const colors = [0xffb575, 0xf5a8bd, 0x9de8cc, 0xcfadfa];
+      for (let burst = 0; burst < 6; burst++) {
+        const x = center + (burst - 2.5) * 147;
+        const y = 109 + (burst % 3) * 55;
+        for (let i = 0; i < 17; i++) {
+          const angle = i * Math.PI * 2 / 17;
+          const spark = this.add.circle(x, y, 2, colors[burst % colors.length]!, 0).setDepth(7);
+          this.tweens.add({ targets: spark, alpha: 1, duration: 130, delay: burst * 240 });
+          this.tweens.add({ targets: spark, x: x + Math.cos(angle) * 78, y: y + Math.sin(angle) * 61 + 16,
+            alpha: 0, duration: 1200, delay: burst * 240 + 125, ease: "Cubic.Out", onComplete: () => spark.destroy() });
+        }
+      }
+      return;
+    }
+    if (effect === "craft") {
+      const x = this.x + 15, y = WALK - 44;
+      for (let i = 0; i < 5; i++) {
+        const offset = (i - 2) * 16;
+        const piece = this.add.rectangle(x + offset, y + Math.abs(offset) * .4, 4, 7, i % 2 ? 0xb3d7b7 : 0xffc693).setDepth(6);
+        this.tweens.add({ targets: piece, x, y: y - 3, angle: 50 + i * 36, duration: 600, delay: i * 55,
+          ease: "Cubic.In", onComplete: () => piece.destroy() });
+      }
+      const glow = this.add.image(x, y - 5, "row-glow").setScale(.43).setAlpha(0).setTint(0xffc185).setDepth(6);
+      this.tweens.add({ targets: glow, y: y - 26, alpha: .88, delay: 790, duration: 370, yoyo: true, onComplete: () => glow.destroy() });
+      return;
+    }
+    if (effect === "buy" || effect === "sell") {
+      const x = this.x;
+      for (let i = 0; i < 5; i++) {
+        const buy = effect === "buy";
+        const token = this.add.circle(x + (buy ? 41 : 11), WALK - 36, 2 + i % 2, buy ? 0xa1e6c9 : 0xffd090).setDepth(6);
+        this.tweens.add({ targets: token, x: buy ? x - 9 : this.cameraX + this.scale.width / this.cameras.main.zoom * .32,
+          y: buy ? WALK - 12 : 21, alpha: 0, scale: .56, duration: buy ? 500 : 760, delay: i * 52,
+          ease: "Quad.Out", onComplete: () => token.destroy() });
+      }
+      return;
+    }
+    const color = effect === "refuse" ? 0xd88e88 : 0xffcb91;
     for (let i = 0; i < 9; i++) {
       const angle = i * Math.PI * 2 / 9;
       const spark = this.add.circle(this.x + 6, WALK - 25, 2 + i % 2, color).setDepth(6);
@@ -247,6 +342,13 @@ class RowScene extends Phaser.Scene {
       sign.setAlpha(alpha);
       this.captions[index]!.setAlpha(alpha);
     });
+    for (const visitor of this.visitors.values()) {
+      const distance = visitor.to - visitor.x;
+      visitor.x = this.reduced ? visitor.to : visitor.x + Math.sign(distance) * Math.min(Math.abs(distance), delta * .11);
+      visitor.cart.setPosition(visitor.x, WALK - 3 + (Math.abs(distance) > 1 && !this.reduced ? Math.sin(time / 68) * 1.5 : 0));
+      if (Math.abs(distance) > 1) visitor.cart.setFlipX(distance < 0);
+      visitor.name.setX(visitor.x + 13);
+    }
     if (this.reduced) return;
     this.boats.forEach((entry, index) => {
       const bob = Math.sin(time / 950 + index) * 1.7;

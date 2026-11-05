@@ -1,1 +1,1 @@
-{"name":"@lantern/game-core","private":true,"type":"module","exports":{".":"./src/index.ts","./haggle":"./src/haggle.ts"},"dependencies":{"@lantern/content":"*","@lantern/protocol":"*"}}
+{"name":"@lantern/game-core","private":true,"type":"module","exports":{".":"./src/index.ts","./haggle":"./src/haggle.ts","./codec":"./src/codec.ts","./net-effects":"./src/net-effects.ts"},"dependencies":{"@lantern/content":"*","@lantern/protocol":"*","zod":"^4.0.0"}}

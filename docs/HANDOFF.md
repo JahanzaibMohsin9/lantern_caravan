@@ -1,34 +1,29 @@
-# Lantern Row build checklist
+# Lantern Row handoff
 
-## Tier 1 · Local campaign · Partial
+## Tier 1 · Local campaign
 
-- [ ] Workspaces, protocol schemas, local backend, and provider seams. The workspaces and First Light protocol are in place.
-- [ ] Ledger, prices, haggling, relationships, and merchant and rival policies. The local ledger, scarcity prices, and haggling are playable.
-- [ ] Recipes, funded orders, wishes, events, and dock jobs. First Light has the paper lantern recipe, funded orders, and six preset wishes.
-- [ ] Closure, offerings, votes, and dividends. Cash bands and shutters are drawn from the ledger.
-- [ ] Side-view Row, economy lighting, boat lights, and action feedback. The first night has camera movement, reflected stall and boat lights, and action sounds.
-- [ ] Three campaign nights, tutorial, profiles, saves, and ending. First Light has a contextual guide, one automatic save, and results with replay.
-- [ ] Tier 1 screens and keyboard navigation. The title, HUD, trade, workshop, board, cart, pause, settings, and results screens are available.
-- [ ] Rules and invariants, golden cases, campaign bot, and simulator CLI. The current rules suite exercises the First Light trade and delivery loop.
-- [ ] README, running, architecture, and API docs. The milestone has run instructions and an architecture overview.
+The three nights are playable through the ending. The Row has a keyboard and mouse interface, state-driven stall lighting, six boat positions, wishes, a compact action guide, and audio cues. The campaign includes scarcity prices, trade and haggling, merchant memory, crafting and orders, NPC traders, dock jobs, rescue and expansion offerings, strategy votes, dividends, cart upgrades, and three IndexedDB slots with backup, export, and import.
 
-## Tier 2 · Living market · Not started
+The Zod protocol and development provider interfaces are checked in. There are 36 deterministic golden files and a bot playthrough through the local backend. The live tests separately cover contention, retry, a restart during delayed settlement, and unknown-to-confirmed or unknown-to-rejected settlement.
 
-- [ ] Dev server and providers, live and private rooms, and Watch mode
-- [ ] Chronicle and history, buybacks and share board, in-game simulator
-- [ ] Soak and balance report, full audio, and Playwright end-to-end suite
+## Tier 2 · Living market
 
-## Tier 3 · Extra polish · Not started
+The reference server runs The Row continuously, supports four human seats per room, and keeps private rooms and public Watch available. The chronicle, price and balance history, share board, buybacks, simulator, layered music, and browser tests are implemented. A player bot trades for 20 nights in the accelerated server test, and the loop completes 500 nights without a real-time wait.
 
-- [ ] Endless mode, Cart II, extra dialogue and wishes, and performance polish
+## Tier 3 · Extra polish
 
-## First Light verification
+Endless unlocks after the campaign, carries the wallet and shares forward, and alternates festival and freight schedules. The later cart upgrade and forty preset wishes are available. Settings include independent volume controls, larger panels, low graphics, and reduced motion.
 
-- `npm ci` installed 69 packages on Node.js 24.14.0.
-- `npm test` passed 14 tests covering scarcity thresholds, sequential batch pricing, round-trip losses, ledger conservation, cargo, quote expiry, funded orders, crowd sales, and haggling.
-- `npm run dev` started with no environment setup and served the game page with HTTP 200.
-- `npm run build` passed type-checking and produced a 1.77 MB static build. Vite reported a bundle-size warning and removed two unrecognized annotation comments in Zod.
-- Chrome and Firefox smoke tests at 1280×720 against the production build passed crafting, wish attachment, delivery and boat lighting, crowd sale, haggling, bulk purchase, save and reload, results, and replay. Both browsers passed launch and layout checks at 1920×1080.
-- Chrome and Firefox passed the canvas click, pause and resume timer, and reduced-motion preference checks.
+[Known issues](KNOWN_ISSUES.md) records differences from the reference brief, including the separate offline campaign and the development server's reservation queue.
 
-See [milestone decisions](DECISIONS.md) for the first-night schedule and save behavior.
+## Verification
+
+- A clean `npm ci` restored the Node.js 24 workspace. The production build type-checked the client, server, tools, and tests. The static output is 1.84 MB.
+- `npm test` passed 61 tests covering local rules, the full campaign, 36 golden cases, the development providers, server races and restart recovery, and the 500-night live loop.
+- `npm run test:e2e -- --workers 2` passed six production-build browser tests. Chrome and Firefox each played the campaign from an empty slot through the rescue, vote, finale, reload, and Endless. Each browser also ran the two-context order race and visited Watch and History without signing in.
+- The CLI ran 2,000 nights each for seeds 17, 42, 93, 166, and 271. The five runs recorded zero invariant errors. See [Balance report](BALANCE_REPORT.md).
+- The campaign recording shows the Oil Wharf shuttered, the pledge reopening it, and the boats lighting. The README includes three captured game screens and a short GIF.
+
+## Provider integration
+
+[API](API.md) has separate steps and file paths for replacing IdentityProvider, SettlementProvider, StateStore, and AuthClient. The reference selects local development providers. [Running](RUNNING.md) describes static hosting, the API URL, and local and server save locations.

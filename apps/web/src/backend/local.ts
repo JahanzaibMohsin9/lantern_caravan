@@ -1,70 +1,116 @@
-import { advanceClock, commit, createWorld, quote, snapshotFor, type World } from "@lantern/game-core";
+import { items } from "@lantern/content";
+import { advanceClock, closeNight, commit, createWorld, newNight, nightId, nowAt, objective, openNight, player,
+  quote, recordAction, snapshotFor, validateQuote, type World } from "@lantern/game-core";
 import { haggle as bargain } from "@lantern/game-core/haggle";
-import { haggleOfferSchema, type ActionStatus, type CreateSessionReq, type HaggleOffer, type Intent,
-  type MarketBackend, type Quote, type Snapshot } from "@lantern/protocol";
-import { read, unpack, write } from "./saves";
+import type { ActionStatus, CreateSessionReq, HaggleOffer, HistoryRange, Intent,
+  LedgerOp, MarketBackend, Quote, Snapshot } from "@lantern/protocol";
+import { pack, read, remove, slots, unpack, write } from "./saves";
 
 export class LocalBackend implements MarketBackend {
   readonly kind = "local";
   readonly environmentLabel = "Local";
   private world = createWorld();
-  private slot = "first-light";
-  private quotes = new Map<string, { deal: Quote; revision: number }>();
+  private checkpoint = this.world;
+  private slot: string = slots[0];
+  private quotes = new Map<string, { deal: Quote; baseline: LedgerOp[] }>();
   private actions = new Map<string, { quoteId: string; status: ActionStatus }>();
   private phases = new Set<string>();
   private saveStatus: Snapshot["saveStatus"] = "saved";
   private saveQueue = Promise.resolve();
 
   async listProfiles() {
-    const row = await read(this.slot);
-    return row ? [{ slot: this.slot, updated: row.current.updated }] : [];
+    const found = await Promise.all(slots.map(async slot => {
+      const row = await read(slot);
+      if (!row) return null;
+      for (const candidate of [row.current, row.backup]) {
+        try {
+          const { world, updated } = unpack(candidate);
+          return { slot, updated, night: world.night, mode: world.mode, phase: world.phase };
+        } catch { /* try the previous save */ }
+      }
+      return { slot, updated: 0 };
+    }));
+    return found.filter(row => row !== null);
   }
 
-  async createSession(req: CreateSessionReq) {
-    this.slot = req.slot;
-    this.world = createWorld();
+  private changeSession(slot: string, world: World, checkpoint = world) {
+    this.slot = slot;
+    this.world = world;
+    this.checkpoint = checkpoint;
     this.quotes.clear();
     this.actions.clear();
     this.phases.clear();
+    this.saveStatus = "saved";
+  }
+
+  async createSession(req: CreateSessionReq) {
+    if (!slots.some(slot => slot === req.slot)) throw new Error("Choose a profile slot.");
+    this.changeSession(req.slot, createWorld());
     await this.save();
     return { sessionId: this.slot };
   }
 
-  async restore() {
-    const row = await read(this.slot);
+  async joinRoom(slot: string) {
+    if (!await this.restore(slot)) throw new Error("There is no save in that slot.");
+    return { sessionId: slot };
+  }
+
+  async restore(slot: string = slots[0]) {
+    await this.saveQueue;
+    const row = await read(slot);
     if (!row) return false;
     try {
-      this.world = unpack(row.current);
+      const { world, checkpoint } = unpack(row.current);
+      this.changeSession(slot, world, checkpoint);
     } catch (error) {
       if (!row.backup) throw error;
-      this.world = unpack(row.backup);
+      const { world, checkpoint } = unpack(row.backup);
+      this.changeSession(slot, world, checkpoint);
       await this.save();
     }
     return true;
   }
 
-  private save() {
+  async deleteProfile(slot: string) {
+    await this.saveQueue;
+    await remove(slot);
+    if (this.slot === slot) this.changeSession(slot, createWorld());
+  }
+
+  exportSave() {
+    return JSON.stringify(pack(this.world, this.checkpoint), null, 2);
+  }
+
+  async importSave(slot: string, json: string) {
+    const { world, checkpoint } = unpack(JSON.parse(json));
+    this.changeSession(slot, world, checkpoint);
+    await this.save();
+    return this.view();
+  }
+
+  save() {
     const world = this.world;
+    const checkpoint = this.checkpoint;
     const slot = this.slot;
     this.saveQueue = this.saveQueue.then(async () => {
       try {
-        await write(slot, world);
-        this.saveStatus = "saved";
+        await write(slot, world, checkpoint);
+        if (slot === this.slot) this.saveStatus = "saved";
       } catch {
-        this.saveStatus = "unsaved";
+        if (slot === this.slot) this.saveStatus = "unsaved";
       }
     });
     return this.saveQueue;
   }
 
-  private check(sessionId: string, nightId?: string) {
-    if (sessionId !== this.slot || (nightId && nightId !== "first-light")) {
+  private check(sessionId: string, requestedNight?: string) {
+    if (sessionId !== this.slot || (requestedNight && requestedNight !== nightId(this.world))) {
       throw new Error("This quote belongs to a different market.");
     }
   }
 
   view(): Snapshot {
-    return { ...snapshotFor(this.world, this.slot), saveStatus: this.saveStatus };
+    return { ...snapshotFor(this.world, this.slot, player, Date.now()), saveStatus: this.saveStatus };
   }
 
   async getSnapshot(sessionId: string) {
@@ -77,63 +123,101 @@ export class LocalBackend implements MarketBackend {
     return { state: this.saveStatus };
   }
 
-  private remember(deal: Quote) {
-    const now = Math.floor(this.world.elapsed * 1000);
+  async getCatalog(contentVersion: string) {
+    return { version: contentVersion, items: Object.fromEntries(Object.entries(items).map(([id, item]) =>
+      [id, { name: item.name, price: String(item.price) }])) };
+  }
+
+  async getChronicle(roomId: string, cursor?: string) {
+    this.check(roomId);
+    const start = cursor ? Number(cursor) : 0;
+    const entries = [...this.world.activity].reverse().slice(start, start + 30).map((entry, index) =>
+      ({ ...entry, id: String(start + index), time: Math.floor(entry.at * 1000) }));
+    return { entries, cursor: start + 30 < this.world.activity.length ? String(start + 30) : undefined };
+  }
+
+  async getHistory(roomId: string, _range: HistoryRange) {
+    this.check(roomId);
+    const view = this.view();
+    const rows = Object.entries(view.merchants).flatMap(([stall, merchant]) => Object.entries(merchant.prices).map(([item, hint]) =>
+      ({ time: view.server_time, night: view.night, stall, item, coins: merchant.coins, price: hint.buy,
+        strategy: merchant.strategy, dividend: merchant.dividendHistory.at(-1) ?? "0" })));
+    return { rows };
+  }
+
+  private remember(deal: Quote, baseline = deal.effects) {
+    const now = nowAt(this.world);
     for (const [id, entry] of this.quotes) {
-      if (entry.deal.expires_at <= now || entry.revision !== this.world.revision) this.quotes.delete(id);
+      if (entry.deal.expires_at <= now) this.quotes.delete(id);
     }
-    this.quotes.set(deal.quote_id, { deal: structuredClone(deal), revision: this.world.revision });
+    this.quotes.set(deal.quote_id, { deal: structuredClone(deal), baseline: structuredClone(baseline) });
     return deal;
   }
 
-  async getQuote(sessionId: string, nightId: string, intent: Intent) {
-    this.check(sessionId, nightId);
-    return this.remember(quote(this.world, intent, crypto.randomUUID(), Math.floor(this.world.elapsed * 1000)));
+  async getQuote(sessionId: string, night: string, intent: Intent) {
+    this.check(sessionId, night);
+    return this.remember(quote(this.world, intent, crypto.randomUUID(), nowAt(this.world)));
   }
 
-  async haggle(sessionId: string, nightId: string, raw: HaggleOffer) {
-    this.check(sessionId, nightId);
-    const outcome = bargain(this.world, haggleOfferSchema.parse(raw), crypto.randomUUID(), Math.floor(this.world.elapsed * 1000));
+  async haggle(sessionId: string, night: string, offer: HaggleOffer) {
+    this.check(sessionId, night);
+    const now = nowAt(this.world);
+    const outcome = bargain(this.world, offer, crypto.randomUUID(), now);
     this.world = outcome.state;
-    if (outcome.result.quote) this.remember(outcome.result.quote);
+    const deal = outcome.result.quote;
+    if (deal) this.remember(deal, quote(this.world, deal.intent, deal.quote_id, now).effects);
     await this.save();
     return outcome.result;
   }
 
-  async submitAction(sessionId: string, nightId: string, quoteId: string, actionId: string) {
-    this.check(sessionId, nightId);
+  async submitAction(sessionId: string, night: string, quoteId: string, actionId: string) {
+    this.check(sessionId, night);
     const previous = this.actions.get(actionId);
     if (previous) {
       if (previous.quoteId !== quoteId) throw new Error("That action ID already belongs to another quote.");
       return previous.status;
     }
     const entry = this.quotes.get(quoteId);
-    if (!entry || entry.revision !== this.world.revision) throw new Error("The market changed. Ask for a fresh quote.");
-    this.world = commit(this.world, entry.deal, Math.floor(this.world.elapsed * 1000));
-    const status: ActionStatus = { state: "confirmed", receipt: { id: actionId, label: "Local receipt" } };
+    if (!entry) throw new Error("Ask for a fresh quote.");
+    const now = nowAt(this.world);
+    validateQuote(this.world, player, entry.deal, entry.baseline, now);
+    const receipt = { id: actionId, label: "Local receipt" };
+    this.world = recordAction(commit(this.world, entry.deal, now), player, entry.deal.summary, receipt);
+    const status: ActionStatus = { state: "confirmed", receipt };
     this.actions.set(actionId, { quoteId, status });
+    this.quotes.delete(quoteId);
     await this.save();
     return status;
   }
 
-  async getActionStatus(sessionId: string, nightId: string, actionId: string) {
-    this.check(sessionId, nightId);
+  async getActionStatus(sessionId: string, night: string, actionId: string): Promise<ActionStatus> {
+    this.check(sessionId, night);
     const entry = this.actions.get(actionId);
-    if (!entry) throw new Error("That receipt isn’t available.");
-    return entry.status;
+    if (entry) return entry.status;
+    const receipt = this.world.activity.find(entry => entry.receipt?.id === actionId)?.receipt;
+    if (!receipt) throw new Error("That receipt isn’t available.");
+    return { state: "confirmed", receipt };
   }
 
   async advancePhase(sessionId: string, actionId: string) {
     this.check(sessionId);
     if (this.phases.has(actionId)) return this.view();
-    if (this.world.phase === "preparation") {
-      this.world = { ...this.world, phase: "open", revision: this.world.revision + 1 };
-    } else if (this.world.phase === "open" && this.world.delivered >= 3) {
-      this.world = { ...this.world, phase: "results", revision: this.world.revision + 1 };
-    } else {
-      throw new Error("Deliver three lanterns to close the night early.");
-    }
+    const goal = objective(this.world, player).complete;
+    if (this.world.phase === "preparation") this.world = openNight(this.world);
+    else if (this.world.phase === "open" && goal) this.world = closeNight(this.world);
+    else if (this.world.phase === "results" && (goal || this.world.mode === "endless")) {
+      this.world = newNight(this.world, this.world.night === 3 ? "endless" : this.world.mode);
+      this.checkpoint = this.world;
+    } else throw new Error("Finish this night’s objective first.");
     this.phases.add(actionId);
+    this.quotes.clear();
+    await this.save();
+    return this.view();
+  }
+
+  async retry() {
+    this.world = openNight({ ...this.checkpoint, revision: this.world.revision + 1 });
+    this.quotes.clear();
     await this.save();
     return this.view();
   }
@@ -141,7 +225,7 @@ export class LocalBackend implements MarketBackend {
   async tick(seconds: number) {
     const previous = this.world;
     this.world = advanceClock(previous, previous.elapsed + seconds);
-    if (this.world.phase !== previous.phase) await this.save();
+    if (this.world.phase !== previous.phase || (Math.floor(this.world.elapsed / 15) > Math.floor(previous.elapsed / 15))) await this.save();
     return this.view();
   }
 }

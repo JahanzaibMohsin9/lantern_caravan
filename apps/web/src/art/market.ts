@@ -374,9 +374,9 @@ export function boat(ctx: Ink) {
   }
 }
 
-export function playerCart(ctx: Ink) {
+export function playerCart(ctx: Ink, style = 1, color = "#94cec2", decorated = false) {
   ctx.translate(0, 10);
-  keeper(ctx, 59, 50, 1, "#94cec2");
+  keeper(ctx, 59, 50, style, color);
   poly(ctx, "#28242f", [[9,25],[40,25],[45,31],[41,43],[12,43],[6,33]], "#936751");
   ctx.strokeStyle = "#8d6b60";
   ctx.beginPath();
@@ -387,7 +387,12 @@ export function playerCart(ctx: Ink) {
     oval(ctx, "#201c27", x, 45, 2.2);
   }
   poly(ctx, "#554247", [[13,24],[14,17],[25,18],[28,25]], "#9b7563");
-  lantern(ctx, 42, 20, "#8ee6cb", 1, .65);
+  lantern(ctx, 42, 20, color, 1, .65);
+  if (decorated) {
+    lantern(ctx, 12, 28, "#ffc07e", .7, .38);
+    lantern(ctx, 23, 31, "#ffc07e", .7, .38);
+    lantern(ctx, 34, 29, "#ffc07e", .7, .38);
+  }
 }
 
 export function foreground(ctx: Ink) {
@@ -422,7 +427,7 @@ export function riverReflection(ctx: Ink) {
   }
 }
 
-export function boatLanterns(ctx: Ink) {
-  lantern(ctx, 33, 31, "#ffb874", .95, .8);
-  lantern(ctx, 65, 29, "#ffd095", 1, .9);
+export function boatLanterns(ctx: Ink, color = "#ffb874") {
+  lantern(ctx, 33, 31, color, .95, .8);
+  lantern(ctx, 65, 29, color, 1, .9);
 }

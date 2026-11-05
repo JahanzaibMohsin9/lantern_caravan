@@ -1,10 +1,11 @@
 # Build decisions
 
-## First Light milestone
-
-- First Light is the initial playable slice of Tier 1. The title's entry button also opens the market so a player can reach the workshop in one click. The context guide gives one suggested action at a time and can be turned off.
-- The Heron and Kingfisher both open at the start. Completing the objective does not require waiting for the next scheduled order. The player can close the night early after three deliveries or trade until the five-minute timer ends.
-- Haggling measures tolerance against the whole batch total and rounds any concession down to a whole coin. Merchant-specific relationships and policy decisions are later Tier 1 work.
-- The browser has one automatic campaign save for this milestone. IndexedDB keeps the previous valid write as a backup. The market timer uses active play time and stops on pause, settings, and hidden tabs.
-- The world and interface use vector silhouettes, stall light, icons, and compact labels. The HUD shows the three-delivery goal separately from the six-boat river meter because First Light has a smaller objective.
-- The client and protocol implement the local methods used by First Light. The full client and server contracts in the brief remain the target for the later milestones.
+- First Light opens from the title so the first craft takes two clicks. The Heron and Kingfisher both start open. Deliver three lanterns to close early or trade until closing.
+- The three campaign nights have authored routes and a deterministic seed. The Dark Wharf reserves two rescue shares for Juno. Preparation leaves at least ten coins available for the player rescue and issues a small relief grant only if a returning player is short.
+- The festival schedule opens the last three boats at 35, 50, and 70 seconds. Rivals begin their support runs around 40 seconds. The player can light the first boats while those runs develop. During playtesting, the shorter cadence removed a long wait between the third delivery and the finale.
+- Workshop ingredient buttons travel to the cheapest in-stock supplier. The main HUD shows progress with icon tiles, lantern diamonds, and the waterfront; trade detail, investment risk, and history are inside panels.
+- A trade's haggle tolerance is applied to the exact batch total, with a whole-coin concession. Rep and strategy adjust tolerance within the published limits.
+- Shares persist across nights. Strategy votes take effect when preparation ends, so the player can see their vote affect the evening they are about to play.
+- Endless and public scenarios alternate festival and freight events. Stalls pay upkeep scaled by cash, receive scheduled shipments, and receive a small harbor relief grant after a dark close. NPC strategies vary by stall health, seed, and night. This is how the soak controls runaway reserves without freezing prices.
+- A development room holds one unresolved reservation at a time. Its clock continues to advance in wall time, and closing waits for the reservation to resolve. Default development settlements confirm immediately.
+- The reference keeps the authored campaign offline and uses server rooms for the evolving shared market. The game uses procedural vector art, bundled fonts, and synthesized audio.

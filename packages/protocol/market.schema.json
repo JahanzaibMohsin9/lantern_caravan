@@ -1,0 +1,5060 @@
+{
+  "schemas": {
+    "request": {
+      "$schema": "https://json-schema.org/draft/2020-12/schema",
+      "type": "object",
+      "properties": {
+        "version": {
+          "type": "integer",
+          "minimum": -9007199254740991,
+          "maximum": 9007199254740991
+        },
+        "request_id": {
+          "$ref": "#/$defs/__schema0"
+        },
+        "method": {
+          "$ref": "#/$defs/__schema0"
+        },
+        "params": {
+          "default": {},
+          "type": "object",
+          "propertyNames": {
+            "type": "string"
+          },
+          "additionalProperties": {}
+        }
+      },
+      "required": [
+        "version",
+        "request_id",
+        "method",
+        "params"
+      ],
+      "additionalProperties": false,
+      "$defs": {
+        "__schema0": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 120
+        }
+      }
+    },
+    "response": {
+      "$schema": "https://json-schema.org/draft/2020-12/schema",
+      "oneOf": [
+        {
+          "type": "object",
+          "properties": {
+            "version": {
+              "type": "number",
+              "const": 1
+            },
+            "request_id": {
+              "$ref": "#/$defs/__schema0"
+            },
+            "ok": {
+              "type": "boolean",
+              "const": true
+            },
+            "result": {},
+            "error": {
+              "type": "null"
+            }
+          },
+          "required": [
+            "version",
+            "request_id",
+            "ok",
+            "result",
+            "error"
+          ],
+          "additionalProperties": false
+        },
+        {
+          "type": "object",
+          "properties": {
+            "version": {
+              "type": "number",
+              "const": 1
+            },
+            "request_id": {
+              "anyOf": [
+                {
+                  "$ref": "#/$defs/__schema0"
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            },
+            "ok": {
+              "type": "boolean",
+              "const": false
+            },
+            "result": {
+              "type": "null"
+            },
+            "error": {
+              "type": "object",
+              "properties": {
+                "code": {
+                  "$ref": "#/$defs/__schema0"
+                },
+                "message": {
+                  "type": "string"
+                }
+              },
+              "required": [
+                "code",
+                "message"
+              ],
+              "additionalProperties": false
+            }
+          },
+          "required": [
+            "version",
+            "request_id",
+            "ok",
+            "result",
+            "error"
+          ],
+          "additionalProperties": false
+        }
+      ],
+      "$defs": {
+        "__schema0": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 120
+        }
+      }
+    },
+    "ledgerOp": {
+      "$schema": "https://json-schema.org/draft/2020-12/schema",
+      "oneOf": [
+        {
+          "type": "object",
+          "properties": {
+            "op": {
+              "type": "string",
+              "const": "mint"
+            },
+            "asset": {
+              "$ref": "#/$defs/__schema0"
+            },
+            "amount": {
+              "$ref": "#/$defs/__schema1"
+            },
+            "to": {
+              "$ref": "#/$defs/__schema0"
+            },
+            "memo": {
+              "$ref": "#/$defs/__schema0"
+            }
+          },
+          "required": [
+            "op",
+            "asset",
+            "amount",
+            "to",
+            "memo"
+          ],
+          "additionalProperties": false
+        },
+        {
+          "type": "object",
+          "properties": {
+            "op": {
+              "type": "string",
+              "const": "burn"
+            },
+            "asset": {
+              "$ref": "#/$defs/__schema0"
+            },
+            "amount": {
+              "$ref": "#/$defs/__schema1"
+            },
+            "from": {
+              "$ref": "#/$defs/__schema0"
+            },
+            "memo": {
+              "$ref": "#/$defs/__schema0"
+            }
+          },
+          "required": [
+            "op",
+            "asset",
+            "amount",
+            "from",
+            "memo"
+          ],
+          "additionalProperties": false
+        },
+        {
+          "type": "object",
+          "properties": {
+            "op": {
+              "type": "string",
+              "const": "transfer"
+            },
+            "asset": {
+              "$ref": "#/$defs/__schema0"
+            },
+            "amount": {
+              "$ref": "#/$defs/__schema1"
+            },
+            "from": {
+              "$ref": "#/$defs/__schema0"
+            },
+            "to": {
+              "$ref": "#/$defs/__schema0"
+            },
+            "memo": {
+              "$ref": "#/$defs/__schema0"
+            }
+          },
+          "required": [
+            "op",
+            "asset",
+            "amount",
+            "from",
+            "to",
+            "memo"
+          ],
+          "additionalProperties": false
+        }
+      ],
+      "$defs": {
+        "__schema0": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 120
+        },
+        "__schema1": {
+          "type": "string",
+          "maxLength": 16,
+          "pattern": "^(0|[1-9]\\d*)$"
+        }
+      }
+    },
+    "intent": {
+      "$schema": "https://json-schema.org/draft/2020-12/schema",
+      "oneOf": [
+        {
+          "type": "object",
+          "properties": {
+            "type": {
+              "type": "string",
+              "enum": [
+                "buy",
+                "sell"
+              ]
+            },
+            "stall_id": {
+              "$ref": "#/$defs/__schema0"
+            },
+            "item_id": {
+              "$ref": "#/$defs/__schema0"
+            },
+            "quantity": {
+              "$ref": "#/$defs/__schema1"
+            }
+          },
+          "required": [
+            "type",
+            "stall_id",
+            "item_id",
+            "quantity"
+          ],
+          "additionalProperties": false
+        },
+        {
+          "type": "object",
+          "properties": {
+            "type": {
+              "type": "string",
+              "const": "craft"
+            },
+            "recipe_id": {
+              "$ref": "#/$defs/__schema0"
+            },
+            "quantity": {
+              "$ref": "#/$defs/__schema1"
+            }
+          },
+          "required": [
+            "type",
+            "recipe_id",
+            "quantity"
+          ],
+          "additionalProperties": false
+        },
+        {
+          "type": "object",
+          "properties": {
+            "type": {
+              "type": "string",
+              "const": "fill_order"
+            },
+            "order_id": {
+              "$ref": "#/$defs/__schema0"
+            },
+            "quantity": {
+              "$ref": "#/$defs/__schema1"
+            },
+            "wish_id": {
+              "$ref": "#/$defs/__schema0"
+            }
+          },
+          "required": [
+            "type",
+            "order_id",
+            "quantity"
+          ],
+          "additionalProperties": false
+        },
+        {
+          "type": "object",
+          "properties": {
+            "type": {
+              "type": "string",
+              "const": "sell_crowd"
+            },
+            "item_id": {
+              "$ref": "#/$defs/__schema0"
+            },
+            "quantity": {
+              "$ref": "#/$defs/__schema1"
+            }
+          },
+          "required": [
+            "type",
+            "item_id",
+            "quantity"
+          ],
+          "additionalProperties": false
+        },
+        {
+          "type": "object",
+          "properties": {
+            "type": {
+              "type": "string",
+              "const": "buy_offering"
+            },
+            "offering_id": {
+              "$ref": "#/$defs/__schema0"
+            },
+            "shares": {
+              "$ref": "#/$defs/__schema1"
+            }
+          },
+          "required": [
+            "type",
+            "offering_id",
+            "shares"
+          ],
+          "additionalProperties": false
+        },
+        {
+          "type": "object",
+          "properties": {
+            "type": {
+              "type": "string",
+              "const": "vote_strategy"
+            },
+            "stall_id": {
+              "$ref": "#/$defs/__schema0"
+            },
+            "strategy_id": {
+              "$ref": "#/$defs/__schema0"
+            }
+          },
+          "required": [
+            "type",
+            "stall_id",
+            "strategy_id"
+          ],
+          "additionalProperties": false
+        },
+        {
+          "type": "object",
+          "properties": {
+            "type": {
+              "type": "string",
+              "const": "buy_upgrade"
+            },
+            "upgrade_id": {
+              "$ref": "#/$defs/__schema0"
+            }
+          },
+          "required": [
+            "type",
+            "upgrade_id"
+          ],
+          "additionalProperties": false
+        },
+        {
+          "type": "object",
+          "properties": {
+            "type": {
+              "type": "string",
+              "const": "start_job"
+            }
+          },
+          "required": [
+            "type"
+          ],
+          "additionalProperties": false
+        },
+        {
+          "type": "object",
+          "properties": {
+            "type": {
+              "type": "string",
+              "const": "finish_job"
+            },
+            "job_id": {
+              "$ref": "#/$defs/__schema0"
+            }
+          },
+          "required": [
+            "type",
+            "job_id"
+          ],
+          "additionalProperties": false
+        },
+        {
+          "type": "object",
+          "properties": {
+            "type": {
+              "type": "string",
+              "const": "accept_buyback"
+            },
+            "buyback_id": {
+              "$ref": "#/$defs/__schema0"
+            }
+          },
+          "required": [
+            "type",
+            "buyback_id"
+          ],
+          "additionalProperties": false
+        },
+        {
+          "type": "object",
+          "properties": {
+            "type": {
+              "type": "string",
+              "const": "list_shares"
+            },
+            "stall_id": {
+              "$ref": "#/$defs/__schema0"
+            },
+            "shares": {
+              "$ref": "#/$defs/__schema1"
+            },
+            "price_per_share": {
+              "$ref": "#/$defs/__schema1"
+            }
+          },
+          "required": [
+            "type",
+            "stall_id",
+            "shares",
+            "price_per_share"
+          ],
+          "additionalProperties": false
+        },
+        {
+          "type": "object",
+          "properties": {
+            "type": {
+              "type": "string",
+              "enum": [
+                "cancel_listing",
+                "buy_listing"
+              ]
+            },
+            "listing_id": {
+              "$ref": "#/$defs/__schema0"
+            }
+          },
+          "required": [
+            "type",
+            "listing_id"
+          ],
+          "additionalProperties": false
+        }
+      ],
+      "$defs": {
+        "__schema0": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 120
+        },
+        "__schema1": {
+          "type": "string",
+          "maxLength": 16,
+          "pattern": "^(0|[1-9]\\d*)$"
+        }
+      }
+    },
+    "quote": {
+      "$schema": "https://json-schema.org/draft/2020-12/schema",
+      "type": "object",
+      "properties": {
+        "quote_id": {
+          "$ref": "#/$defs/__schema0"
+        },
+        "intent": {
+          "oneOf": [
+            {
+              "type": "object",
+              "properties": {
+                "type": {
+                  "type": "string",
+                  "enum": [
+                    "buy",
+                    "sell"
+                  ]
+                },
+                "stall_id": {
+                  "$ref": "#/$defs/__schema0"
+                },
+                "item_id": {
+                  "$ref": "#/$defs/__schema0"
+                },
+                "quantity": {
+                  "$ref": "#/$defs/__schema1"
+                }
+              },
+              "required": [
+                "type",
+                "stall_id",
+                "item_id",
+                "quantity"
+              ],
+              "additionalProperties": false
+            },
+            {
+              "type": "object",
+              "properties": {
+                "type": {
+                  "type": "string",
+                  "const": "craft"
+                },
+                "recipe_id": {
+                  "$ref": "#/$defs/__schema0"
+                },
+                "quantity": {
+                  "$ref": "#/$defs/__schema1"
+                }
+              },
+              "required": [
+                "type",
+                "recipe_id",
+                "quantity"
+              ],
+              "additionalProperties": false
+            },
+            {
+              "type": "object",
+              "properties": {
+                "type": {
+                  "type": "string",
+                  "const": "fill_order"
+                },
+                "order_id": {
+                  "$ref": "#/$defs/__schema0"
+                },
+                "quantity": {
+                  "$ref": "#/$defs/__schema1"
+                },
+                "wish_id": {
+                  "$ref": "#/$defs/__schema0"
+                }
+              },
+              "required": [
+                "type",
+                "order_id",
+                "quantity"
+              ],
+              "additionalProperties": false
+            },
+            {
+              "type": "object",
+              "properties": {
+                "type": {
+                  "type": "string",
+                  "const": "sell_crowd"
+                },
+                "item_id": {
+                  "$ref": "#/$defs/__schema0"
+                },
+                "quantity": {
+                  "$ref": "#/$defs/__schema1"
+                }
+              },
+              "required": [
+                "type",
+                "item_id",
+                "quantity"
+              ],
+              "additionalProperties": false
+            },
+            {
+              "type": "object",
+              "properties": {
+                "type": {
+                  "type": "string",
+                  "const": "buy_offering"
+                },
+                "offering_id": {
+                  "$ref": "#/$defs/__schema0"
+                },
+                "shares": {
+                  "$ref": "#/$defs/__schema1"
+                }
+              },
+              "required": [
+                "type",
+                "offering_id",
+                "shares"
+              ],
+              "additionalProperties": false
+            },
+            {
+              "type": "object",
+              "properties": {
+                "type": {
+                  "type": "string",
+                  "const": "vote_strategy"
+                },
+                "stall_id": {
+                  "$ref": "#/$defs/__schema0"
+                },
+                "strategy_id": {
+                  "$ref": "#/$defs/__schema0"
+                }
+              },
+              "required": [
+                "type",
+                "stall_id",
+                "strategy_id"
+              ],
+              "additionalProperties": false
+            },
+            {
+              "type": "object",
+              "properties": {
+                "type": {
+                  "type": "string",
+                  "const": "buy_upgrade"
+                },
+                "upgrade_id": {
+                  "$ref": "#/$defs/__schema0"
+                }
+              },
+              "required": [
+                "type",
+                "upgrade_id"
+              ],
+              "additionalProperties": false
+            },
+            {
+              "type": "object",
+              "properties": {
+                "type": {
+                  "type": "string",
+                  "const": "start_job"
+                }
+              },
+              "required": [
+                "type"
+              ],
+              "additionalProperties": false
+            },
+            {
+              "type": "object",
+              "properties": {
+                "type": {
+                  "type": "string",
+                  "const": "finish_job"
+                },
+                "job_id": {
+                  "$ref": "#/$defs/__schema0"
+                }
+              },
+              "required": [
+                "type",
+                "job_id"
+              ],
+              "additionalProperties": false
+            },
+            {
+              "type": "object",
+              "properties": {
+                "type": {
+                  "type": "string",
+                  "const": "accept_buyback"
+                },
+                "buyback_id": {
+                  "$ref": "#/$defs/__schema0"
+                }
+              },
+              "required": [
+                "type",
+                "buyback_id"
+              ],
+              "additionalProperties": false
+            },
+            {
+              "type": "object",
+              "properties": {
+                "type": {
+                  "type": "string",
+                  "const": "list_shares"
+                },
+                "stall_id": {
+                  "$ref": "#/$defs/__schema0"
+                },
+                "shares": {
+                  "$ref": "#/$defs/__schema1"
+                },
+                "price_per_share": {
+                  "$ref": "#/$defs/__schema1"
+                }
+              },
+              "required": [
+                "type",
+                "stall_id",
+                "shares",
+                "price_per_share"
+              ],
+              "additionalProperties": false
+            },
+            {
+              "type": "object",
+              "properties": {
+                "type": {
+                  "type": "string",
+                  "enum": [
+                    "cancel_listing",
+                    "buy_listing"
+                  ]
+                },
+                "listing_id": {
+                  "$ref": "#/$defs/__schema0"
+                }
+              },
+              "required": [
+                "type",
+                "listing_id"
+              ],
+              "additionalProperties": false
+            }
+          ]
+        },
+        "effects": {
+          "type": "array",
+          "items": {
+            "oneOf": [
+              {
+                "type": "object",
+                "properties": {
+                  "op": {
+                    "type": "string",
+                    "const": "mint"
+                  },
+                  "asset": {
+                    "$ref": "#/$defs/__schema0"
+                  },
+                  "amount": {
+                    "$ref": "#/$defs/__schema1"
+                  },
+                  "to": {
+                    "$ref": "#/$defs/__schema0"
+                  },
+                  "memo": {
+                    "$ref": "#/$defs/__schema0"
+                  }
+                },
+                "required": [
+                  "op",
+                  "asset",
+                  "amount",
+                  "to",
+                  "memo"
+                ],
+                "additionalProperties": false
+              },
+              {
+                "type": "object",
+                "properties": {
+                  "op": {
+                    "type": "string",
+                    "const": "burn"
+                  },
+                  "asset": {
+                    "$ref": "#/$defs/__schema0"
+                  },
+                  "amount": {
+                    "$ref": "#/$defs/__schema1"
+                  },
+                  "from": {
+                    "$ref": "#/$defs/__schema0"
+                  },
+                  "memo": {
+                    "$ref": "#/$defs/__schema0"
+                  }
+                },
+                "required": [
+                  "op",
+                  "asset",
+                  "amount",
+                  "from",
+                  "memo"
+                ],
+                "additionalProperties": false
+              },
+              {
+                "type": "object",
+                "properties": {
+                  "op": {
+                    "type": "string",
+                    "const": "transfer"
+                  },
+                  "asset": {
+                    "$ref": "#/$defs/__schema0"
+                  },
+                  "amount": {
+                    "$ref": "#/$defs/__schema1"
+                  },
+                  "from": {
+                    "$ref": "#/$defs/__schema0"
+                  },
+                  "to": {
+                    "$ref": "#/$defs/__schema0"
+                  },
+                  "memo": {
+                    "$ref": "#/$defs/__schema0"
+                  }
+                },
+                "required": [
+                  "op",
+                  "asset",
+                  "amount",
+                  "from",
+                  "to",
+                  "memo"
+                ],
+                "additionalProperties": false
+              }
+            ]
+          }
+        },
+        "summary": {
+          "$ref": "#/$defs/__schema0"
+        },
+        "expires_at": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 9007199254740991
+        }
+      },
+      "required": [
+        "quote_id",
+        "intent",
+        "effects",
+        "summary",
+        "expires_at"
+      ],
+      "additionalProperties": false,
+      "$defs": {
+        "__schema0": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 120
+        },
+        "__schema1": {
+          "type": "string",
+          "maxLength": 16,
+          "pattern": "^(0|[1-9]\\d*)$"
+        }
+      }
+    },
+    "haggleOffer": {
+      "$schema": "https://json-schema.org/draft/2020-12/schema",
+      "type": "object",
+      "properties": {
+        "stall_id": {
+          "$ref": "#/$defs/__schema0"
+        },
+        "item_id": {
+          "$ref": "#/$defs/__schema0"
+        },
+        "side": {
+          "type": "string",
+          "enum": [
+            "buy",
+            "sell"
+          ]
+        },
+        "quantity": {
+          "$ref": "#/$defs/__schema1"
+        },
+        "price_per_unit": {
+          "$ref": "#/$defs/__schema1"
+        }
+      },
+      "required": [
+        "stall_id",
+        "item_id",
+        "side",
+        "quantity",
+        "price_per_unit"
+      ],
+      "additionalProperties": false,
+      "$defs": {
+        "__schema0": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 120
+        },
+        "__schema1": {
+          "type": "string",
+          "maxLength": 16,
+          "pattern": "^(0|[1-9]\\d*)$"
+        }
+      }
+    },
+    "snapshot": {
+      "$schema": "https://json-schema.org/draft/2020-12/schema",
+      "type": "object",
+      "properties": {
+        "session_id": {
+          "$ref": "#/$defs/__schema0"
+        },
+        "night_id": {
+          "$ref": "#/$defs/__schema0"
+        },
+        "night": {
+          "$ref": "#/$defs/__schema1"
+        },
+        "nightName": {
+          "$ref": "#/$defs/__schema0"
+        },
+        "mode": {
+          "type": "string",
+          "enum": [
+            "campaign",
+            "endless",
+            "live"
+          ]
+        },
+        "seed": {
+          "$ref": "#/$defs/__schema1"
+        },
+        "server_time": {
+          "$ref": "#/$defs/__schema1"
+        },
+        "revision": {
+          "$ref": "#/$defs/__schema1"
+        },
+        "phase": {
+          "type": "string",
+          "enum": [
+            "preparation",
+            "open",
+            "results"
+          ]
+        },
+        "elapsed": {
+          "$ref": "#/$defs/__schema2"
+        },
+        "duration": {
+          "$ref": "#/$defs/__schema2"
+        },
+        "coins": {
+          "$ref": "#/$defs/__schema3"
+        },
+        "cargo": {
+          "$ref": "#/$defs/__schema4"
+        },
+        "capacity": {
+          "$ref": "#/$defs/__schema3"
+        },
+        "upgrades": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/__schema0"
+          }
+        },
+        "merchants": {
+          "type": "object",
+          "propertyNames": {
+            "type": "string"
+          },
+          "additionalProperties": {
+            "type": "object",
+            "properties": {
+              "band": {
+                "type": "string",
+                "enum": [
+                  "thriving",
+                  "healthy",
+                  "tight",
+                  "dark"
+                ]
+              },
+              "coins": {
+                "$ref": "#/$defs/__schema3"
+              },
+              "stock": {
+                "$ref": "#/$defs/__schema4"
+              },
+              "prices": {
+                "type": "object",
+                "propertyNames": {
+                  "type": "string"
+                },
+                "additionalProperties": {
+                  "type": "object",
+                  "properties": {
+                    "buy": {
+                      "$ref": "#/$defs/__schema3"
+                    },
+                    "sell": {
+                      "$ref": "#/$defs/__schema3"
+                    },
+                    "label": {
+                      "$ref": "#/$defs/__schema0"
+                    },
+                    "target": {
+                      "$ref": "#/$defs/__schema3"
+                    }
+                  },
+                  "required": [
+                    "buy",
+                    "sell",
+                    "label",
+                    "target"
+                  ],
+                  "additionalProperties": false
+                }
+              },
+              "strategy": {
+                "$ref": "#/$defs/__schema5"
+              },
+              "vote": {
+                "$ref": "#/$defs/__schema5"
+              },
+              "thinking": {
+                "type": "string"
+              },
+              "relationship": {
+                "type": "integer",
+                "minimum": -5,
+                "maximum": 10
+              },
+              "owned": {
+                "$ref": "#/$defs/__schema3"
+              },
+              "shareholders": {
+                "type": "array",
+                "items": {
+                  "type": "object",
+                  "properties": {
+                    "name": {
+                      "$ref": "#/$defs/__schema0"
+                    },
+                    "count": {
+                      "$ref": "#/$defs/__schema3"
+                    }
+                  },
+                  "required": [
+                    "name",
+                    "count"
+                  ],
+                  "additionalProperties": false
+                }
+              },
+              "bookValue": {
+                "$ref": "#/$defs/__schema3"
+              },
+              "sharePrice": {
+                "$ref": "#/$defs/__schema3"
+              },
+              "dividend": {
+                "$ref": "#/$defs/__schema3"
+              },
+              "dividendHistory": {
+                "maxItems": 5,
+                "type": "array",
+                "items": {
+                  "$ref": "#/$defs/__schema3"
+                }
+              },
+              "offering": {
+                "type": "object",
+                "properties": {
+                  "id": {
+                    "$ref": "#/$defs/__schema0"
+                  },
+                  "kind": {
+                    "type": "string",
+                    "enum": [
+                      "rescue",
+                      "expansion"
+                    ]
+                  },
+                  "price": {
+                    "$ref": "#/$defs/__schema3"
+                  },
+                  "left": {
+                    "$ref": "#/$defs/__schema3"
+                  },
+                  "total": {
+                    "$ref": "#/$defs/__schema3"
+                  },
+                  "available": {
+                    "$ref": "#/$defs/__schema3"
+                  },
+                  "ends": {
+                    "$ref": "#/$defs/__schema2"
+                  }
+                },
+                "required": [
+                  "id",
+                  "kind",
+                  "price",
+                  "left",
+                  "total",
+                  "available",
+                  "ends"
+                ],
+                "additionalProperties": false
+              },
+              "buyback": {
+                "type": "object",
+                "properties": {
+                  "id": {
+                    "$ref": "#/$defs/__schema0"
+                  },
+                  "price": {
+                    "$ref": "#/$defs/__schema3"
+                  }
+                },
+                "required": [
+                  "id",
+                  "price"
+                ],
+                "additionalProperties": false
+              }
+            },
+            "required": [
+              "band",
+              "coins",
+              "stock",
+              "prices",
+              "strategy",
+              "thinking",
+              "relationship",
+              "owned",
+              "shareholders",
+              "bookValue",
+              "sharePrice",
+              "dividend",
+              "dividendHistory"
+            ],
+            "additionalProperties": false
+          }
+        },
+        "orders": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "id": {
+                "$ref": "#/$defs/__schema0"
+              },
+              "name": {
+                "$ref": "#/$defs/__schema0"
+              },
+              "item": {
+                "$ref": "#/$defs/__schema0"
+              },
+              "remaining": {
+                "$ref": "#/$defs/__schema3"
+              },
+              "quantity": {
+                "$ref": "#/$defs/__schema3"
+              },
+              "payout": {
+                "$ref": "#/$defs/__schema3"
+              },
+              "boat": {
+                "type": "integer",
+                "minimum": 0,
+                "maximum": 5
+              },
+              "personal": {
+                "type": "boolean"
+              },
+              "opens": {
+                "$ref": "#/$defs/__schema2"
+              },
+              "state": {
+                "type": "string",
+                "enum": [
+                  "upcoming",
+                  "open",
+                  "filled",
+                  "expired"
+                ]
+              },
+              "wishes": {
+                "type": "array",
+                "items": {
+                  "type": "string"
+                }
+              },
+              "wishAuthors": {
+                "type": "array",
+                "items": {
+                  "type": "string"
+                }
+              }
+            },
+            "required": [
+              "id",
+              "name",
+              "item",
+              "remaining",
+              "quantity",
+              "payout",
+              "boat",
+              "personal",
+              "opens",
+              "state",
+              "wishes",
+              "wishAuthors"
+            ],
+            "additionalProperties": false
+          }
+        },
+        "objective": {
+          "type": "object",
+          "properties": {
+            "complete": {
+              "type": "boolean"
+            },
+            "name": {
+              "$ref": "#/$defs/__schema0"
+            },
+            "steps": {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "properties": {
+                  "label": {
+                    "$ref": "#/$defs/__schema0"
+                  },
+                  "count": {
+                    "$ref": "#/$defs/__schema3"
+                  },
+                  "target": {
+                    "$ref": "#/$defs/__schema3"
+                  },
+                  "icon": {
+                    "$ref": "#/$defs/__schema0"
+                  }
+                },
+                "required": [
+                  "label",
+                  "count",
+                  "target",
+                  "icon"
+                ],
+                "additionalProperties": false
+              }
+            }
+          },
+          "required": [
+            "complete",
+            "name",
+            "steps"
+          ],
+          "additionalProperties": false
+        },
+        "delivered": {
+          "$ref": "#/$defs/__schema3"
+        },
+        "crafted": {
+          "$ref": "#/$defs/__schema3"
+        },
+        "crowdBudget": {
+          "$ref": "#/$defs/__schema3"
+        },
+        "crowdSold": {
+          "$ref": "#/$defs/__schema3"
+        },
+        "lifetimeCrafted": {
+          "$ref": "#/$defs/__schema3"
+        },
+        "lifetimeDividends": {
+          "$ref": "#/$defs/__schema3"
+        },
+        "earned": {
+          "$ref": "#/$defs/__schema3"
+        },
+        "spent": {
+          "$ref": "#/$defs/__schema3"
+        },
+        "boatsHelped": {
+          "$ref": "#/$defs/__schema3"
+        },
+        "rescued": {
+          "$ref": "#/$defs/__schema3"
+        },
+        "titles": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/__schema0"
+          }
+        },
+        "saveStatus": {
+          "type": "string",
+          "enum": [
+            "saved",
+            "unsaved"
+          ]
+        },
+        "events": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "id": {
+                "$ref": "#/$defs/__schema0"
+              },
+              "label": {
+                "$ref": "#/$defs/__schema0"
+              },
+              "detail": {
+                "type": "string"
+              },
+              "at": {
+                "$ref": "#/$defs/__schema2"
+              }
+            },
+            "required": [
+              "id",
+              "label",
+              "detail",
+              "at"
+            ],
+            "additionalProperties": false
+          }
+        },
+        "job": {
+          "type": "object",
+          "properties": {
+            "id": {
+              "$ref": "#/$defs/__schema0"
+            },
+            "readyAt": {
+              "$ref": "#/$defs/__schema2"
+            }
+          },
+          "required": [
+            "id",
+            "readyAt"
+          ],
+          "additionalProperties": false
+        },
+        "jobAvailable": {
+          "type": "boolean"
+        },
+        "activity": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "at": {
+                "$ref": "#/$defs/__schema2"
+              },
+              "night": {
+                "$ref": "#/$defs/__schema1"
+              },
+              "line": {
+                "type": "string"
+              },
+              "actor": {
+                "type": "string"
+              },
+              "receipt": {
+                "type": "object",
+                "properties": {
+                  "id": {
+                    "$ref": "#/$defs/__schema0"
+                  },
+                  "label": {
+                    "$ref": "#/$defs/__schema0"
+                  },
+                  "url": {
+                    "type": "string",
+                    "format": "uri"
+                  }
+                },
+                "required": [
+                  "id",
+                  "label"
+                ],
+                "additionalProperties": false
+              }
+            },
+            "required": [
+              "at",
+              "night",
+              "line"
+            ],
+            "additionalProperties": false
+          }
+        },
+        "traders": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "id": {
+                "$ref": "#/$defs/__schema0"
+              },
+              "name": {
+                "$ref": "#/$defs/__schema0"
+              },
+              "lastStop": {
+                "$ref": "#/$defs/__schema0"
+              }
+            },
+            "required": [
+              "id",
+              "name"
+            ],
+            "additionalProperties": false
+          }
+        },
+        "listings": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "id": {
+                "$ref": "#/$defs/__schema0"
+              },
+              "stall": {
+                "$ref": "#/$defs/__schema0"
+              },
+              "shares": {
+                "$ref": "#/$defs/__schema3"
+              },
+              "price": {
+                "$ref": "#/$defs/__schema3"
+              },
+              "seller": {
+                "$ref": "#/$defs/__schema0"
+              },
+              "mine": {
+                "type": "boolean"
+              }
+            },
+            "required": [
+              "id",
+              "stall",
+              "shares",
+              "price",
+              "seller",
+              "mine"
+            ],
+            "additionalProperties": false
+          }
+        },
+        "spectator": {
+          "type": "boolean"
+        },
+        "pendingActions": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "id": {
+                "$ref": "#/$defs/__schema0"
+              },
+              "state": {
+                "type": "string",
+                "enum": [
+                  "pending",
+                  "unknown"
+                ]
+              }
+            },
+            "required": [
+              "id",
+              "state"
+            ],
+            "additionalProperties": false
+          }
+        }
+      },
+      "required": [
+        "session_id",
+        "night_id",
+        "night",
+        "nightName",
+        "mode",
+        "seed",
+        "server_time",
+        "revision",
+        "phase",
+        "elapsed",
+        "duration",
+        "coins",
+        "cargo",
+        "capacity",
+        "upgrades",
+        "merchants",
+        "orders",
+        "objective",
+        "delivered",
+        "crafted",
+        "crowdBudget",
+        "crowdSold",
+        "lifetimeCrafted",
+        "lifetimeDividends",
+        "earned",
+        "spent",
+        "boatsHelped",
+        "rescued",
+        "titles",
+        "saveStatus",
+        "events",
+        "jobAvailable",
+        "activity",
+        "traders",
+        "listings",
+        "spectator",
+        "pendingActions"
+      ],
+      "additionalProperties": false,
+      "$defs": {
+        "__schema0": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 120
+        },
+        "__schema1": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 9007199254740991
+        },
+        "__schema2": {
+          "type": "number",
+          "minimum": 0
+        },
+        "__schema3": {
+          "type": "string",
+          "maxLength": 16,
+          "pattern": "^(0|[1-9]\\d*)$"
+        },
+        "__schema4": {
+          "type": "object",
+          "propertyNames": {
+            "type": "string"
+          },
+          "additionalProperties": {
+            "$ref": "#/$defs/__schema3"
+          }
+        },
+        "__schema5": {
+          "type": "string",
+          "enum": [
+            "steady",
+            "bold",
+            "festival",
+            "bargain"
+          ]
+        }
+      }
+    },
+    "actionStatus": {
+      "$schema": "https://json-schema.org/draft/2020-12/schema",
+      "oneOf": [
+        {
+          "type": "object",
+          "properties": {
+            "state": {
+              "type": "string",
+              "const": "confirmed"
+            },
+            "receipt": {
+              "type": "object",
+              "properties": {
+                "id": {
+                  "$ref": "#/$defs/__schema0"
+                },
+                "label": {
+                  "$ref": "#/$defs/__schema0"
+                },
+                "url": {
+                  "type": "string",
+                  "format": "uri"
+                }
+              },
+              "required": [
+                "id",
+                "label"
+              ],
+              "additionalProperties": false
+            }
+          },
+          "required": [
+            "state",
+            "receipt"
+          ],
+          "additionalProperties": false
+        },
+        {
+          "type": "object",
+          "properties": {
+            "state": {
+              "type": "string",
+              "enum": [
+                "pending",
+                "unknown",
+                "rejected"
+              ]
+            },
+            "reason": {
+              "type": "string"
+            }
+          },
+          "required": [
+            "state"
+          ],
+          "additionalProperties": false
+        }
+      ],
+      "$defs": {
+        "__schema0": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 120
+        }
+      }
+    },
+    "historyRow": {
+      "$schema": "https://json-schema.org/draft/2020-12/schema",
+      "type": "object",
+      "properties": {
+        "time": {
+          "$ref": "#/$defs/__schema0"
+        },
+        "night": {
+          "$ref": "#/$defs/__schema0"
+        },
+        "stall": {
+          "$ref": "#/$defs/__schema1"
+        },
+        "coins": {
+          "$ref": "#/$defs/__schema2"
+        },
+        "price": {
+          "$ref": "#/$defs/__schema2"
+        },
+        "item": {
+          "$ref": "#/$defs/__schema1"
+        },
+        "strategy": {
+          "type": "string",
+          "enum": [
+            "steady",
+            "bold",
+            "festival",
+            "bargain"
+          ]
+        },
+        "dividend": {
+          "$ref": "#/$defs/__schema2"
+        },
+        "sharePrice": {
+          "$ref": "#/$defs/__schema2"
+        }
+      },
+      "required": [
+        "time",
+        "night",
+        "stall",
+        "coins",
+        "price",
+        "item",
+        "strategy",
+        "dividend"
+      ],
+      "additionalProperties": false,
+      "$defs": {
+        "__schema0": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 9007199254740991
+        },
+        "__schema1": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 120
+        },
+        "__schema2": {
+          "type": "string",
+          "maxLength": 16,
+          "pattern": "^(0|[1-9]\\d*)$"
+        }
+      }
+    },
+    "chronicleEntry": {
+      "$schema": "https://json-schema.org/draft/2020-12/schema",
+      "type": "object",
+      "properties": {
+        "at": {
+          "type": "number",
+          "minimum": 0
+        },
+        "night": {
+          "$ref": "#/$defs/__schema0"
+        },
+        "line": {
+          "type": "string"
+        },
+        "actor": {
+          "type": "string"
+        },
+        "receipt": {
+          "type": "object",
+          "properties": {
+            "id": {
+              "$ref": "#/$defs/__schema1"
+            },
+            "label": {
+              "$ref": "#/$defs/__schema1"
+            },
+            "url": {
+              "type": "string",
+              "format": "uri"
+            }
+          },
+          "required": [
+            "id",
+            "label"
+          ],
+          "additionalProperties": false
+        },
+        "id": {
+          "$ref": "#/$defs/__schema1"
+        },
+        "time": {
+          "$ref": "#/$defs/__schema0"
+        }
+      },
+      "required": [
+        "at",
+        "night",
+        "line",
+        "id",
+        "time"
+      ],
+      "additionalProperties": false,
+      "$defs": {
+        "__schema0": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 9007199254740991
+        },
+        "__schema1": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 120
+        }
+      }
+    },
+    "health": {
+      "$schema": "https://json-schema.org/draft/2020-12/schema",
+      "type": "object",
+      "properties": {
+        "version": {
+          "type": "number",
+          "const": 1
+        },
+        "content_version": {
+          "$ref": "#/$defs/__schema0"
+        },
+        "rules_version": {
+          "$ref": "#/$defs/__schema0"
+        },
+        "uptime": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 9007199254740991
+        }
+      },
+      "required": [
+        "version",
+        "content_version",
+        "rules_version",
+        "uptime"
+      ],
+      "additionalProperties": false,
+      "$defs": {
+        "__schema0": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 120
+        }
+      }
+    },
+    "login": {
+      "$schema": "https://json-schema.org/draft/2020-12/schema",
+      "type": "object",
+      "properties": {
+        "displayName": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 24
+        }
+      },
+      "required": [
+        "displayName"
+      ],
+      "additionalProperties": false
+    },
+    "loginResult": {
+      "$schema": "https://json-schema.org/draft/2020-12/schema",
+      "type": "object",
+      "properties": {
+        "credential": {
+          "type": "string",
+          "minLength": 1
+        },
+        "player": {
+          "type": "object",
+          "properties": {
+            "id": {
+              "$ref": "#/$defs/__schema0"
+            },
+            "displayName": {
+              "$ref": "#/$defs/__schema0"
+            }
+          },
+          "required": [
+            "id",
+            "displayName"
+          ],
+          "additionalProperties": false
+        }
+      },
+      "required": [
+        "credential",
+        "player"
+      ],
+      "additionalProperties": false,
+      "$defs": {
+        "__schema0": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 120
+        }
+      }
+    }
+  },
+  "methods": {
+    "list_profiles": {
+      "params": {
+        "$schema": "https://json-schema.org/draft/2020-12/schema",
+        "type": "object",
+        "properties": {},
+        "additionalProperties": false
+      },
+      "result": {
+        "$schema": "https://json-schema.org/draft/2020-12/schema",
+        "type": "array",
+        "items": {
+          "type": "object",
+          "properties": {
+            "slot": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 120
+            },
+            "updated": {
+              "$ref": "#/$defs/__schema0"
+            },
+            "night": {
+              "$ref": "#/$defs/__schema0"
+            },
+            "phase": {
+              "type": "string",
+              "enum": [
+                "preparation",
+                "open",
+                "results"
+              ]
+            },
+            "mode": {
+              "type": "string",
+              "enum": [
+                "campaign",
+                "endless",
+                "live"
+              ]
+            }
+          },
+          "required": [
+            "slot",
+            "updated"
+          ],
+          "additionalProperties": false
+        },
+        "$defs": {
+          "__schema0": {
+            "type": "integer",
+            "minimum": 0,
+            "maximum": 9007199254740991
+          }
+        }
+      }
+    },
+    "create_session": {
+      "params": {
+        "$schema": "https://json-schema.org/draft/2020-12/schema",
+        "type": "object",
+        "properties": {
+          "slot": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 120
+          },
+          "mode": {
+            "type": "string",
+            "enum": [
+              "campaign",
+              "endless",
+              "live"
+            ]
+          }
+        },
+        "required": [
+          "slot"
+        ],
+        "additionalProperties": false
+      },
+      "result": {
+        "$schema": "https://json-schema.org/draft/2020-12/schema",
+        "type": "object",
+        "properties": {
+          "sessionId": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 120
+          },
+          "spectator": {
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "sessionId"
+        ],
+        "additionalProperties": false
+      }
+    },
+    "join_room": {
+      "params": {
+        "$schema": "https://json-schema.org/draft/2020-12/schema",
+        "type": "object",
+        "properties": {
+          "room_id": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 120
+          },
+          "spectate": {
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "room_id"
+        ],
+        "additionalProperties": false
+      },
+      "result": {
+        "$schema": "https://json-schema.org/draft/2020-12/schema",
+        "type": "object",
+        "properties": {
+          "sessionId": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 120
+          },
+          "spectator": {
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "sessionId"
+        ],
+        "additionalProperties": false
+      }
+    },
+    "get_catalog": {
+      "params": {
+        "$schema": "https://json-schema.org/draft/2020-12/schema",
+        "type": "object",
+        "properties": {
+          "content_version": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 120
+          }
+        },
+        "required": [
+          "content_version"
+        ],
+        "additionalProperties": false
+      },
+      "result": {
+        "$schema": "https://json-schema.org/draft/2020-12/schema",
+        "type": "object",
+        "properties": {
+          "version": {
+            "$ref": "#/$defs/__schema0"
+          },
+          "items": {
+            "type": "object",
+            "propertyNames": {
+              "type": "string"
+            },
+            "additionalProperties": {
+              "type": "object",
+              "properties": {
+                "name": {
+                  "$ref": "#/$defs/__schema0"
+                },
+                "price": {
+                  "type": "string",
+                  "maxLength": 16,
+                  "pattern": "^(0|[1-9]\\d*)$"
+                }
+              },
+              "required": [
+                "name",
+                "price"
+              ],
+              "additionalProperties": false
+            }
+          }
+        },
+        "required": [
+          "version",
+          "items"
+        ],
+        "additionalProperties": false,
+        "$defs": {
+          "__schema0": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 120
+          }
+        }
+      }
+    },
+    "get_snapshot": {
+      "params": {
+        "$schema": "https://json-schema.org/draft/2020-12/schema",
+        "type": "object",
+        "properties": {
+          "session_id": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 120
+          }
+        },
+        "required": [
+          "session_id"
+        ],
+        "additionalProperties": false
+      },
+      "result": {
+        "$schema": "https://json-schema.org/draft/2020-12/schema",
+        "type": "object",
+        "properties": {
+          "session_id": {
+            "$ref": "#/$defs/__schema0"
+          },
+          "night_id": {
+            "$ref": "#/$defs/__schema0"
+          },
+          "night": {
+            "$ref": "#/$defs/__schema1"
+          },
+          "nightName": {
+            "$ref": "#/$defs/__schema0"
+          },
+          "mode": {
+            "type": "string",
+            "enum": [
+              "campaign",
+              "endless",
+              "live"
+            ]
+          },
+          "seed": {
+            "$ref": "#/$defs/__schema1"
+          },
+          "server_time": {
+            "$ref": "#/$defs/__schema1"
+          },
+          "revision": {
+            "$ref": "#/$defs/__schema1"
+          },
+          "phase": {
+            "type": "string",
+            "enum": [
+              "preparation",
+              "open",
+              "results"
+            ]
+          },
+          "elapsed": {
+            "$ref": "#/$defs/__schema2"
+          },
+          "duration": {
+            "$ref": "#/$defs/__schema2"
+          },
+          "coins": {
+            "$ref": "#/$defs/__schema3"
+          },
+          "cargo": {
+            "$ref": "#/$defs/__schema4"
+          },
+          "capacity": {
+            "$ref": "#/$defs/__schema3"
+          },
+          "upgrades": {
+            "type": "array",
+            "items": {
+              "$ref": "#/$defs/__schema0"
+            }
+          },
+          "merchants": {
+            "type": "object",
+            "propertyNames": {
+              "type": "string"
+            },
+            "additionalProperties": {
+              "type": "object",
+              "properties": {
+                "band": {
+                  "type": "string",
+                  "enum": [
+                    "thriving",
+                    "healthy",
+                    "tight",
+                    "dark"
+                  ]
+                },
+                "coins": {
+                  "$ref": "#/$defs/__schema3"
+                },
+                "stock": {
+                  "$ref": "#/$defs/__schema4"
+                },
+                "prices": {
+                  "type": "object",
+                  "propertyNames": {
+                    "type": "string"
+                  },
+                  "additionalProperties": {
+                    "type": "object",
+                    "properties": {
+                      "buy": {
+                        "$ref": "#/$defs/__schema3"
+                      },
+                      "sell": {
+                        "$ref": "#/$defs/__schema3"
+                      },
+                      "label": {
+                        "$ref": "#/$defs/__schema0"
+                      },
+                      "target": {
+                        "$ref": "#/$defs/__schema3"
+                      }
+                    },
+                    "required": [
+                      "buy",
+                      "sell",
+                      "label",
+                      "target"
+                    ],
+                    "additionalProperties": false
+                  }
+                },
+                "strategy": {
+                  "$ref": "#/$defs/__schema5"
+                },
+                "vote": {
+                  "$ref": "#/$defs/__schema5"
+                },
+                "thinking": {
+                  "type": "string"
+                },
+                "relationship": {
+                  "type": "integer",
+                  "minimum": -5,
+                  "maximum": 10
+                },
+                "owned": {
+                  "$ref": "#/$defs/__schema3"
+                },
+                "shareholders": {
+                  "type": "array",
+                  "items": {
+                    "type": "object",
+                    "properties": {
+                      "name": {
+                        "$ref": "#/$defs/__schema0"
+                      },
+                      "count": {
+                        "$ref": "#/$defs/__schema3"
+                      }
+                    },
+                    "required": [
+                      "name",
+                      "count"
+                    ],
+                    "additionalProperties": false
+                  }
+                },
+                "bookValue": {
+                  "$ref": "#/$defs/__schema3"
+                },
+                "sharePrice": {
+                  "$ref": "#/$defs/__schema3"
+                },
+                "dividend": {
+                  "$ref": "#/$defs/__schema3"
+                },
+                "dividendHistory": {
+                  "maxItems": 5,
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/$defs/__schema3"
+                  }
+                },
+                "offering": {
+                  "type": "object",
+                  "properties": {
+                    "id": {
+                      "$ref": "#/$defs/__schema0"
+                    },
+                    "kind": {
+                      "type": "string",
+                      "enum": [
+                        "rescue",
+                        "expansion"
+                      ]
+                    },
+                    "price": {
+                      "$ref": "#/$defs/__schema3"
+                    },
+                    "left": {
+                      "$ref": "#/$defs/__schema3"
+                    },
+                    "total": {
+                      "$ref": "#/$defs/__schema3"
+                    },
+                    "available": {
+                      "$ref": "#/$defs/__schema3"
+                    },
+                    "ends": {
+                      "$ref": "#/$defs/__schema2"
+                    }
+                  },
+                  "required": [
+                    "id",
+                    "kind",
+                    "price",
+                    "left",
+                    "total",
+                    "available",
+                    "ends"
+                  ],
+                  "additionalProperties": false
+                },
+                "buyback": {
+                  "type": "object",
+                  "properties": {
+                    "id": {
+                      "$ref": "#/$defs/__schema0"
+                    },
+                    "price": {
+                      "$ref": "#/$defs/__schema3"
+                    }
+                  },
+                  "required": [
+                    "id",
+                    "price"
+                  ],
+                  "additionalProperties": false
+                }
+              },
+              "required": [
+                "band",
+                "coins",
+                "stock",
+                "prices",
+                "strategy",
+                "thinking",
+                "relationship",
+                "owned",
+                "shareholders",
+                "bookValue",
+                "sharePrice",
+                "dividend",
+                "dividendHistory"
+              ],
+              "additionalProperties": false
+            }
+          },
+          "orders": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "id": {
+                  "$ref": "#/$defs/__schema0"
+                },
+                "name": {
+                  "$ref": "#/$defs/__schema0"
+                },
+                "item": {
+                  "$ref": "#/$defs/__schema0"
+                },
+                "remaining": {
+                  "$ref": "#/$defs/__schema3"
+                },
+                "quantity": {
+                  "$ref": "#/$defs/__schema3"
+                },
+                "payout": {
+                  "$ref": "#/$defs/__schema3"
+                },
+                "boat": {
+                  "type": "integer",
+                  "minimum": 0,
+                  "maximum": 5
+                },
+                "personal": {
+                  "type": "boolean"
+                },
+                "opens": {
+                  "$ref": "#/$defs/__schema2"
+                },
+                "state": {
+                  "type": "string",
+                  "enum": [
+                    "upcoming",
+                    "open",
+                    "filled",
+                    "expired"
+                  ]
+                },
+                "wishes": {
+                  "type": "array",
+                  "items": {
+                    "type": "string"
+                  }
+                },
+                "wishAuthors": {
+                  "type": "array",
+                  "items": {
+                    "type": "string"
+                  }
+                }
+              },
+              "required": [
+                "id",
+                "name",
+                "item",
+                "remaining",
+                "quantity",
+                "payout",
+                "boat",
+                "personal",
+                "opens",
+                "state",
+                "wishes",
+                "wishAuthors"
+              ],
+              "additionalProperties": false
+            }
+          },
+          "objective": {
+            "type": "object",
+            "properties": {
+              "complete": {
+                "type": "boolean"
+              },
+              "name": {
+                "$ref": "#/$defs/__schema0"
+              },
+              "steps": {
+                "type": "array",
+                "items": {
+                  "type": "object",
+                  "properties": {
+                    "label": {
+                      "$ref": "#/$defs/__schema0"
+                    },
+                    "count": {
+                      "$ref": "#/$defs/__schema3"
+                    },
+                    "target": {
+                      "$ref": "#/$defs/__schema3"
+                    },
+                    "icon": {
+                      "$ref": "#/$defs/__schema0"
+                    }
+                  },
+                  "required": [
+                    "label",
+                    "count",
+                    "target",
+                    "icon"
+                  ],
+                  "additionalProperties": false
+                }
+              }
+            },
+            "required": [
+              "complete",
+              "name",
+              "steps"
+            ],
+            "additionalProperties": false
+          },
+          "delivered": {
+            "$ref": "#/$defs/__schema3"
+          },
+          "crafted": {
+            "$ref": "#/$defs/__schema3"
+          },
+          "crowdBudget": {
+            "$ref": "#/$defs/__schema3"
+          },
+          "crowdSold": {
+            "$ref": "#/$defs/__schema3"
+          },
+          "lifetimeCrafted": {
+            "$ref": "#/$defs/__schema3"
+          },
+          "lifetimeDividends": {
+            "$ref": "#/$defs/__schema3"
+          },
+          "earned": {
+            "$ref": "#/$defs/__schema3"
+          },
+          "spent": {
+            "$ref": "#/$defs/__schema3"
+          },
+          "boatsHelped": {
+            "$ref": "#/$defs/__schema3"
+          },
+          "rescued": {
+            "$ref": "#/$defs/__schema3"
+          },
+          "titles": {
+            "type": "array",
+            "items": {
+              "$ref": "#/$defs/__schema0"
+            }
+          },
+          "saveStatus": {
+            "type": "string",
+            "enum": [
+              "saved",
+              "unsaved"
+            ]
+          },
+          "events": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "id": {
+                  "$ref": "#/$defs/__schema0"
+                },
+                "label": {
+                  "$ref": "#/$defs/__schema0"
+                },
+                "detail": {
+                  "type": "string"
+                },
+                "at": {
+                  "$ref": "#/$defs/__schema2"
+                }
+              },
+              "required": [
+                "id",
+                "label",
+                "detail",
+                "at"
+              ],
+              "additionalProperties": false
+            }
+          },
+          "job": {
+            "type": "object",
+            "properties": {
+              "id": {
+                "$ref": "#/$defs/__schema0"
+              },
+              "readyAt": {
+                "$ref": "#/$defs/__schema2"
+              }
+            },
+            "required": [
+              "id",
+              "readyAt"
+            ],
+            "additionalProperties": false
+          },
+          "jobAvailable": {
+            "type": "boolean"
+          },
+          "activity": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "at": {
+                  "$ref": "#/$defs/__schema2"
+                },
+                "night": {
+                  "$ref": "#/$defs/__schema1"
+                },
+                "line": {
+                  "type": "string"
+                },
+                "actor": {
+                  "type": "string"
+                },
+                "receipt": {
+                  "type": "object",
+                  "properties": {
+                    "id": {
+                      "$ref": "#/$defs/__schema0"
+                    },
+                    "label": {
+                      "$ref": "#/$defs/__schema0"
+                    },
+                    "url": {
+                      "type": "string",
+                      "format": "uri"
+                    }
+                  },
+                  "required": [
+                    "id",
+                    "label"
+                  ],
+                  "additionalProperties": false
+                }
+              },
+              "required": [
+                "at",
+                "night",
+                "line"
+              ],
+              "additionalProperties": false
+            }
+          },
+          "traders": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "id": {
+                  "$ref": "#/$defs/__schema0"
+                },
+                "name": {
+                  "$ref": "#/$defs/__schema0"
+                },
+                "lastStop": {
+                  "$ref": "#/$defs/__schema0"
+                }
+              },
+              "required": [
+                "id",
+                "name"
+              ],
+              "additionalProperties": false
+            }
+          },
+          "listings": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "id": {
+                  "$ref": "#/$defs/__schema0"
+                },
+                "stall": {
+                  "$ref": "#/$defs/__schema0"
+                },
+                "shares": {
+                  "$ref": "#/$defs/__schema3"
+                },
+                "price": {
+                  "$ref": "#/$defs/__schema3"
+                },
+                "seller": {
+                  "$ref": "#/$defs/__schema0"
+                },
+                "mine": {
+                  "type": "boolean"
+                }
+              },
+              "required": [
+                "id",
+                "stall",
+                "shares",
+                "price",
+                "seller",
+                "mine"
+              ],
+              "additionalProperties": false
+            }
+          },
+          "spectator": {
+            "type": "boolean"
+          },
+          "pendingActions": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "id": {
+                  "$ref": "#/$defs/__schema0"
+                },
+                "state": {
+                  "type": "string",
+                  "enum": [
+                    "pending",
+                    "unknown"
+                  ]
+                }
+              },
+              "required": [
+                "id",
+                "state"
+              ],
+              "additionalProperties": false
+            }
+          }
+        },
+        "required": [
+          "session_id",
+          "night_id",
+          "night",
+          "nightName",
+          "mode",
+          "seed",
+          "server_time",
+          "revision",
+          "phase",
+          "elapsed",
+          "duration",
+          "coins",
+          "cargo",
+          "capacity",
+          "upgrades",
+          "merchants",
+          "orders",
+          "objective",
+          "delivered",
+          "crafted",
+          "crowdBudget",
+          "crowdSold",
+          "lifetimeCrafted",
+          "lifetimeDividends",
+          "earned",
+          "spent",
+          "boatsHelped",
+          "rescued",
+          "titles",
+          "saveStatus",
+          "events",
+          "jobAvailable",
+          "activity",
+          "traders",
+          "listings",
+          "spectator",
+          "pendingActions"
+        ],
+        "additionalProperties": false,
+        "$defs": {
+          "__schema0": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 120
+          },
+          "__schema1": {
+            "type": "integer",
+            "minimum": 0,
+            "maximum": 9007199254740991
+          },
+          "__schema2": {
+            "type": "number",
+            "minimum": 0
+          },
+          "__schema3": {
+            "type": "string",
+            "maxLength": 16,
+            "pattern": "^(0|[1-9]\\d*)$"
+          },
+          "__schema4": {
+            "type": "object",
+            "propertyNames": {
+              "type": "string"
+            },
+            "additionalProperties": {
+              "$ref": "#/$defs/__schema3"
+            }
+          },
+          "__schema5": {
+            "type": "string",
+            "enum": [
+              "steady",
+              "bold",
+              "festival",
+              "bargain"
+            ]
+          }
+        }
+      }
+    },
+    "get_quote": {
+      "params": {
+        "$schema": "https://json-schema.org/draft/2020-12/schema",
+        "type": "object",
+        "properties": {
+          "session_id": {
+            "$ref": "#/$defs/__schema0"
+          },
+          "night_id": {
+            "$ref": "#/$defs/__schema0"
+          },
+          "intent": {
+            "oneOf": [
+              {
+                "type": "object",
+                "properties": {
+                  "type": {
+                    "type": "string",
+                    "enum": [
+                      "buy",
+                      "sell"
+                    ]
+                  },
+                  "stall_id": {
+                    "$ref": "#/$defs/__schema1"
+                  },
+                  "item_id": {
+                    "$ref": "#/$defs/__schema1"
+                  },
+                  "quantity": {
+                    "$ref": "#/$defs/__schema2"
+                  }
+                },
+                "required": [
+                  "type",
+                  "stall_id",
+                  "item_id",
+                  "quantity"
+                ],
+                "additionalProperties": false
+              },
+              {
+                "type": "object",
+                "properties": {
+                  "type": {
+                    "type": "string",
+                    "const": "craft"
+                  },
+                  "recipe_id": {
+                    "$ref": "#/$defs/__schema1"
+                  },
+                  "quantity": {
+                    "$ref": "#/$defs/__schema2"
+                  }
+                },
+                "required": [
+                  "type",
+                  "recipe_id",
+                  "quantity"
+                ],
+                "additionalProperties": false
+              },
+              {
+                "type": "object",
+                "properties": {
+                  "type": {
+                    "type": "string",
+                    "const": "fill_order"
+                  },
+                  "order_id": {
+                    "$ref": "#/$defs/__schema1"
+                  },
+                  "quantity": {
+                    "$ref": "#/$defs/__schema2"
+                  },
+                  "wish_id": {
+                    "$ref": "#/$defs/__schema1"
+                  }
+                },
+                "required": [
+                  "type",
+                  "order_id",
+                  "quantity"
+                ],
+                "additionalProperties": false
+              },
+              {
+                "type": "object",
+                "properties": {
+                  "type": {
+                    "type": "string",
+                    "const": "sell_crowd"
+                  },
+                  "item_id": {
+                    "$ref": "#/$defs/__schema1"
+                  },
+                  "quantity": {
+                    "$ref": "#/$defs/__schema2"
+                  }
+                },
+                "required": [
+                  "type",
+                  "item_id",
+                  "quantity"
+                ],
+                "additionalProperties": false
+              },
+              {
+                "type": "object",
+                "properties": {
+                  "type": {
+                    "type": "string",
+                    "const": "buy_offering"
+                  },
+                  "offering_id": {
+                    "$ref": "#/$defs/__schema1"
+                  },
+                  "shares": {
+                    "$ref": "#/$defs/__schema2"
+                  }
+                },
+                "required": [
+                  "type",
+                  "offering_id",
+                  "shares"
+                ],
+                "additionalProperties": false
+              },
+              {
+                "type": "object",
+                "properties": {
+                  "type": {
+                    "type": "string",
+                    "const": "vote_strategy"
+                  },
+                  "stall_id": {
+                    "$ref": "#/$defs/__schema1"
+                  },
+                  "strategy_id": {
+                    "$ref": "#/$defs/__schema1"
+                  }
+                },
+                "required": [
+                  "type",
+                  "stall_id",
+                  "strategy_id"
+                ],
+                "additionalProperties": false
+              },
+              {
+                "type": "object",
+                "properties": {
+                  "type": {
+                    "type": "string",
+                    "const": "buy_upgrade"
+                  },
+                  "upgrade_id": {
+                    "$ref": "#/$defs/__schema1"
+                  }
+                },
+                "required": [
+                  "type",
+                  "upgrade_id"
+                ],
+                "additionalProperties": false
+              },
+              {
+                "type": "object",
+                "properties": {
+                  "type": {
+                    "type": "string",
+                    "const": "start_job"
+                  }
+                },
+                "required": [
+                  "type"
+                ],
+                "additionalProperties": false
+              },
+              {
+                "type": "object",
+                "properties": {
+                  "type": {
+                    "type": "string",
+                    "const": "finish_job"
+                  },
+                  "job_id": {
+                    "$ref": "#/$defs/__schema1"
+                  }
+                },
+                "required": [
+                  "type",
+                  "job_id"
+                ],
+                "additionalProperties": false
+              },
+              {
+                "type": "object",
+                "properties": {
+                  "type": {
+                    "type": "string",
+                    "const": "accept_buyback"
+                  },
+                  "buyback_id": {
+                    "$ref": "#/$defs/__schema1"
+                  }
+                },
+                "required": [
+                  "type",
+                  "buyback_id"
+                ],
+                "additionalProperties": false
+              },
+              {
+                "type": "object",
+                "properties": {
+                  "type": {
+                    "type": "string",
+                    "const": "list_shares"
+                  },
+                  "stall_id": {
+                    "$ref": "#/$defs/__schema1"
+                  },
+                  "shares": {
+                    "$ref": "#/$defs/__schema2"
+                  },
+                  "price_per_share": {
+                    "$ref": "#/$defs/__schema2"
+                  }
+                },
+                "required": [
+                  "type",
+                  "stall_id",
+                  "shares",
+                  "price_per_share"
+                ],
+                "additionalProperties": false
+              },
+              {
+                "type": "object",
+                "properties": {
+                  "type": {
+                    "type": "string",
+                    "enum": [
+                      "cancel_listing",
+                      "buy_listing"
+                    ]
+                  },
+                  "listing_id": {
+                    "$ref": "#/$defs/__schema1"
+                  }
+                },
+                "required": [
+                  "type",
+                  "listing_id"
+                ],
+                "additionalProperties": false
+              }
+            ]
+          }
+        },
+        "required": [
+          "session_id",
+          "night_id",
+          "intent"
+        ],
+        "additionalProperties": false,
+        "$defs": {
+          "__schema0": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 120
+          },
+          "__schema1": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 120
+          },
+          "__schema2": {
+            "type": "string",
+            "maxLength": 16,
+            "pattern": "^(0|[1-9]\\d*)$"
+          }
+        }
+      },
+      "result": {
+        "$schema": "https://json-schema.org/draft/2020-12/schema",
+        "type": "object",
+        "properties": {
+          "quote_id": {
+            "$ref": "#/$defs/__schema0"
+          },
+          "intent": {
+            "oneOf": [
+              {
+                "type": "object",
+                "properties": {
+                  "type": {
+                    "type": "string",
+                    "enum": [
+                      "buy",
+                      "sell"
+                    ]
+                  },
+                  "stall_id": {
+                    "$ref": "#/$defs/__schema0"
+                  },
+                  "item_id": {
+                    "$ref": "#/$defs/__schema0"
+                  },
+                  "quantity": {
+                    "$ref": "#/$defs/__schema1"
+                  }
+                },
+                "required": [
+                  "type",
+                  "stall_id",
+                  "item_id",
+                  "quantity"
+                ],
+                "additionalProperties": false
+              },
+              {
+                "type": "object",
+                "properties": {
+                  "type": {
+                    "type": "string",
+                    "const": "craft"
+                  },
+                  "recipe_id": {
+                    "$ref": "#/$defs/__schema0"
+                  },
+                  "quantity": {
+                    "$ref": "#/$defs/__schema1"
+                  }
+                },
+                "required": [
+                  "type",
+                  "recipe_id",
+                  "quantity"
+                ],
+                "additionalProperties": false
+              },
+              {
+                "type": "object",
+                "properties": {
+                  "type": {
+                    "type": "string",
+                    "const": "fill_order"
+                  },
+                  "order_id": {
+                    "$ref": "#/$defs/__schema0"
+                  },
+                  "quantity": {
+                    "$ref": "#/$defs/__schema1"
+                  },
+                  "wish_id": {
+                    "$ref": "#/$defs/__schema0"
+                  }
+                },
+                "required": [
+                  "type",
+                  "order_id",
+                  "quantity"
+                ],
+                "additionalProperties": false
+              },
+              {
+                "type": "object",
+                "properties": {
+                  "type": {
+                    "type": "string",
+                    "const": "sell_crowd"
+                  },
+                  "item_id": {
+                    "$ref": "#/$defs/__schema0"
+                  },
+                  "quantity": {
+                    "$ref": "#/$defs/__schema1"
+                  }
+                },
+                "required": [
+                  "type",
+                  "item_id",
+                  "quantity"
+                ],
+                "additionalProperties": false
+              },
+              {
+                "type": "object",
+                "properties": {
+                  "type": {
+                    "type": "string",
+                    "const": "buy_offering"
+                  },
+                  "offering_id": {
+                    "$ref": "#/$defs/__schema0"
+                  },
+                  "shares": {
+                    "$ref": "#/$defs/__schema1"
+                  }
+                },
+                "required": [
+                  "type",
+                  "offering_id",
+                  "shares"
+                ],
+                "additionalProperties": false
+              },
+              {
+                "type": "object",
+                "properties": {
+                  "type": {
+                    "type": "string",
+                    "const": "vote_strategy"
+                  },
+                  "stall_id": {
+                    "$ref": "#/$defs/__schema0"
+                  },
+                  "strategy_id": {
+                    "$ref": "#/$defs/__schema0"
+                  }
+                },
+                "required": [
+                  "type",
+                  "stall_id",
+                  "strategy_id"
+                ],
+                "additionalProperties": false
+              },
+              {
+                "type": "object",
+                "properties": {
+                  "type": {
+                    "type": "string",
+                    "const": "buy_upgrade"
+                  },
+                  "upgrade_id": {
+                    "$ref": "#/$defs/__schema0"
+                  }
+                },
+                "required": [
+                  "type",
+                  "upgrade_id"
+                ],
+                "additionalProperties": false
+              },
+              {
+                "type": "object",
+                "properties": {
+                  "type": {
+                    "type": "string",
+                    "const": "start_job"
+                  }
+                },
+                "required": [
+                  "type"
+                ],
+                "additionalProperties": false
+              },
+              {
+                "type": "object",
+                "properties": {
+                  "type": {
+                    "type": "string",
+                    "const": "finish_job"
+                  },
+                  "job_id": {
+                    "$ref": "#/$defs/__schema0"
+                  }
+                },
+                "required": [
+                  "type",
+                  "job_id"
+                ],
+                "additionalProperties": false
+              },
+              {
+                "type": "object",
+                "properties": {
+                  "type": {
+                    "type": "string",
+                    "const": "accept_buyback"
+                  },
+                  "buyback_id": {
+                    "$ref": "#/$defs/__schema0"
+                  }
+                },
+                "required": [
+                  "type",
+                  "buyback_id"
+                ],
+                "additionalProperties": false
+              },
+              {
+                "type": "object",
+                "properties": {
+                  "type": {
+                    "type": "string",
+                    "const": "list_shares"
+                  },
+                  "stall_id": {
+                    "$ref": "#/$defs/__schema0"
+                  },
+                  "shares": {
+                    "$ref": "#/$defs/__schema1"
+                  },
+                  "price_per_share": {
+                    "$ref": "#/$defs/__schema1"
+                  }
+                },
+                "required": [
+                  "type",
+                  "stall_id",
+                  "shares",
+                  "price_per_share"
+                ],
+                "additionalProperties": false
+              },
+              {
+                "type": "object",
+                "properties": {
+                  "type": {
+                    "type": "string",
+                    "enum": [
+                      "cancel_listing",
+                      "buy_listing"
+                    ]
+                  },
+                  "listing_id": {
+                    "$ref": "#/$defs/__schema0"
+                  }
+                },
+                "required": [
+                  "type",
+                  "listing_id"
+                ],
+                "additionalProperties": false
+              }
+            ]
+          },
+          "effects": {
+            "type": "array",
+            "items": {
+              "oneOf": [
+                {
+                  "type": "object",
+                  "properties": {
+                    "op": {
+                      "type": "string",
+                      "const": "mint"
+                    },
+                    "asset": {
+                      "$ref": "#/$defs/__schema0"
+                    },
+                    "amount": {
+                      "$ref": "#/$defs/__schema1"
+                    },
+                    "to": {
+                      "$ref": "#/$defs/__schema0"
+                    },
+                    "memo": {
+                      "$ref": "#/$defs/__schema0"
+                    }
+                  },
+                  "required": [
+                    "op",
+                    "asset",
+                    "amount",
+                    "to",
+                    "memo"
+                  ],
+                  "additionalProperties": false
+                },
+                {
+                  "type": "object",
+                  "properties": {
+                    "op": {
+                      "type": "string",
+                      "const": "burn"
+                    },
+                    "asset": {
+                      "$ref": "#/$defs/__schema0"
+                    },
+                    "amount": {
+                      "$ref": "#/$defs/__schema1"
+                    },
+                    "from": {
+                      "$ref": "#/$defs/__schema0"
+                    },
+                    "memo": {
+                      "$ref": "#/$defs/__schema0"
+                    }
+                  },
+                  "required": [
+                    "op",
+                    "asset",
+                    "amount",
+                    "from",
+                    "memo"
+                  ],
+                  "additionalProperties": false
+                },
+                {
+                  "type": "object",
+                  "properties": {
+                    "op": {
+                      "type": "string",
+                      "const": "transfer"
+                    },
+                    "asset": {
+                      "$ref": "#/$defs/__schema0"
+                    },
+                    "amount": {
+                      "$ref": "#/$defs/__schema1"
+                    },
+                    "from": {
+                      "$ref": "#/$defs/__schema0"
+                    },
+                    "to": {
+                      "$ref": "#/$defs/__schema0"
+                    },
+                    "memo": {
+                      "$ref": "#/$defs/__schema0"
+                    }
+                  },
+                  "required": [
+                    "op",
+                    "asset",
+                    "amount",
+                    "from",
+                    "to",
+                    "memo"
+                  ],
+                  "additionalProperties": false
+                }
+              ]
+            }
+          },
+          "summary": {
+            "$ref": "#/$defs/__schema0"
+          },
+          "expires_at": {
+            "type": "integer",
+            "minimum": 0,
+            "maximum": 9007199254740991
+          }
+        },
+        "required": [
+          "quote_id",
+          "intent",
+          "effects",
+          "summary",
+          "expires_at"
+        ],
+        "additionalProperties": false,
+        "$defs": {
+          "__schema0": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 120
+          },
+          "__schema1": {
+            "type": "string",
+            "maxLength": 16,
+            "pattern": "^(0|[1-9]\\d*)$"
+          }
+        }
+      }
+    },
+    "haggle": {
+      "params": {
+        "$schema": "https://json-schema.org/draft/2020-12/schema",
+        "type": "object",
+        "properties": {
+          "session_id": {
+            "$ref": "#/$defs/__schema0"
+          },
+          "night_id": {
+            "$ref": "#/$defs/__schema0"
+          },
+          "offer": {
+            "type": "object",
+            "properties": {
+              "stall_id": {
+                "$ref": "#/$defs/__schema1"
+              },
+              "item_id": {
+                "$ref": "#/$defs/__schema1"
+              },
+              "side": {
+                "type": "string",
+                "enum": [
+                  "buy",
+                  "sell"
+                ]
+              },
+              "quantity": {
+                "$ref": "#/$defs/__schema2"
+              },
+              "price_per_unit": {
+                "$ref": "#/$defs/__schema2"
+              }
+            },
+            "required": [
+              "stall_id",
+              "item_id",
+              "side",
+              "quantity",
+              "price_per_unit"
+            ],
+            "additionalProperties": false
+          }
+        },
+        "required": [
+          "session_id",
+          "night_id",
+          "offer"
+        ],
+        "additionalProperties": false,
+        "$defs": {
+          "__schema0": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 120
+          },
+          "__schema1": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 120
+          },
+          "__schema2": {
+            "type": "string",
+            "maxLength": 16,
+            "pattern": "^(0|[1-9]\\d*)$"
+          }
+        }
+      },
+      "result": {
+        "$schema": "https://json-schema.org/draft/2020-12/schema",
+        "type": "object",
+        "properties": {
+          "outcome": {
+            "type": "string",
+            "enum": [
+              "accept",
+              "counter",
+              "refuse"
+            ]
+          },
+          "quote": {
+            "type": "object",
+            "properties": {
+              "quote_id": {
+                "$ref": "#/$defs/__schema0"
+              },
+              "intent": {
+                "oneOf": [
+                  {
+                    "type": "object",
+                    "properties": {
+                      "type": {
+                        "type": "string",
+                        "enum": [
+                          "buy",
+                          "sell"
+                        ]
+                      },
+                      "stall_id": {
+                        "$ref": "#/$defs/__schema0"
+                      },
+                      "item_id": {
+                        "$ref": "#/$defs/__schema0"
+                      },
+                      "quantity": {
+                        "$ref": "#/$defs/__schema1"
+                      }
+                    },
+                    "required": [
+                      "type",
+                      "stall_id",
+                      "item_id",
+                      "quantity"
+                    ],
+                    "additionalProperties": false
+                  },
+                  {
+                    "type": "object",
+                    "properties": {
+                      "type": {
+                        "type": "string",
+                        "const": "craft"
+                      },
+                      "recipe_id": {
+                        "$ref": "#/$defs/__schema0"
+                      },
+                      "quantity": {
+                        "$ref": "#/$defs/__schema1"
+                      }
+                    },
+                    "required": [
+                      "type",
+                      "recipe_id",
+                      "quantity"
+                    ],
+                    "additionalProperties": false
+                  },
+                  {
+                    "type": "object",
+                    "properties": {
+                      "type": {
+                        "type": "string",
+                        "const": "fill_order"
+                      },
+                      "order_id": {
+                        "$ref": "#/$defs/__schema0"
+                      },
+                      "quantity": {
+                        "$ref": "#/$defs/__schema1"
+                      },
+                      "wish_id": {
+                        "$ref": "#/$defs/__schema0"
+                      }
+                    },
+                    "required": [
+                      "type",
+                      "order_id",
+                      "quantity"
+                    ],
+                    "additionalProperties": false
+                  },
+                  {
+                    "type": "object",
+                    "properties": {
+                      "type": {
+                        "type": "string",
+                        "const": "sell_crowd"
+                      },
+                      "item_id": {
+                        "$ref": "#/$defs/__schema0"
+                      },
+                      "quantity": {
+                        "$ref": "#/$defs/__schema1"
+                      }
+                    },
+                    "required": [
+                      "type",
+                      "item_id",
+                      "quantity"
+                    ],
+                    "additionalProperties": false
+                  },
+                  {
+                    "type": "object",
+                    "properties": {
+                      "type": {
+                        "type": "string",
+                        "const": "buy_offering"
+                      },
+                      "offering_id": {
+                        "$ref": "#/$defs/__schema0"
+                      },
+                      "shares": {
+                        "$ref": "#/$defs/__schema1"
+                      }
+                    },
+                    "required": [
+                      "type",
+                      "offering_id",
+                      "shares"
+                    ],
+                    "additionalProperties": false
+                  },
+                  {
+                    "type": "object",
+                    "properties": {
+                      "type": {
+                        "type": "string",
+                        "const": "vote_strategy"
+                      },
+                      "stall_id": {
+                        "$ref": "#/$defs/__schema0"
+                      },
+                      "strategy_id": {
+                        "$ref": "#/$defs/__schema0"
+                      }
+                    },
+                    "required": [
+                      "type",
+                      "stall_id",
+                      "strategy_id"
+                    ],
+                    "additionalProperties": false
+                  },
+                  {
+                    "type": "object",
+                    "properties": {
+                      "type": {
+                        "type": "string",
+                        "const": "buy_upgrade"
+                      },
+                      "upgrade_id": {
+                        "$ref": "#/$defs/__schema0"
+                      }
+                    },
+                    "required": [
+                      "type",
+                      "upgrade_id"
+                    ],
+                    "additionalProperties": false
+                  },
+                  {
+                    "type": "object",
+                    "properties": {
+                      "type": {
+                        "type": "string",
+                        "const": "start_job"
+                      }
+                    },
+                    "required": [
+                      "type"
+                    ],
+                    "additionalProperties": false
+                  },
+                  {
+                    "type": "object",
+                    "properties": {
+                      "type": {
+                        "type": "string",
+                        "const": "finish_job"
+                      },
+                      "job_id": {
+                        "$ref": "#/$defs/__schema0"
+                      }
+                    },
+                    "required": [
+                      "type",
+                      "job_id"
+                    ],
+                    "additionalProperties": false
+                  },
+                  {
+                    "type": "object",
+                    "properties": {
+                      "type": {
+                        "type": "string",
+                        "const": "accept_buyback"
+                      },
+                      "buyback_id": {
+                        "$ref": "#/$defs/__schema0"
+                      }
+                    },
+                    "required": [
+                      "type",
+                      "buyback_id"
+                    ],
+                    "additionalProperties": false
+                  },
+                  {
+                    "type": "object",
+                    "properties": {
+                      "type": {
+                        "type": "string",
+                        "const": "list_shares"
+                      },
+                      "stall_id": {
+                        "$ref": "#/$defs/__schema0"
+                      },
+                      "shares": {
+                        "$ref": "#/$defs/__schema1"
+                      },
+                      "price_per_share": {
+                        "$ref": "#/$defs/__schema1"
+                      }
+                    },
+                    "required": [
+                      "type",
+                      "stall_id",
+                      "shares",
+                      "price_per_share"
+                    ],
+                    "additionalProperties": false
+                  },
+                  {
+                    "type": "object",
+                    "properties": {
+                      "type": {
+                        "type": "string",
+                        "enum": [
+                          "cancel_listing",
+                          "buy_listing"
+                        ]
+                      },
+                      "listing_id": {
+                        "$ref": "#/$defs/__schema0"
+                      }
+                    },
+                    "required": [
+                      "type",
+                      "listing_id"
+                    ],
+                    "additionalProperties": false
+                  }
+                ]
+              },
+              "effects": {
+                "type": "array",
+                "items": {
+                  "oneOf": [
+                    {
+                      "type": "object",
+                      "properties": {
+                        "op": {
+                          "type": "string",
+                          "const": "mint"
+                        },
+                        "asset": {
+                          "$ref": "#/$defs/__schema0"
+                        },
+                        "amount": {
+                          "$ref": "#/$defs/__schema1"
+                        },
+                        "to": {
+                          "$ref": "#/$defs/__schema0"
+                        },
+                        "memo": {
+                          "$ref": "#/$defs/__schema0"
+                        }
+                      },
+                      "required": [
+                        "op",
+                        "asset",
+                        "amount",
+                        "to",
+                        "memo"
+                      ],
+                      "additionalProperties": false
+                    },
+                    {
+                      "type": "object",
+                      "properties": {
+                        "op": {
+                          "type": "string",
+                          "const": "burn"
+                        },
+                        "asset": {
+                          "$ref": "#/$defs/__schema0"
+                        },
+                        "amount": {
+                          "$ref": "#/$defs/__schema1"
+                        },
+                        "from": {
+                          "$ref": "#/$defs/__schema0"
+                        },
+                        "memo": {
+                          "$ref": "#/$defs/__schema0"
+                        }
+                      },
+                      "required": [
+                        "op",
+                        "asset",
+                        "amount",
+                        "from",
+                        "memo"
+                      ],
+                      "additionalProperties": false
+                    },
+                    {
+                      "type": "object",
+                      "properties": {
+                        "op": {
+                          "type": "string",
+                          "const": "transfer"
+                        },
+                        "asset": {
+                          "$ref": "#/$defs/__schema0"
+                        },
+                        "amount": {
+                          "$ref": "#/$defs/__schema1"
+                        },
+                        "from": {
+                          "$ref": "#/$defs/__schema0"
+                        },
+                        "to": {
+                          "$ref": "#/$defs/__schema0"
+                        },
+                        "memo": {
+                          "$ref": "#/$defs/__schema0"
+                        }
+                      },
+                      "required": [
+                        "op",
+                        "asset",
+                        "amount",
+                        "from",
+                        "to",
+                        "memo"
+                      ],
+                      "additionalProperties": false
+                    }
+                  ]
+                }
+              },
+              "summary": {
+                "$ref": "#/$defs/__schema0"
+              },
+              "expires_at": {
+                "type": "integer",
+                "minimum": 0,
+                "maximum": 9007199254740991
+              }
+            },
+            "required": [
+              "quote_id",
+              "intent",
+              "effects",
+              "summary",
+              "expires_at"
+            ],
+            "additionalProperties": false
+          },
+          "line": {
+            "type": "string"
+          },
+          "retry_after_ms": {
+            "type": "integer",
+            "minimum": 0,
+            "maximum": 9007199254740991
+          }
+        },
+        "required": [
+          "outcome",
+          "line",
+          "retry_after_ms"
+        ],
+        "additionalProperties": false,
+        "$defs": {
+          "__schema0": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 120
+          },
+          "__schema1": {
+            "type": "string",
+            "maxLength": 16,
+            "pattern": "^(0|[1-9]\\d*)$"
+          }
+        }
+      }
+    },
+    "submit_action": {
+      "params": {
+        "$schema": "https://json-schema.org/draft/2020-12/schema",
+        "type": "object",
+        "properties": {
+          "session_id": {
+            "$ref": "#/$defs/__schema0"
+          },
+          "night_id": {
+            "$ref": "#/$defs/__schema0"
+          },
+          "action_id": {
+            "$ref": "#/$defs/__schema0"
+          },
+          "quote_id": {
+            "$ref": "#/$defs/__schema0"
+          }
+        },
+        "required": [
+          "session_id",
+          "night_id",
+          "action_id",
+          "quote_id"
+        ],
+        "additionalProperties": false,
+        "$defs": {
+          "__schema0": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 120
+          }
+        }
+      },
+      "result": {
+        "$schema": "https://json-schema.org/draft/2020-12/schema",
+        "oneOf": [
+          {
+            "type": "object",
+            "properties": {
+              "state": {
+                "type": "string",
+                "const": "confirmed"
+              },
+              "receipt": {
+                "type": "object",
+                "properties": {
+                  "id": {
+                    "$ref": "#/$defs/__schema0"
+                  },
+                  "label": {
+                    "$ref": "#/$defs/__schema0"
+                  },
+                  "url": {
+                    "type": "string",
+                    "format": "uri"
+                  }
+                },
+                "required": [
+                  "id",
+                  "label"
+                ],
+                "additionalProperties": false
+              }
+            },
+            "required": [
+              "state",
+              "receipt"
+            ],
+            "additionalProperties": false
+          },
+          {
+            "type": "object",
+            "properties": {
+              "state": {
+                "type": "string",
+                "enum": [
+                  "pending",
+                  "unknown",
+                  "rejected"
+                ]
+              },
+              "reason": {
+                "type": "string"
+              }
+            },
+            "required": [
+              "state"
+            ],
+            "additionalProperties": false
+          }
+        ],
+        "$defs": {
+          "__schema0": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 120
+          }
+        }
+      }
+    },
+    "get_action_status": {
+      "params": {
+        "$schema": "https://json-schema.org/draft/2020-12/schema",
+        "type": "object",
+        "properties": {
+          "session_id": {
+            "$ref": "#/$defs/__schema0"
+          },
+          "night_id": {
+            "$ref": "#/$defs/__schema0"
+          },
+          "action_id": {
+            "$ref": "#/$defs/__schema0"
+          }
+        },
+        "required": [
+          "session_id",
+          "night_id",
+          "action_id"
+        ],
+        "additionalProperties": false,
+        "$defs": {
+          "__schema0": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 120
+          }
+        }
+      },
+      "result": {
+        "$schema": "https://json-schema.org/draft/2020-12/schema",
+        "oneOf": [
+          {
+            "type": "object",
+            "properties": {
+              "state": {
+                "type": "string",
+                "const": "confirmed"
+              },
+              "receipt": {
+                "type": "object",
+                "properties": {
+                  "id": {
+                    "$ref": "#/$defs/__schema0"
+                  },
+                  "label": {
+                    "$ref": "#/$defs/__schema0"
+                  },
+                  "url": {
+                    "type": "string",
+                    "format": "uri"
+                  }
+                },
+                "required": [
+                  "id",
+                  "label"
+                ],
+                "additionalProperties": false
+              }
+            },
+            "required": [
+              "state",
+              "receipt"
+            ],
+            "additionalProperties": false
+          },
+          {
+            "type": "object",
+            "properties": {
+              "state": {
+                "type": "string",
+                "enum": [
+                  "pending",
+                  "unknown",
+                  "rejected"
+                ]
+              },
+              "reason": {
+                "type": "string"
+              }
+            },
+            "required": [
+              "state"
+            ],
+            "additionalProperties": false
+          }
+        ],
+        "$defs": {
+          "__schema0": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 120
+          }
+        }
+      }
+    },
+    "advance_phase": {
+      "params": {
+        "$schema": "https://json-schema.org/draft/2020-12/schema",
+        "type": "object",
+        "properties": {
+          "session_id": {
+            "$ref": "#/$defs/__schema0"
+          },
+          "action_id": {
+            "$ref": "#/$defs/__schema0"
+          }
+        },
+        "required": [
+          "session_id",
+          "action_id"
+        ],
+        "additionalProperties": false,
+        "$defs": {
+          "__schema0": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 120
+          }
+        }
+      },
+      "result": {
+        "$schema": "https://json-schema.org/draft/2020-12/schema",
+        "type": "object",
+        "properties": {
+          "session_id": {
+            "$ref": "#/$defs/__schema0"
+          },
+          "night_id": {
+            "$ref": "#/$defs/__schema0"
+          },
+          "night": {
+            "$ref": "#/$defs/__schema1"
+          },
+          "nightName": {
+            "$ref": "#/$defs/__schema0"
+          },
+          "mode": {
+            "type": "string",
+            "enum": [
+              "campaign",
+              "endless",
+              "live"
+            ]
+          },
+          "seed": {
+            "$ref": "#/$defs/__schema1"
+          },
+          "server_time": {
+            "$ref": "#/$defs/__schema1"
+          },
+          "revision": {
+            "$ref": "#/$defs/__schema1"
+          },
+          "phase": {
+            "type": "string",
+            "enum": [
+              "preparation",
+              "open",
+              "results"
+            ]
+          },
+          "elapsed": {
+            "$ref": "#/$defs/__schema2"
+          },
+          "duration": {
+            "$ref": "#/$defs/__schema2"
+          },
+          "coins": {
+            "$ref": "#/$defs/__schema3"
+          },
+          "cargo": {
+            "$ref": "#/$defs/__schema4"
+          },
+          "capacity": {
+            "$ref": "#/$defs/__schema3"
+          },
+          "upgrades": {
+            "type": "array",
+            "items": {
+              "$ref": "#/$defs/__schema0"
+            }
+          },
+          "merchants": {
+            "type": "object",
+            "propertyNames": {
+              "type": "string"
+            },
+            "additionalProperties": {
+              "type": "object",
+              "properties": {
+                "band": {
+                  "type": "string",
+                  "enum": [
+                    "thriving",
+                    "healthy",
+                    "tight",
+                    "dark"
+                  ]
+                },
+                "coins": {
+                  "$ref": "#/$defs/__schema3"
+                },
+                "stock": {
+                  "$ref": "#/$defs/__schema4"
+                },
+                "prices": {
+                  "type": "object",
+                  "propertyNames": {
+                    "type": "string"
+                  },
+                  "additionalProperties": {
+                    "type": "object",
+                    "properties": {
+                      "buy": {
+                        "$ref": "#/$defs/__schema3"
+                      },
+                      "sell": {
+                        "$ref": "#/$defs/__schema3"
+                      },
+                      "label": {
+                        "$ref": "#/$defs/__schema0"
+                      },
+                      "target": {
+                        "$ref": "#/$defs/__schema3"
+                      }
+                    },
+                    "required": [
+                      "buy",
+                      "sell",
+                      "label",
+                      "target"
+                    ],
+                    "additionalProperties": false
+                  }
+                },
+                "strategy": {
+                  "$ref": "#/$defs/__schema5"
+                },
+                "vote": {
+                  "$ref": "#/$defs/__schema5"
+                },
+                "thinking": {
+                  "type": "string"
+                },
+                "relationship": {
+                  "type": "integer",
+                  "minimum": -5,
+                  "maximum": 10
+                },
+                "owned": {
+                  "$ref": "#/$defs/__schema3"
+                },
+                "shareholders": {
+                  "type": "array",
+                  "items": {
+                    "type": "object",
+                    "properties": {
+                      "name": {
+                        "$ref": "#/$defs/__schema0"
+                      },
+                      "count": {
+                        "$ref": "#/$defs/__schema3"
+                      }
+                    },
+                    "required": [
+                      "name",
+                      "count"
+                    ],
+                    "additionalProperties": false
+                  }
+                },
+                "bookValue": {
+                  "$ref": "#/$defs/__schema3"
+                },
+                "sharePrice": {
+                  "$ref": "#/$defs/__schema3"
+                },
+                "dividend": {
+                  "$ref": "#/$defs/__schema3"
+                },
+                "dividendHistory": {
+                  "maxItems": 5,
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/$defs/__schema3"
+                  }
+                },
+                "offering": {
+                  "type": "object",
+                  "properties": {
+                    "id": {
+                      "$ref": "#/$defs/__schema0"
+                    },
+                    "kind": {
+                      "type": "string",
+                      "enum": [
+                        "rescue",
+                        "expansion"
+                      ]
+                    },
+                    "price": {
+                      "$ref": "#/$defs/__schema3"
+                    },
+                    "left": {
+                      "$ref": "#/$defs/__schema3"
+                    },
+                    "total": {
+                      "$ref": "#/$defs/__schema3"
+                    },
+                    "available": {
+                      "$ref": "#/$defs/__schema3"
+                    },
+                    "ends": {
+                      "$ref": "#/$defs/__schema2"
+                    }
+                  },
+                  "required": [
+                    "id",
+                    "kind",
+                    "price",
+                    "left",
+                    "total",
+                    "available",
+                    "ends"
+                  ],
+                  "additionalProperties": false
+                },
+                "buyback": {
+                  "type": "object",
+                  "properties": {
+                    "id": {
+                      "$ref": "#/$defs/__schema0"
+                    },
+                    "price": {
+                      "$ref": "#/$defs/__schema3"
+                    }
+                  },
+                  "required": [
+                    "id",
+                    "price"
+                  ],
+                  "additionalProperties": false
+                }
+              },
+              "required": [
+                "band",
+                "coins",
+                "stock",
+                "prices",
+                "strategy",
+                "thinking",
+                "relationship",
+                "owned",
+                "shareholders",
+                "bookValue",
+                "sharePrice",
+                "dividend",
+                "dividendHistory"
+              ],
+              "additionalProperties": false
+            }
+          },
+          "orders": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "id": {
+                  "$ref": "#/$defs/__schema0"
+                },
+                "name": {
+                  "$ref": "#/$defs/__schema0"
+                },
+                "item": {
+                  "$ref": "#/$defs/__schema0"
+                },
+                "remaining": {
+                  "$ref": "#/$defs/__schema3"
+                },
+                "quantity": {
+                  "$ref": "#/$defs/__schema3"
+                },
+                "payout": {
+                  "$ref": "#/$defs/__schema3"
+                },
+                "boat": {
+                  "type": "integer",
+                  "minimum": 0,
+                  "maximum": 5
+                },
+                "personal": {
+                  "type": "boolean"
+                },
+                "opens": {
+                  "$ref": "#/$defs/__schema2"
+                },
+                "state": {
+                  "type": "string",
+                  "enum": [
+                    "upcoming",
+                    "open",
+                    "filled",
+                    "expired"
+                  ]
+                },
+                "wishes": {
+                  "type": "array",
+                  "items": {
+                    "type": "string"
+                  }
+                },
+                "wishAuthors": {
+                  "type": "array",
+                  "items": {
+                    "type": "string"
+                  }
+                }
+              },
+              "required": [
+                "id",
+                "name",
+                "item",
+                "remaining",
+                "quantity",
+                "payout",
+                "boat",
+                "personal",
+                "opens",
+                "state",
+                "wishes",
+                "wishAuthors"
+              ],
+              "additionalProperties": false
+            }
+          },
+          "objective": {
+            "type": "object",
+            "properties": {
+              "complete": {
+                "type": "boolean"
+              },
+              "name": {
+                "$ref": "#/$defs/__schema0"
+              },
+              "steps": {
+                "type": "array",
+                "items": {
+                  "type": "object",
+                  "properties": {
+                    "label": {
+                      "$ref": "#/$defs/__schema0"
+                    },
+                    "count": {
+                      "$ref": "#/$defs/__schema3"
+                    },
+                    "target": {
+                      "$ref": "#/$defs/__schema3"
+                    },
+                    "icon": {
+                      "$ref": "#/$defs/__schema0"
+                    }
+                  },
+                  "required": [
+                    "label",
+                    "count",
+                    "target",
+                    "icon"
+                  ],
+                  "additionalProperties": false
+                }
+              }
+            },
+            "required": [
+              "complete",
+              "name",
+              "steps"
+            ],
+            "additionalProperties": false
+          },
+          "delivered": {
+            "$ref": "#/$defs/__schema3"
+          },
+          "crafted": {
+            "$ref": "#/$defs/__schema3"
+          },
+          "crowdBudget": {
+            "$ref": "#/$defs/__schema3"
+          },
+          "crowdSold": {
+            "$ref": "#/$defs/__schema3"
+          },
+          "lifetimeCrafted": {
+            "$ref": "#/$defs/__schema3"
+          },
+          "lifetimeDividends": {
+            "$ref": "#/$defs/__schema3"
+          },
+          "earned": {
+            "$ref": "#/$defs/__schema3"
+          },
+          "spent": {
+            "$ref": "#/$defs/__schema3"
+          },
+          "boatsHelped": {
+            "$ref": "#/$defs/__schema3"
+          },
+          "rescued": {
+            "$ref": "#/$defs/__schema3"
+          },
+          "titles": {
+            "type": "array",
+            "items": {
+              "$ref": "#/$defs/__schema0"
+            }
+          },
+          "saveStatus": {
+            "type": "string",
+            "enum": [
+              "saved",
+              "unsaved"
+            ]
+          },
+          "events": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "id": {
+                  "$ref": "#/$defs/__schema0"
+                },
+                "label": {
+                  "$ref": "#/$defs/__schema0"
+                },
+                "detail": {
+                  "type": "string"
+                },
+                "at": {
+                  "$ref": "#/$defs/__schema2"
+                }
+              },
+              "required": [
+                "id",
+                "label",
+                "detail",
+                "at"
+              ],
+              "additionalProperties": false
+            }
+          },
+          "job": {
+            "type": "object",
+            "properties": {
+              "id": {
+                "$ref": "#/$defs/__schema0"
+              },
+              "readyAt": {
+                "$ref": "#/$defs/__schema2"
+              }
+            },
+            "required": [
+              "id",
+              "readyAt"
+            ],
+            "additionalProperties": false
+          },
+          "jobAvailable": {
+            "type": "boolean"
+          },
+          "activity": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "at": {
+                  "$ref": "#/$defs/__schema2"
+                },
+                "night": {
+                  "$ref": "#/$defs/__schema1"
+                },
+                "line": {
+                  "type": "string"
+                },
+                "actor": {
+                  "type": "string"
+                },
+                "receipt": {
+                  "type": "object",
+                  "properties": {
+                    "id": {
+                      "$ref": "#/$defs/__schema0"
+                    },
+                    "label": {
+                      "$ref": "#/$defs/__schema0"
+                    },
+                    "url": {
+                      "type": "string",
+                      "format": "uri"
+                    }
+                  },
+                  "required": [
+                    "id",
+                    "label"
+                  ],
+                  "additionalProperties": false
+                }
+              },
+              "required": [
+                "at",
+                "night",
+                "line"
+              ],
+              "additionalProperties": false
+            }
+          },
+          "traders": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "id": {
+                  "$ref": "#/$defs/__schema0"
+                },
+                "name": {
+                  "$ref": "#/$defs/__schema0"
+                },
+                "lastStop": {
+                  "$ref": "#/$defs/__schema0"
+                }
+              },
+              "required": [
+                "id",
+                "name"
+              ],
+              "additionalProperties": false
+            }
+          },
+          "listings": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "id": {
+                  "$ref": "#/$defs/__schema0"
+                },
+                "stall": {
+                  "$ref": "#/$defs/__schema0"
+                },
+                "shares": {
+                  "$ref": "#/$defs/__schema3"
+                },
+                "price": {
+                  "$ref": "#/$defs/__schema3"
+                },
+                "seller": {
+                  "$ref": "#/$defs/__schema0"
+                },
+                "mine": {
+                  "type": "boolean"
+                }
+              },
+              "required": [
+                "id",
+                "stall",
+                "shares",
+                "price",
+                "seller",
+                "mine"
+              ],
+              "additionalProperties": false
+            }
+          },
+          "spectator": {
+            "type": "boolean"
+          },
+          "pendingActions": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "id": {
+                  "$ref": "#/$defs/__schema0"
+                },
+                "state": {
+                  "type": "string",
+                  "enum": [
+                    "pending",
+                    "unknown"
+                  ]
+                }
+              },
+              "required": [
+                "id",
+                "state"
+              ],
+              "additionalProperties": false
+            }
+          }
+        },
+        "required": [
+          "session_id",
+          "night_id",
+          "night",
+          "nightName",
+          "mode",
+          "seed",
+          "server_time",
+          "revision",
+          "phase",
+          "elapsed",
+          "duration",
+          "coins",
+          "cargo",
+          "capacity",
+          "upgrades",
+          "merchants",
+          "orders",
+          "objective",
+          "delivered",
+          "crafted",
+          "crowdBudget",
+          "crowdSold",
+          "lifetimeCrafted",
+          "lifetimeDividends",
+          "earned",
+          "spent",
+          "boatsHelped",
+          "rescued",
+          "titles",
+          "saveStatus",
+          "events",
+          "jobAvailable",
+          "activity",
+          "traders",
+          "listings",
+          "spectator",
+          "pendingActions"
+        ],
+        "additionalProperties": false,
+        "$defs": {
+          "__schema0": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 120
+          },
+          "__schema1": {
+            "type": "integer",
+            "minimum": 0,
+            "maximum": 9007199254740991
+          },
+          "__schema2": {
+            "type": "number",
+            "minimum": 0
+          },
+          "__schema3": {
+            "type": "string",
+            "maxLength": 16,
+            "pattern": "^(0|[1-9]\\d*)$"
+          },
+          "__schema4": {
+            "type": "object",
+            "propertyNames": {
+              "type": "string"
+            },
+            "additionalProperties": {
+              "$ref": "#/$defs/__schema3"
+            }
+          },
+          "__schema5": {
+            "type": "string",
+            "enum": [
+              "steady",
+              "bold",
+              "festival",
+              "bargain"
+            ]
+          }
+        }
+      }
+    },
+    "get_chronicle": {
+      "params": {
+        "$schema": "https://json-schema.org/draft/2020-12/schema",
+        "type": "object",
+        "properties": {
+          "room_id": {
+            "$ref": "#/$defs/__schema0"
+          },
+          "cursor": {
+            "$ref": "#/$defs/__schema0"
+          }
+        },
+        "required": [
+          "room_id"
+        ],
+        "additionalProperties": false,
+        "$defs": {
+          "__schema0": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 120
+          }
+        }
+      },
+      "result": {
+        "$schema": "https://json-schema.org/draft/2020-12/schema",
+        "type": "object",
+        "properties": {
+          "entries": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "at": {
+                  "type": "number",
+                  "minimum": 0
+                },
+                "night": {
+                  "$ref": "#/$defs/__schema0"
+                },
+                "line": {
+                  "type": "string"
+                },
+                "actor": {
+                  "type": "string"
+                },
+                "receipt": {
+                  "type": "object",
+                  "properties": {
+                    "id": {
+                      "$ref": "#/$defs/__schema1"
+                    },
+                    "label": {
+                      "$ref": "#/$defs/__schema1"
+                    },
+                    "url": {
+                      "type": "string",
+                      "format": "uri"
+                    }
+                  },
+                  "required": [
+                    "id",
+                    "label"
+                  ],
+                  "additionalProperties": false
+                },
+                "id": {
+                  "$ref": "#/$defs/__schema1"
+                },
+                "time": {
+                  "$ref": "#/$defs/__schema0"
+                }
+              },
+              "required": [
+                "at",
+                "night",
+                "line",
+                "id",
+                "time"
+              ],
+              "additionalProperties": false
+            }
+          },
+          "cursor": {
+            "$ref": "#/$defs/__schema1"
+          }
+        },
+        "required": [
+          "entries"
+        ],
+        "additionalProperties": false,
+        "$defs": {
+          "__schema0": {
+            "type": "integer",
+            "minimum": 0,
+            "maximum": 9007199254740991
+          },
+          "__schema1": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 120
+          }
+        }
+      }
+    },
+    "get_history": {
+      "params": {
+        "$schema": "https://json-schema.org/draft/2020-12/schema",
+        "type": "object",
+        "properties": {
+          "room_id": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 120
+          },
+          "range": {
+            "type": "string",
+            "enum": [
+              "day",
+              "week",
+              "all"
+            ]
+          }
+        },
+        "required": [
+          "room_id",
+          "range"
+        ],
+        "additionalProperties": false
+      },
+      "result": {
+        "$schema": "https://json-schema.org/draft/2020-12/schema",
+        "type": "object",
+        "properties": {
+          "rows": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "time": {
+                  "$ref": "#/$defs/__schema0"
+                },
+                "night": {
+                  "$ref": "#/$defs/__schema0"
+                },
+                "stall": {
+                  "$ref": "#/$defs/__schema1"
+                },
+                "coins": {
+                  "$ref": "#/$defs/__schema2"
+                },
+                "price": {
+                  "$ref": "#/$defs/__schema2"
+                },
+                "item": {
+                  "$ref": "#/$defs/__schema1"
+                },
+                "strategy": {
+                  "type": "string",
+                  "enum": [
+                    "steady",
+                    "bold",
+                    "festival",
+                    "bargain"
+                  ]
+                },
+                "dividend": {
+                  "$ref": "#/$defs/__schema2"
+                },
+                "sharePrice": {
+                  "$ref": "#/$defs/__schema2"
+                }
+              },
+              "required": [
+                "time",
+                "night",
+                "stall",
+                "coins",
+                "price",
+                "item",
+                "strategy",
+                "dividend"
+              ],
+              "additionalProperties": false
+            }
+          }
+        },
+        "required": [
+          "rows"
+        ],
+        "additionalProperties": false,
+        "$defs": {
+          "__schema0": {
+            "type": "integer",
+            "minimum": 0,
+            "maximum": 9007199254740991
+          },
+          "__schema1": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 120
+          },
+          "__schema2": {
+            "type": "string",
+            "maxLength": 16,
+            "pattern": "^(0|[1-9]\\d*)$"
+          }
+        }
+      }
+    },
+    "get_save_status": {
+      "params": {
+        "$schema": "https://json-schema.org/draft/2020-12/schema",
+        "type": "object",
+        "properties": {
+          "session_id": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 120
+          }
+        },
+        "required": [
+          "session_id"
+        ],
+        "additionalProperties": false
+      },
+      "result": {
+        "$schema": "https://json-schema.org/draft/2020-12/schema",
+        "type": "object",
+        "properties": {
+          "state": {
+            "type": "string",
+            "enum": [
+              "saved",
+              "unsaved"
+            ]
+          }
+        },
+        "required": [
+          "state"
+        ],
+        "additionalProperties": false
+      }
+    }
+  },
+  "examples": {
+    "request": {
+      "version": 1,
+      "request_id": "req-001",
+      "method": "get_quote",
+      "params": {
+        "session_id": "the-row",
+        "night_id": "night-1",
+        "intent": {
+          "type": "buy",
+          "stall_id": "oil_wharf",
+          "item_id": "oil",
+          "quantity": "2"
+        }
+      }
+    },
+    "actionStatus": {
+      "state": "confirmed",
+      "receipt": {
+        "id": "dev-001",
+        "label": "Dev receipt"
+      }
+    },
+    "error": {
+      "version": 1,
+      "request_id": "req-001",
+      "ok": false,
+      "result": null,
+      "error": {
+        "code": "ORDER_FILLED",
+        "message": "The boat already has those lanterns."
+      }
+    }
+  }
+}

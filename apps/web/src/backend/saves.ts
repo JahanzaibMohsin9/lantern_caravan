@@ -1,39 +1,49 @@
+import { orders } from "@lantern/content";
+import { createWorld, player, type World } from "@lantern/game-core";
+import { decodeWorld, encodeWorld } from "@lantern/game-core/codec";
 import { amount } from "@lantern/protocol";
-import type { World } from "@lantern/game-core";
 import { z } from "zod";
 
-const saveSchema = z.object({
-  version: z.literal(1),
-  updated: z.int().nonnegative(),
-  world: z.object({
-    phase: z.enum(["preparation", "open", "results"]),
-    revision: z.int().nonnegative(),
-    elapsed: z.number().nonnegative().max(300),
-    delivered: amount, crafted: amount, crowdSold: amount,
+export const slots = ["first-light", "slot-2", "slot-3"] as const;
+const saveSchema = z.object({ version: z.literal(2), updated: z.int().nonnegative(), world: z.unknown(), checkpoint: z.unknown() });
+const legacy = z.object({
+  version: z.literal(1), updated: z.int().nonnegative(), world: z.object({
+    phase: z.enum(["preparation", "open", "results"]), revision: z.int().nonnegative(),
+    elapsed: z.number().nonnegative().max(300), delivered: amount, crafted: amount, crowdSold: amount,
     ledger: z.record(z.string(), z.record(z.string(), amount)),
     cooldowns: z.record(z.string(), z.int()),
     orderWishes: z.record(z.string(), z.array(z.string())),
   }),
 });
-type Save = z.infer<typeof saveSchema>;
-type SaveRow = { current: Save; backup?: Save };
+type SaveRow = { current: unknown; backup?: unknown };
 
-function mapLedger<T, R>(ledger: Record<string, Record<string, T>>, convert: (value: T) => R) {
-  return Object.fromEntries(Object.entries(ledger).map(([account, assets]) =>
-    [account, Object.fromEntries(Object.entries(assets).map(([asset, value]) => [asset, convert(value)]))]));
+export function pack(world: World, checkpoint: World) {
+  return { version: 2, updated: Date.now(), world: encodeWorld(world), checkpoint: encodeWorld(checkpoint) };
 }
 
-function pack(world: World): Save {
-  return {
-    version: 1, updated: Date.now(), world: { ...world, delivered: String(world.delivered),
-      crafted: String(world.crafted), crowdSold: String(world.crowdSold), ledger: mapLedger(world.ledger, String) },
-  };
-}
+export function unpack(save: unknown): { world: World; checkpoint: World; updated: number } {
+  const current = saveSchema.safeParse(save);
+  if (current.success) {
+    const world = decodeWorld(current.data.world);
+    const checkpoint = decodeWorld(current.data.checkpoint);
+    if (!world.traders[player] || !checkpoint.traders[player] || world.night !== checkpoint.night || world.mode !== checkpoint.mode ||
+      world.mode === "live" || checkpoint.phase !== "preparation") throw new Error("This save doesn't match a local campaign.");
+    return { world, checkpoint, updated: current.data.updated };
+  }
 
-export function unpack(save: Save): World {
-  const { world } = saveSchema.parse(save);
-  return { ...world, delivered: Number(world.delivered), crafted: Number(world.crafted),
-    crowdSold: Number(world.crowdSold), ledger: mapLedger(world.ledger, Number) };
+  const old = legacy.parse(save);
+  const checkpoint = createWorld();
+  const source = old.world;
+  const ledger = { ...checkpoint.ledger, ...Object.fromEntries(Object.entries(source.ledger).map(([account, assets]) =>
+    [account, Object.fromEntries(Object.entries(assets).map(([asset, value]) => [asset, Number(value)]))])) };
+  const orderContributors = Object.fromEntries(orders.filter(order =>
+    (ledger["esc:order:" + order.id]?.coin ?? 0) < order.quantity * order.payout).map(order => [order.id, [player]]));
+  const world: World = { ...checkpoint, ledger, phase: source.phase, elapsed: source.elapsed, tickAt: Math.floor(source.elapsed / 10) * 10,
+    revision: source.revision, orderWishes: source.orderWishes, orderContributors,
+    traders: { ...checkpoint.traders, [player]: { ...checkpoint.traders[player]!, delivered: { lantern_paper: Number(source.delivered) },
+      crafted: Number(source.crafted), lifetimeCrafted: Number(source.crafted), crowdSold: Number(source.crowdSold),
+      cooldowns: source.cooldowns, boatsHelped: orders.filter(order => ledger["esc:order:" + order.id]?.coin === 0).length } } };
+  return { world, checkpoint, updated: old.updated };
 }
 
 function openDatabase(): Promise<IDBDatabase> {
@@ -58,19 +68,12 @@ export async function read(slot: string): Promise<SaveRow | undefined> {
   }
 }
 
-export async function write(slot: string, world: World): Promise<void> {
-  const save = pack(world);
+async function edit(change: (store: IDBObjectStore) => void) {
   const db = await openDatabase();
   try {
     await new Promise<void>((resolve, reject) => {
       const tx = db.transaction("profiles", "readwrite");
-      const store = tx.objectStore("profiles");
-      const request = store.get(slot);
-      request.onsuccess = () => {
-        const previous = request.result as SaveRow | undefined;
-        const current = saveSchema.safeParse(previous?.current);
-        store.put({ current: save, backup: current.success ? current.data : previous?.backup }, slot);
-      };
+      change(tx.objectStore("profiles"));
       tx.oncomplete = () => resolve();
       tx.onabort = () => reject(tx.error);
       tx.onerror = () => reject(tx.error);
@@ -79,3 +82,20 @@ export async function write(slot: string, world: World): Promise<void> {
     db.close();
   }
 }
+
+export async function write(slot: string, world: World, checkpoint: World) {
+  const current = pack(world, checkpoint);
+  await edit(store => {
+    const request = store.get(slot);
+    request.onsuccess = () => {
+      const previous = request.result as SaveRow | undefined;
+      let backup = previous?.backup;
+      if (previous) {
+        try { unpack(previous.current); backup = previous.current; } catch { /* preserve the previous backup */ }
+      }
+      store.put({ current, backup }, slot);
+    };
+  });
+}
+
+export const remove = (slot: string) => edit(store => { store.delete(slot); });

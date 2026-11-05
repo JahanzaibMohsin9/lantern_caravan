@@ -1,63 +1,32 @@
-import { items, merchants, orders, recipes, wishes, type ItemId, type StallId } from "@lantern/content";
-import { intentSchema, type CashBand, type Intent, type LedgerOp, type Quote, type Snapshot } from "@lantern/protocol";
-import { apply, balance, type Ledger } from "./ledger";
+import { items, merchants, recipes, wishes, type ItemId, type RecipeId, type StallId } from "@lantern/content";
+import { strategies, type FestivalOrder, type StrategyId, type UpgradeId } from "@lantern/content/nights";
+import { intentSchema, type Intent, type LedgerOp, type Quote, type Snapshot } from "@lantern/protocol";
+import { apply } from "./ledger";
 import { ask, tradePrice } from "./pricing";
+import {
+  addActivity, burn, canTakeJob, cart, cartCapacity, cashBand, crowd, escrow, get, getTrader, itemIds, merchantIds,
+  mint, move, nightId, nowAt, objective, orderPayout, plan, player, ratio, remaining, rescue, share, shop,
+  stockTargets, supply, unlock, type Trader, type World,
+} from "./model";
+import { afterOwnership, bookValue, buybackPrice, closeOwnership, owners, ownershipQuote, pledged, refreshOfferings } from "./ownership";
 
-export const duration = 300;
-export const player = "p:guest";
-export const capacity = 6;
-export const crowd = "sys:crowd";
-const merchantIds = Object.keys(merchants) as StallId[];
-const itemIds = Object.keys(items) as ItemId[];
-const initialStock = (stall: StallId): Record<string, number> => merchants[stall].goods;
-const shop = (stall: string) => "m:" + stall;
-const escrow = (id: string) => "esc:order:" + id;
-const strategy = (stall: StallId) => stall === "oil_wharf" ? 10500 : stall === "reed_thread" ? 9500 : 10000;
-const mint = (to: string, asset: string, amount: number, memo: string): LedgerOp =>
-  ({ op: "mint", to, asset, amount: String(amount), memo });
-const burn = (from: string, asset: string, amount: number, memo: string): LedgerOp =>
-  ({ op: "burn", from, asset, amount: String(amount), memo });
-const move = (from: string, to: string, asset: string, amount: number, memo: string): LedgerOp =>
-  ({ op: "transfer", from, to, asset, amount: String(amount), memo });
+export { createWorld, newNight, addTrader, addActivity, capacity, duration, player, crowd, nightId, nowAt, objective, plan, type World } from "./model";
+export { openNight } from "./ownership";
 
-export type World = {
-  phase: Snapshot["phase"];
-  revision: number;
-  ledger: Ledger;
-  elapsed: number;
-  delivered: number;
-  crafted: number;
-  crowdSold: number;
-  cooldowns: Record<string, number>;
-  orderWishes: Record<string, string[]>;
-};
-
-export function createWorld(): World {
-  const grants = [
-    mint(player, "coin", 30, "Starting grant"),
-    mint(player, "paper", 2, "Starting grant"),
-    mint(player, "oil", 2, "Starting grant"),
-    mint(crowd, "coin", 120, "Night budget"),
-    ...merchantIds.flatMap(stall => [
-      mint(shop(stall), "coin", 40, "Starting float"),
-      ...Object.entries(initialStock(stall)).map(([item, quantity]) => mint(shop(stall), item, quantity, "Opening stock")),
-    ]),
-    ...orders.map(order => mint(escrow(order.id), "coin", order.quantity * order.payout, "Festival budget")),
-  ];
-  return { phase: "preparation", revision: 0, ledger: apply({}, grants), elapsed: 0,
-    delivered: 0, crafted: 0, crowdSold: 0, cooldowns: {}, orderWishes: {} };
+function phaseCheck(state: World, intent: Intent) {
+  if (intent.type === "vote_strategy" || intent.type === "buy_upgrade") {
+    if (state.phase !== "preparation") throw new Error("Do that during preparation.");
+  } else if (state.phase !== "open" || state.elapsed >= plan(state).duration) {
+    throw new Error("The market is closed.");
+  }
 }
 
-const get = (state: World, account: string, asset: string) => balance(state.ledger, account, asset);
-const cargo = (ledger: Ledger) => itemIds.reduce((sum, item) => sum + balance(ledger, player, item), 0);
-const band = (coins: number): CashBand => coins < 5 ? "dark" : coins < 25 ? "tight" : coins < 60 ? "healthy" : "thriving";
-const remaining = (state: World, order: typeof orders[number]) => get(state, escrow(order.id), "coin") / order.payout;
-
-export function quote(state: World, raw: Intent, id: string, now: number, agreedTotal?: number): Quote {
+export function quoteFor(state: World, actor: string, raw: Intent, id: string, now: number, agreedTotal?: number): Quote {
   const intent = intentSchema.parse(raw);
-  if (state.phase !== "open" || state.elapsed >= duration) throw new Error("The market is closed.");
-  const quantity = Number(intent.quantity);
-  if (quantity > capacity) throw new Error("Your cart holds six items.");
+  phaseCheck(state, intent);
+  const trader = getTrader(state, actor);
+  const quantity = "quantity" in intent ? Number(intent.quantity) : 0;
+  if (quantity > cartCapacity(trader)) throw new Error(`Your cart holds ${cartCapacity(trader)} items.`);
   let effects: LedgerOp[];
   let summary: string;
 
@@ -67,15 +36,13 @@ export function quote(state: World, raw: Intent, id: string, now: number, agreed
       const stall = intent.stall_id as StallId;
       const item = intent.item_id as ItemId;
       const account = shop(stall);
-      if (!Object.hasOwn(merchants, stall) || !Object.hasOwn(initialStock(stall), item)) {
-        throw new Error("This stall doesn’t trade that item.");
-      }
-      if (band(get(state, account, "coin")) === "dark") throw new Error("This stall is closed.");
+      if (!Object.hasOwn(merchants, stall) || !Object.hasOwn(stockTargets(stall), item)) throw new Error("This stall doesn’t trade that item.");
+      if (cashBand(get(state, account, "coin")) === "dark") throw new Error("This stall is closed.");
       const stock = get(state, account, item);
       const buying = intent.type === "buy";
-      const from = buying ? account : player;
-      const to = buying ? player : account;
-      const total = agreedTotal ?? tradePrice(intent.type, items[item].price, stock, initialStock(stall)[item]!, strategy(stall), quantity);
+      const from = buying ? account : actor;
+      const to = buying ? actor : account;
+      const total = agreedTotal ?? tradePrice(intent.type, items[item].price, stock, stockTargets(stall)[item]!, ratio(state, stall), quantity);
       if (get(state, from, item) < quantity) throw new Error(buying ? "The stall is low on stock." : "You don’t have enough to sell.");
       if (get(state, to, "coin") < total) throw new Error(buying ? "You’re short on coins." : "The stall is short on coins.");
       summary = `${buying ? "Buy" : "Sell"} ${quantity} · ${total} coins`;
@@ -83,92 +50,350 @@ export function quote(state: World, raw: Intent, id: string, now: number, agreed
       break;
     }
     case "craft": {
-      if (intent.recipe_id !== "paper_lantern") throw new Error("This recipe unlocks on a later night.");
-      const recipe = recipes.paper_lantern;
-      if (recipe.inputs.some(item => get(state, player, item) < quantity)) throw new Error("You need paper and oil.");
-      summary = `Craft ${quantity} · Paper lantern`;
-      effects = [...recipe.inputs.map(item => burn(player, item, quantity, summary)),
-        mint(player, recipe.output, quantity, summary)];
+      const id = intent.recipe_id as RecipeId;
+      const recipe = Object.hasOwn(recipes, id) ? recipes[id] : undefined;
+      if (!recipe || recipe.unlock > unlock(state)) throw new Error("This recipe unlocks on a later night.");
+      if ((recipe.inputs as readonly ItemId[]).some(item => get(state, actor, item) < quantity)) {
+        throw new Error(id === "paper_lantern" ? "You need paper and oil." : "Your cart is missing ingredients.");
+      }
+      summary = `Craft ${quantity} · ${items[recipe.output].name}`;
+      effects = [...recipe.inputs.map(item => burn(actor, item, quantity, summary)), mint(actor, recipe.output, quantity, summary)];
       break;
     }
     case "fill_order": {
-      const order = orders.find(entry => entry.id === intent.order_id);
+      const order = plan(state).orders.find(entry => entry.id === intent.order_id);
       if (!order || state.elapsed < order.opens) throw new Error("This order hasn’t opened yet.");
+      if (order.personal && actor.startsWith("r:")) throw new Error("This order is reserved for the player.");
       if (remaining(state, order) < quantity) throw new Error("The boat already has those lanterns.");
-      if (get(state, player, "lantern_paper") < quantity) throw new Error("Craft more paper lanterns first.");
+      if (get(state, actor, order.item) < quantity) throw new Error(`Craft more ${items[order.item].name.toLowerCase()}s first.`);
       if (intent.wish_id && !wishes.includes(intent.wish_id as typeof wishes[number])) throw new Error("Choose a wish from the list.");
-      summary = `Deliver ${quantity} · ${quantity * order.payout} coins`;
-      effects = [move(player, "sys:festival", "lantern_paper", quantity, summary),
-        move(escrow(order.id), player, "coin", quantity * order.payout, summary)];
+      const total = quantity * orderPayout(state, order);
+      summary = `Deliver ${quantity} · ${total} coins`;
+      effects = [move(actor, "sys:festival", order.item, quantity, summary), move(escrow(order.id), actor, "coin", total, summary)];
       break;
     }
     case "sell_crowd": {
-      if (intent.item_id !== "lantern_paper" || get(state, player, "lantern_paper") < quantity) {
-        throw new Error("You need paper lanterns to sell.");
+      if (plan(state).events.some(event => event.id === "quiet_patch" && state.elapsed >= event.at && state.elapsed < event.at + 45)) {
+        throw new Error("The crowd is taking a short break.");
       }
-      if (state.crowdSold + quantity > 6) throw new Error("You’ve reached the crowd’s nightly limit.");
-      const total = items.lantern_paper.price * quantity;
+      const item = intent.item_id as ItemId;
+      if (!itemIds.includes(item) || !item.startsWith("lantern_") || get(state, actor, item) < quantity) throw new Error("You need lanterns to sell.");
+      if (trader.crowdSold + quantity > 6) throw new Error("You’ve reached the crowd’s nightly limit.");
+      const total = items[item].price * quantity;
       if (get(state, crowd, "coin") < total) throw new Error("The crowd has spent its budget.");
       summary = `Sell ${quantity} · ${total} coins`;
-      effects = [burn(player, "lantern_paper", quantity, summary), move(crowd, player, "coin", total, summary)];
+      effects = [burn(actor, item, quantity, summary), move(crowd, actor, "coin", total, summary)];
       break;
     }
+    case "start_job": {
+      if (!canTakeJob(state, actor)) throw new Error("No dock job is available.");
+      summary = "Parcel picked up";
+      effects = [];
+      break;
+    }
+    case "finish_job": {
+      if (trader.job?.id !== intent.job_id || state.elapsed < trader.job.readyAt) throw new Error("Give the boat time to dock.");
+      summary = "Parcel delivered · 4 coins";
+      effects = [move(rescue, actor, "coin", 4, summary)];
+      break;
+    }
+    default:
+      ({ effects, summary } = ownershipQuote(state, actor, intent, id));
   }
 
-  if (cargo(apply(state.ledger, effects)) > capacity) throw new Error("Your cart is full.");
+  if (effects.some(effect => effect.op !== "mint" && effect.from === actor && effect.asset === "coin" &&
+    Number(effect.amount) > get(state, actor, "coin"))) throw new Error("You’re short on coins.");
+  if (cart(apply(state.ledger, effects), actor) > cartCapacity(trader)) throw new Error("Your cart is full.");
   return { quote_id: id, intent, summary, effects, expires_at: now + 15000 };
 }
 
-export function commit(state: World, deal: Quote, now: number): World {
+export const quote = (state: World, intent: Intent, id: string, now: number, agreedTotal?: number) =>
+  quoteFor(state, player, intent, id, now, agreedTotal);
+
+export function validateQuote(state: World, actor: string, deal: Quote, baseline: LedgerOp[], now: number) {
   if (now >= deal.expires_at) throw new Error("Quote expired. Ask for a fresh price.");
-  if (state.phase !== "open" || state.elapsed >= duration) throw new Error("The market is closed.");
+  const current = quoteFor(state, actor, deal.intent, deal.quote_id, now);
+  if (JSON.stringify(current.effects) !== JSON.stringify(baseline)) throw new Error("The market changed. Ask for a fresh quote.");
+}
+
+function setTrader(state: World, actor: string, trader: Trader): World {
+  return { ...state, traders: { ...state.traders, [actor]: trader } };
+}
+
+export function commitFor(state: World, actor: string, deal: Quote, now: number): World {
+  if (now >= deal.expires_at) throw new Error("Quote expired. Ask for a fresh price.");
+  phaseCheck(state, deal.intent);
   const ledger = apply(state.ledger, deal.effects);
-  if (cargo(ledger) > capacity) throw new Error("Your cart is full.");
-  const next = { ...state, ledger, revision: state.revision + 1 };
-  const quantity = Number(deal.intent.quantity);
-  if (deal.intent.type === "craft") next.crafted += quantity;
-  if (deal.intent.type === "sell_crowd") next.crowdSold += quantity;
-  if (deal.intent.type === "fill_order") {
-    next.delivered += quantity;
-    const { order_id, wish_id } = deal.intent;
-    if (wish_id) {
-      next.orderWishes = { ...state.orderWishes,
-        [order_id]: [...(state.orderWishes[order_id] ?? []), ...Array<string>(quantity).fill(wish_id)] };
+  const old = getTrader(state, actor);
+  if (cart(ledger, actor) > cartCapacity(old)) throw new Error("Your cart is full.");
+  const trader: Trader = { ...old };
+  let next: World = { ...state, ledger, revision: state.revision + 1 };
+  const intent = deal.intent;
+  const quantity = "quantity" in intent ? Number(intent.quantity) : 0;
+  for (const effect of deal.effects) {
+    if (effect.op === "transfer" && effect.asset === "coin") {
+      if (effect.to === actor) trader.earned += Number(effect.amount);
+      if (effect.from === actor) trader.spent += Number(effect.amount);
     }
   }
+  switch (intent.type) {
+    case "buy":
+    case "sell": {
+      const stall = intent.stall_id as StallId;
+      const item = intent.item_id as ItemId;
+      const prior = state.market[stall];
+      const buying = intent.type === "buy";
+      const total = Number(deal.effects[1]!.amount);
+      const stock = get(state, shop(stall), item);
+      const target = stockTargets(stall)[item]!;
+      const price = ask(items[item].price, buying ? stock : stock + quantity, target, ratio(state, stall));
+      const fair = price.label === "Normal" && total === tradePrice(intent.type, items[item].price, stock, target, ratio(state, stall), quantity) &&
+        (trader.fair[stall] ?? 0) < 2;
+      const change = !buying && price.label === "Flooded" ? -1 : fair ? 1 : 0;
+      if (fair) trader.fair = { ...trader.fair, [stall]: (trader.fair[stall] ?? 0) + 1 };
+      if (change) trader.relationship = { ...trader.relationship, [stall]: Math.max(-5, Math.min(10, (trader.relationship[stall] ?? 0) + change)) };
+      trader.lastStop = stall;
+      next.market = { ...state.market, [stall]: { ...prior, profit: prior.profit + (buying ? total : -total),
+        unitsSold: prior.unitsSold + (buying ? quantity : 0) } };
+      break;
+    }
+    case "craft":
+      trader.crafted += quantity;
+      trader.lifetimeCrafted += quantity;
+      trader.lastStop = "workshop";
+      break;
+    case "sell_crowd":
+      trader.crowdSold += quantity;
+      trader.lastStop = "lantern_house";
+      break;
+    case "fill_order": {
+      const order = plan(state).orders.find(order => order.id === intent.order_id)!;
+      trader.delivered = { ...old.delivered, [order.item]: (old.delivered[order.item] ?? 0) + quantity };
+      trader.lastStop = "board";
+      const contributors = [...new Set([...(state.orderContributors[order.id] ?? []), actor])];
+      next.orderContributors = { ...state.orderContributors, [order.id]: contributors };
+      if (intent.wish_id) {
+        next.orderWishes = { ...state.orderWishes,
+          [order.id]: [...(state.orderWishes[order.id] ?? []), ...Array<string>(quantity).fill(intent.wish_id)] };
+        next.wishAuthors = { ...state.wishAuthors,
+          [order.id]: [...(state.wishAuthors[order.id] ?? []), ...Array<string>(quantity).fill(trader.name)] };
+        next = addActivity(next, `${order.name} carries a wish: “${intent.wish_id}”`, trader.name);
+      }
+      next = setTrader(next, actor, trader);
+      if (!remaining(next, order)) {
+        for (const id of contributors) {
+          const holder = next.traders[id]!;
+          next = setTrader(next, id, { ...holder, boatsHelped: holder.boatsHelped + 1 });
+        }
+        next = addActivity(next, `${order.name} is lit.`, trader.name);
+      }
+      return next;
+    }
+    case "vote_strategy":
+      trader.votes = { ...old.votes, [intent.stall_id]: intent.strategy_id as StrategyId };
+      break;
+    case "buy_upgrade":
+      trader.upgrades = [...trader.upgrades, intent.upgrade_id as UpgradeId];
+      break;
+    case "start_job":
+      trader.job = { id: deal.quote_id, readyAt: state.elapsed + 20 };
+      break;
+    case "finish_job":
+      delete trader.job;
+      trader.jobsDone++;
+      trader.lastStop = "shed";
+      break;
+  }
+  next = afterOwnership(state, setTrader(next, actor, trader), actor, intent, deal.quote_id);
+  if (intent.type === "accept_buyback") next = addActivity(next, deal.summary, trader.name);
+  return state.phase === "open" ? refreshOfferings(next) : next;
+}
+
+export const commit = (state: World, deal: Quote, now: number) => commitFor(state, player, deal, now);
+
+export function recordAction(state: World, actor: string, line: string, receipt: NonNullable<Snapshot["activity"][number]["receipt"]>) {
+  const next = addActivity(state, line, state.traders[actor]?.name);
+  const entry = next.activity.at(-1)!;
+  entry.receipt = receipt;
   return next;
 }
 
-export function snapshotFor(state: World, session_id: string): Snapshot {
+export function closeNight(state: World): World {
+  if (state.phase !== "open") return state;
+  const closed = closeOwnership(state);
+  return { ...closed, phase: "results", revision: closed.revision + 1 };
+}
+
+export function snapshotFor(state: World, session_id: string, actor = player, server_time = 0): Snapshot {
+  const trader = state.traders[actor];
+  const schedule = plan(state);
+  const titles = [];
+  if (trader?.boatsHelped) titles.push("Lamplighter");
+  if (trader?.rescued) titles.push("Patron");
+  if (trader && merchantIds.filter(stall => owners(state, stall)[actor]).length >= 3) titles.push("Shareholder");
+  if (trader && ((state.mode === "campaign" && state.night === 3 && state.phase === "results" && objective(state, actor).complete)
+    || state.mode === "endless")) titles.push("Master of the Row");
   return {
-    session_id, night_id: "first-light", revision: state.revision, phase: state.phase, elapsed: state.elapsed,
-    coins: String(get(state, player, "coin")),
-    cargo: Object.fromEntries(itemIds.map(item => [item, String(get(state, player, item))])),
+    session_id, night_id: nightId(state), night: state.night, nightName: schedule.name, mode: state.mode, seed: state.seed, server_time,
+    revision: state.revision, phase: state.phase, elapsed: state.elapsed, duration: schedule.duration,
+    coins: String(get(state, actor, "coin")), capacity: String(trader ? cartCapacity(trader) : 0), upgrades: trader?.upgrades ?? [],
+    cargo: Object.fromEntries(itemIds.map(item => [item, String(get(state, actor, item))])),
     merchants: Object.fromEntries(merchantIds.map(stall => {
-      const stock = state.ledger[shop(stall)] ?? {};
+      const account = shop(stall);
+      const market = state.market[stall];
+      const holders = owners(state, stall);
+      const offer = Object.values(state.offers).find(offer => offer.stall === stall);
+      const buyback = buybackPrice(state, stall);
       return [stall, {
-        band: band(stock.coin ?? 0),
-        stock: Object.fromEntries(Object.keys(initialStock(stall)).map(item => [item, String(stock[item] ?? 0)])),
-        prices: Object.fromEntries(Object.entries(initialStock(stall)).map(([key, target]) => {
+        band: cashBand(get(state, account, "coin")), coins: String(get(state, account, "coin")), strategy: market.strategy, vote: trader?.votes[stall],
+        thinking: market.thinking, relationship: trader?.relationship[stall] ?? 0,
+        owned: String(holders[actor] ?? 0), shareholders: Object.entries(holders).filter(([, amount]) => amount)
+          .map(([owner, amount]) => ({ name: state.traders[owner]!.name, count: String(amount) })),
+        bookValue: String(supply(state, share(stall)) ? Math.floor(bookValue(state, stall)) : 0),
+        sharePrice: String(market.lastSharePrice), dividend: String(trader?.dividends[stall] ?? 0),
+        dividendHistory: market.dividendHistory.map(String),
+        offering: offer ? { id: offer.id, kind: offer.kind, price: String(offer.price), total: String(offer.total),
+          left: String(offer.total - pledged(offer)), available: String(Math.min(offer.total - pledged(offer), 2 - (offer.contributions[actor] ?? 0))),
+          ends: offer.ends } : undefined,
+        buyback: buyback && get(state, actor, share(stall)) ? { id: `buyback-${stall}`, price: String(buyback) } : undefined,
+        stock: Object.fromEntries(Object.keys(stockTargets(stall)).map(item => [item, String(get(state, account, item))])),
+        prices: Object.fromEntries(Object.entries(stockTargets(stall)).map(([key, target]) => {
           const item = key as ItemId;
-          const { price, label } = ask(items[item].price, stock[item] ?? 0, target, strategy(stall));
-          return [item, { buy: String(price), sell: String(tradePrice("sell", items[item].price, stock[item] ?? 0, target, strategy(stall), 1)), label, target: String(target) }];
+          const stock = get(state, account, item);
+          const { price, label } = ask(items[item].price, stock, target, ratio(state, stall));
+          return [item, { buy: String(price), sell: String(tradePrice("sell", items[item].price, stock, target, ratio(state, stall), 1)), label, target: String(target) }];
         })),
       }];
     })),
-    orders: orders.map(order => {
-      const left = remaining(state, order);
-      return { ...order, remaining: String(left), quantity: String(order.quantity), payout: String(order.payout),
-        wishes: state.orderWishes[order.id] ?? [],
-        state: left === 0 ? "filled" : state.phase === "results" ? "expired" : state.elapsed < order.opens ? "upcoming" : "open" };
+    orders: schedule.orders.map(order => {
+      const count = remaining(state, order);
+      const filled = count === 0 && !!state.orderContributors[order.id]?.length;
+      const expired = state.phase === "results" && !filled;
+      return { ...order, remaining: String(count), quantity: String(order.quantity), payout: String(orderPayout(state, order)),
+        wishes: state.orderWishes[order.id] ?? [], wishAuthors: state.wishAuthors[order.id] ?? [],
+        state: filled ? "filled" : expired ? "expired" : state.elapsed < order.opens || state.phase === "preparation" ? "upcoming" : "open" };
     }),
-    delivered: String(state.delivered), crafted: String(state.crafted), crowdBudget: String(get(state, crowd, "coin")),
-    crowdSold: String(state.crowdSold), saveStatus: "saved",
+    objective: objective(state, actor), delivered: String(Object.values(trader?.delivered ?? {}).reduce((a, b) => a + b, 0)),
+    crafted: String(trader?.crafted ?? 0), lifetimeCrafted: String(trader?.lifetimeCrafted ?? 0), lifetimeDividends: String(trader?.lifetimeDividends ?? 0),
+    earned: String(trader?.earned ?? 0), spent: String(trader?.spent ?? 0), boatsHelped: String(trader?.boatsHelped ?? 0),
+    rescued: String(trader?.rescued ?? 0), titles,
+    crowdBudget: String(get(state, crowd, "coin")), crowdSold: String(trader?.crowdSold ?? 0),
+    events: schedule.events, job: trader?.job, jobAvailable: state.phase === "open" && !!trader && canTakeJob(state, actor),
+    activity: state.activity.slice(-50), saveStatus: "saved",
+    traders: Object.entries(state.traders).filter(([id]) => id !== actor).map(([id, trader]) => ({ id, name: trader.name, lastStop: trader.lastStop })),
+    pendingActions: [], listings: Object.values(state.listings).map(listing => ({ id: listing.id, stall: listing.stall, shares: String(listing.shares),
+      price: String(listing.price), seller: state.traders[listing.actor]!.name, mine: listing.actor === actor })),
+    spectator: !trader,
   };
 }
 
-export function advanceClock(state: World, elapsed: number): World {
-  if (state.phase !== "open") return state;
-  return elapsed < duration ? { ...state, elapsed }
-    : { ...state, elapsed: duration, phase: "results", revision: state.revision + 1 };
+function botRoute(world: World, actor: string, order: FestivalOrder) {
+  const recipeId = (Object.keys(recipes) as RecipeId[]).find(id => recipes[id].output === order.item)!;
+  const recipe = recipes[recipeId];
+  let state = world;
+  const act = (intent: Intent) => {
+    const now = nowAt(state);
+    state = commitFor(state, actor, quoteFor(state, actor, intent, `agent-${state.revision}`, now), now);
+  };
+  try {
+    if (!get(state, actor, order.item)) {
+      for (const item of recipe.inputs) {
+        if (get(state, actor, item)) continue;
+        const seller = merchantIds.filter(stall => stockTargets(stall)[item] && get(state, shop(stall), item) > 0 &&
+          cashBand(get(state, shop(stall), "coin")) !== "dark")
+          .map(stall => ({ stall, price: tradePrice("buy", items[item].price, get(state, shop(stall), item),
+            stockTargets(stall)[item]!, ratio(state, stall), 1) })).sort((a, b) => a.price - b.price)[0];
+        if (!seller) return world;
+        act({ type: "buy", stall_id: seller.stall, item_id: item, quantity: "1" });
+      }
+      act({ type: "craft", recipe_id: recipeId, quantity: "1" });
+    }
+    act({ type: "fill_order", order_id: order.id, quantity: "1" });
+    return get(state, actor, "coin") >= get(world, actor, "coin") ? state : world;
+  } catch {
+    // A route that can't complete leaves the world and the rival's cart untouched.
+    return world;
+  }
+}
+
+function restock(world: World) {
+  let state = world;
+  for (const stall of merchantIds) {
+    const account = shop(stall);
+    const cash = get(state, account, "coin");
+    const market = state.market[stall];
+    if (cash < 5) continue;
+    const reserve = strategies[market.strategy].reserve;
+    const target = Object.entries(stockTargets(stall)).find(([item, target]) => get(state, account, item) < target / 2);
+    if (!target) continue;
+    const [item, quantity] = target as [ItemId, number];
+    const supplier = merchantIds.find(other => other !== stall && stockTargets(other)[item] &&
+      get(state, shop(other), item) > stockTargets(other)[item]! * .75 && get(state, shop(other), "coin") >= 5);
+    if (!supplier) continue;
+    const source = shop(supplier);
+    const cost = ask(items[item].price, get(state, source, item), stockTargets(supplier)[item]!, ratio(state, supplier)).price;
+    const margin = ask(items[item].price, get(state, account, item) + 1, quantity, ratio(state, stall)).price;
+    if (cash - cost < reserve || cost >= margin) continue;
+    const ledger = apply(state.ledger, [move(account, source, "coin", cost, "Wholesale restock"), move(source, account, item, 1, "Wholesale restock")]);
+    state = { ...state, ledger, revision: state.revision + 1, market: { ...state.market,
+      [stall]: { ...market, profit: market.profit - cost, thinking: `Restocked ${items[item].name.toLowerCase()} from ${merchants[supplier].name}.` },
+      [supplier]: { ...state.market[supplier], profit: state.market[supplier].profit + cost, unitsSold: state.market[supplier].unitsSold + 1 } } };
+  }
+  return state;
+}
+
+function agentTurn(world: World) {
+  let state = world;
+  for (const event of plan(world).events.filter(event => event.at > world.elapsed - 10 && event.at <= world.elapsed)) {
+    const effects = event.id === "paper_barge" ? [mint(shop("paper_mill"), "paper", 8, "Paper barge")]
+      : event.id === "oil_late" ? [mint(shop("oil_wharf"), "oil", 8, "Delayed oil barge")] : [];
+    state = addActivity({ ...state, ledger: apply(state.ledger, effects), revision: state.revision + 1 }, event.label + " · " + event.detail);
+  }
+  state = refreshOfferings(restock(state));
+  const actors = Object.keys(state.traders).filter(actor => actor.startsWith("r:"));
+  if (!actors.length) return state;
+  const campaign = state.mode === "campaign";
+  const actor = actors[(Math.floor(state.elapsed / 20) + state.seed + state.night) % actors.length]!;
+  const canTrade = state.elapsed >= (campaign && state.night === 3 ? 40 : campaign ? 80 : 20) && state.elapsed % 20 === 0;
+  if (!canTrade) return state;
+  const offers = Object.values(state.offers).filter(offer => offer.kind === "rescue" || (!campaign || state.night >= 3));
+  for (const offer of offers) {
+    const n = Math.min(2 - (offer.contributions[actor] ?? 0), offer.total - pledged(offer));
+    if (!n || (campaign && offer.kind === "rescue" && state.night === 2 && offer.stall === "oil_wharf") ||
+      get(state, actor, "coin") < n * offer.price + 8) continue;
+    const now = nowAt(state);
+    const deal = quoteFor(state, actor, { type: "buy_offering", offering_id: offer.id, shares: String(n) }, `agent-${state.revision}`, now);
+    state = commitFor(state, actor, deal, now);
+    if (offer.kind === "rescue") return state;
+    break;
+  }
+  const candidates = plan(state).orders.filter(order => !order.personal && order.opens <= state.elapsed && remaining(state, order) > 0 &&
+    (!campaign || (state.night === 3 ? order.boat >= 3 || state.elapsed >= 140 : order.boat >= 2)));
+  for (const order of candidates.sort((a, b) => orderPayout(state, b) - orderPayout(state, a))) {
+    const next = botRoute(state, actor, order);
+    if (next !== state) return next;
+  }
+  if (!campaign && state.elapsed % 40 === 0) {
+    const seller = merchantIds.find(stall => get(state, actor, share(stall)) > 0 && buybackPrice(state, stall) > 0);
+    if (seller) {
+      const now = nowAt(state);
+      const deal = quoteFor(state, actor, { type: "accept_buyback", buyback_id: "buyback-" + seller }, `agent-${state.revision}`, now);
+      return commitFor(state, actor, deal, now);
+    }
+  }
+  return state;
+}
+
+export function advanceClock(world: World, elapsed: number, agents = true): World {
+  if (world.phase !== "open") return world;
+  const end = plan(world).duration;
+  const target = Math.min(end, Math.max(world.elapsed, elapsed));
+  let state = world;
+  if (agents) {
+    for (let at = state.tickAt + 10; at <= target && at < end; at += 10) {
+      state = agentTurn({ ...state, elapsed: at, tickAt: at });
+    }
+  }
+  state = { ...state, elapsed: target };
+  return target >= end ? closeNight(state) : state;
 }
