@@ -55,6 +55,13 @@ export function Landing({ snapshot, busy, submit, castOff }: { snapshot: Snapsho
       </button>}
     </div>}
     {tab === "barge" && <>
+      {(snapshot.river.almanac.tonight || snapshot.river.almanac.tomorrow) && <div className="landing-almanac" aria-label="Harbor almanac">
+        <small>Harbor almanac</small>
+        {(["tonight", "tomorrow"] as const).map(when => {
+          const entry = snapshot.river.almanac[when];
+          return entry && <p key={when}><b>{when === "tonight" ? "Tonight" : "Tomorrow"} · {entry.name} at {villages[entry.village as VillageId].name}.</b> {entry.detail}</p>;
+        })}
+      </div>}
       <label className="order-row"><span className="row-main"><strong>Barge trim</strong><small>Free to switch between runs · fitted at cast-off</small></span>
         <select aria-label="Barge trim" value={trim} disabled={busy || !canCast || !trimsUnlocked}
           onChange={event => setTrim(event.target.value as BargeTrimId)}>

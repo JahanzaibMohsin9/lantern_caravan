@@ -2397,6 +2397,18 @@
                 "additionalProperties": false
               }
             },
+            "almanac": {
+              "type": "object",
+              "properties": {
+                "tonight": {
+                  "$ref": "#/$defs/__schema15"
+                },
+                "tomorrow": {
+                  "$ref": "#/$defs/__schema15"
+                }
+              },
+              "additionalProperties": false
+            },
             "upriver": {
               "type": "array",
               "items": {
@@ -2424,6 +2436,7 @@
             "reaches",
             "contracts",
             "wrecks",
+            "almanac",
             "upriver",
             "bountyFund"
           ],
@@ -2933,6 +2946,34 @@
             "at",
             "name",
             "cargo"
+          ],
+          "additionalProperties": false
+        },
+        "__schema15": {
+          "type": "object",
+          "properties": {
+            "id": {
+              "$ref": "#/$defs/__schema0"
+            },
+            "name": {
+              "$ref": "#/$defs/__schema0"
+            },
+            "village": {
+              "$ref": "#/$defs/__schema0"
+            },
+            "item": {
+              "$ref": "#/$defs/__schema0"
+            },
+            "detail": {
+              "type": "string"
+            }
+          },
+          "required": [
+            "id",
+            "name",
+            "village",
+            "item",
+            "detail"
           ],
           "additionalProperties": false
         }
@@ -4142,6 +4183,18 @@
                   "additionalProperties": false
                 }
               },
+              "almanac": {
+                "type": "object",
+                "properties": {
+                  "tonight": {
+                    "$ref": "#/$defs/__schema15"
+                  },
+                  "tomorrow": {
+                    "$ref": "#/$defs/__schema15"
+                  }
+                },
+                "additionalProperties": false
+              },
               "upriver": {
                 "type": "array",
                 "items": {
@@ -4169,6 +4222,7 @@
               "reaches",
               "contracts",
               "wrecks",
+              "almanac",
               "upriver",
               "bountyFund"
             ],
@@ -4678,6 +4732,34 @@
               "at",
               "name",
               "cargo"
+            ],
+            "additionalProperties": false
+          },
+          "__schema15": {
+            "type": "object",
+            "properties": {
+              "id": {
+                "$ref": "#/$defs/__schema0"
+              },
+              "name": {
+                "$ref": "#/$defs/__schema0"
+              },
+              "village": {
+                "$ref": "#/$defs/__schema0"
+              },
+              "item": {
+                "$ref": "#/$defs/__schema0"
+              },
+              "detail": {
+                "type": "string"
+              }
+            },
+            "required": [
+              "id",
+              "name",
+              "village",
+              "item",
+              "detail"
             ],
             "additionalProperties": false
           }
@@ -7902,6 +7984,18 @@
                   "additionalProperties": false
                 }
               },
+              "almanac": {
+                "type": "object",
+                "properties": {
+                  "tonight": {
+                    "$ref": "#/$defs/__schema15"
+                  },
+                  "tomorrow": {
+                    "$ref": "#/$defs/__schema15"
+                  }
+                },
+                "additionalProperties": false
+              },
               "upriver": {
                 "type": "array",
                 "items": {
@@ -7929,6 +8023,7 @@
               "reaches",
               "contracts",
               "wrecks",
+              "almanac",
               "upriver",
               "bountyFund"
             ],
@@ -8438,6 +8533,34 @@
               "at",
               "name",
               "cargo"
+            ],
+            "additionalProperties": false
+          },
+          "__schema15": {
+            "type": "object",
+            "properties": {
+              "id": {
+                "$ref": "#/$defs/__schema0"
+              },
+              "name": {
+                "$ref": "#/$defs/__schema0"
+              },
+              "village": {
+                "$ref": "#/$defs/__schema0"
+              },
+              "item": {
+                "$ref": "#/$defs/__schema0"
+              },
+              "detail": {
+                "type": "string"
+              }
+            },
+            "required": [
+              "id",
+              "name",
+              "village",
+              "item",
+              "detail"
             ],
             "additionalProperties": false
           }

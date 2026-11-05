@@ -46,6 +46,7 @@ test("relights the dark wharf with a relief haul from upriver, then sells spare 
   await button("The Landing").click();
   await button("Barge").click();
   await expect(page.getByRole("combobox", { name: "Barge trim" })).toBeDisabled();
+  await expect(page.getByLabel("Harbor almanac")).toContainText("Tomorrow · Pressing strike at Ember Falls.");
   await page.getByRole("button", { name: /^Harbor Bell/ }).click();
   // The dark wharf rings the Harbor Bell for a relief haul of oil.
   const relief = page.locator(".relief-row").filter({ hasText: "Relight Oil Wharf" });
@@ -145,6 +146,7 @@ test("salvages the oil the Night 2 storm sank at Heron Reach", async ({ page }) 
   await page.keyboard.press("Escape");
   await button("The Landing").click();
   await button("Barge").click();
+  await expect(page.getByLabel("Harbor almanac")).toContainText("Tonight · Pressing strike at Ember Falls.");
   const wrecks = page.getByLabel("Wrecks on the river");
   await expect(wrecks).toContainText("Wreck of the freight barge on Heron Reach");
   await expect(wrecks).toContainText("6 lamp oil");

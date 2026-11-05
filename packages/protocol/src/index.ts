@@ -96,6 +96,7 @@ export type MerchantSnapshot = {
   offering?: { id: string; kind: "rescue" | "expansion"; price: string; left: string; total: string; available: string; ends: number };
   buyback?: { id: string; price: string };
 };
+export type AlmanacEntry = { id: string; name: string; village: string; item: string; detail: string };
 export type Snapshot = {
   session_id: string; night_id: string; night: number; nightName: string; mode: Mode; seed: number;
   server_time: number; revision: number; phase: "preparation" | "open" | "results"; elapsed: number; duration: number;
@@ -109,6 +110,7 @@ export type Snapshot = {
       deadline: number; mine: boolean; taken: boolean; kind: "supply" | "escort"; relief?: boolean }[];
     myRun?: { id: string; deadline: number; manifest: RunManifest };
     wrecks: { id: string; reach: string; name: string; cargo: Record<string, string>; open: boolean; nightsLeft: number; claimed: boolean }[];
+    almanac: { tonight?: AlmanacEntry; tomorrow?: AlmanacEntry };
     upriver: { actor: string; name: string }[];
     bountyFund: string;
   };

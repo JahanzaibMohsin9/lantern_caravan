@@ -55,6 +55,45 @@ export const pirateRoles = {
 export type PirateRole = keyof typeof pirateRoles;
 export const pirateRoleAt = (danger: number, index: number): PirateRole =>
   danger >= 3 && index % 3 === 2 ? "gunboat" : danger >= 2 && index % 3 === 1 ? "skiff" : "raider";
+/**
+ * Harbor almanac: village events that change one night's harvest. Each is announced the night before it acts,
+ * so merchants and players can stock up or wait.
+ */
+export const almanacEvents = {
+  oil_glut: { name: "Oil glut", village: "ember_falls", item: "oil", factor: 1.5, bonus: 0,
+    detail: "The Ember Falls presses run all night: the oil harvest is half again as large." },
+  pressing_strike: { name: "Pressing strike", village: "ember_falls", item: "oil", factor: .5, bonus: 0,
+    detail: "The Ember Falls pressers strike: the oil harvest is halved." },
+  mill_flood: { name: "Mill flood", village: "millbrook", item: "paper", factor: .5, bonus: 0,
+    detail: "The Mill Race floods the paper mill: the paper harvest is halved. Cord is unaffected." },
+  dye_bloom: { name: "Dye bloom", village: "reedmarsh", item: "dye", factor: 1, bonus: 6,
+    detail: "Indigo blooms in the Reedmarsh pools: 6 extra dye." },
+  reed_blight: { name: "Reed blight", village: "reedmarsh", item: "reed", factor: .5, bonus: 0,
+    detail: "Blight in the reed beds: the reed harvest is halved." },
+} as const satisfies Record<string, { name: string; village: VillageId; item: ItemId; factor: number; bonus: number; detail: string }>;
+export type AlmanacId = keyof typeof almanacEvents;
+const almanacIds = Object.keys(almanacEvents) as AlmanacId[];
+
+/**
+ * The event acting on a night's harvest, if any. The campaign scripts Night 3's pressing strike (announced on
+ * Night 2). Endless and live rooms have one event every two nights from Night 3, seeded from the room seed;
+ * the village rotates, so the same village never has two events in a row.
+ */
+export function almanacFor(mode: "campaign" | "endless" | "live", night: number, seed: number): AlmanacId | undefined {
+  if (mode === "campaign") return night === 3 ? "pressing_strike" : undefined;
+  if (night < 3 || night % 2 === 0) return undefined;
+  const mix = (value: number) => { value = Math.imul(value ^ (value >>> 16), 0x45d9f3b); return (value ^ (value >>> 16)) >>> 0; };
+  const order = Object.keys(villages) as VillageId[];
+  const village = order[(mix(seed) + (night - 3) / 2) % order.length]!;
+  const options = almanacIds.filter(id => almanacEvents[id].village === village);
+  return options[mix(seed ^ Math.imul(night, 0x9e3779b1)) % options.length];
+}
+/** Harvest target for one good tonight, after any almanac event. */
+export function harvestTarget(event: AlmanacId | undefined, village: VillageId, item: ItemId, target: number) {
+  const entry = event && almanacEvents[event];
+  return entry && entry.village === village && entry.item === item ? Math.round(target * entry.factor) + entry.bonus : target;
+}
+
 /** A sunk haul becomes salvageable at the next dusk and breaks up after this many nights. */
 export const wreckNights = 2;
 

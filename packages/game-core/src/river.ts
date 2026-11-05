@@ -1,7 +1,8 @@
 import { items, merchants, recipes, type ItemId, type StallId } from "@lantern/content";
 import { strategies } from "@lantern/content/nights";
 import { bargeHold, bargeUpgrades, pirateCap, pirateRoleCaps, pirateRoles, reachIds, reaches, routeDistance, runMs, sourceFor, stopChoice,
-  stopPlan, villageGoods, villageIds, villageStrategy, villages, wreckNights, type BargeUpgradeId, type ReachId, type VillageId } from "@lantern/content/river";
+  stopPlan, villageGoods, villageIds, villageStrategy, villages, wreckNights, almanacEvents, almanacFor, harvestTarget,
+  type AlmanacId, type BargeUpgradeId, type ReachId, type VillageId } from "@lantern/content/river";
 import { runReportSchema, type Intent, type LedgerOp, type RunManifest, type RunReport, type Snapshot } from "@lantern/protocol";
 import { apply } from "./ledger";
 import { addActivity, burn, cashBand, get, merchantIds, mint, move, plan, ratio, shop, stockTargets, type World } from "./model";
@@ -87,15 +88,21 @@ function breakUpWrecks(world: World) {
   return withRiver(state, { wrecks });
 }
 
+export const almanacTonight = (world: World) => almanacFor(world.mode, world.night, world.seed);
+export const almanacTomorrow = (world: World) => almanacFor(world.mode, world.night + 1, world.seed);
+const almanacLine = (id: AlmanacId) => almanacEvents[id].name + " at " + villages[almanacEvents[id].village].name;
+
 export function harvest(world: World, goodsOnly = false) {
   const effects: LedgerOp[] = [];
+  // Almanac events change only how much a village harvests tonight; nothing else about the night.
+  const event = goodsOnly ? undefined : almanacTonight(world);
   for (const id of villageIds) {
     const account = village(id), cash = get(world, account, "coin");
     if (!cash && !goodsOnly) effects.push(mint(account, "coin", 40, "Village float"));
     const upkeep = goodsOnly ? 0 : Math.min(Math.max(0, cash - 24), 3 + Math.floor(Math.max(0, cash - 44) / 3));
     if (upkeep && world.mode !== "campaign") effects.push(move(account, freightSink, "coin", upkeep, "Village upkeep"));
     for (const [item, target] of goodsEntries(id)) {
-      const qty = target - stock(world, id, item);
+      const qty = harvestTarget(event, id, item, target) - stock(world, id, item);
       if (qty > 0) effects.push(harvestMint(account, item, qty));
     }
   }
@@ -148,6 +155,9 @@ export function beginRiverNight(world: World) {
     state = changeReach(rolled, id, 1, reach.boom || (world.mode !== "campaign" && reach.danger >= 2 && world.night % 3 === 0));
   }
   state = harvest(state);
+  const tonight = almanacTonight(state), tomorrow = almanacTomorrow(state);
+  if (tonight) state = addActivity(state, "Harbor almanac: " + almanacLine(tonight) + " tonight. " + almanacEvents[tonight].detail, "Almanac");
+  if (tomorrow) state = addActivity(state, "Harbor almanac: " + almanacLine(tomorrow) + " tomorrow night. " + almanacEvents[tomorrow].detail, "Almanac");
   if (world.night === 1) {
     const slots = world.mode === "live" ? 7 : 3;
     state = applyEffects(state, (["paper", "oil"] as const).map(item =>
@@ -308,21 +318,30 @@ export function refreshContracts(world: World) {
   if (world.mode === "campaign") return state;
   const inputs = new Set<ItemId>(plan(world).orders.flatMap(order => Object.values(recipes).filter(recipe => recipe.output === order.item)
     .flatMap(recipe => [...recipe.inputs])));
+  const warning = almanacTomorrow(world), short = warning && almanacEvents[warning].factor < 1 ? almanacEvents[warning] : undefined;
   for (const stall of merchantIds) {
     const strategy = state.market[stall].strategy, payer = shop(stall), reserve = strategies[strategy].reserve;
     for (const [key, target] of Object.entries(stockTargets(stall))) {
       const item = key as ItemId, id = sourceFor(item)!;
       const open = Object.values(state.river.contracts).filter(contract => contract.kind === "supply" && contract.stall === stall);
       const stock = get(state, payer, item), cash = get(state, payer, "coin");
+      // A shortage in tomorrow's almanac makes every stall that sells the good restock early, at almost full shelves.
+      const ahead = short?.item === item;
       if (open.length >= 2 || open.some(contract => contract.item === item) ||
-        stock >= target * (strategy === "bold" ? .6 : .5) || cash < reserve * (strategy === "steady" ? 2 : 1) ||
-        (strategy === "festival" && !inputs.has(item))) continue;
+        stock >= target * (ahead ? .9 : strategy === "bold" ? .6 : .5) || cash < reserve * (strategy === "steady" ? 2 : 1) ||
+        (strategy === "festival" && !inputs.has(item) && !ahead)) continue;
       const qty = Math.max(3, Math.min(8, target - stock));
       const premium = Math.max(1, 2 + dangerOnRoute(state, id) + Math.ceil(routeDistance(id) / 900) +
         (strategy === "bold" ? 2 : strategy === "festival" ? 1 : strategy === "bargain" ? -1 : 0));
       const payout = qty * normal(stall, item) + premium;
       if (cash - payout < Math.max(10, reserve)) continue;
       state = postContract(state, { village: id, item, qty, payout, payer, stall, deadline: plan(world).duration, kind: "supply" });
+      if (ahead) {
+        const line = merchants[stall].name + " is stocking up on " + items[item].name.toLowerCase() + ": the almanac warns of a " +
+          short!.name.toLowerCase() + " at " + villages[short!.village].name + " tomorrow.";
+        state = { ...state, market: { ...state.market, [stall]: { ...state.market[stall], thinking: line } } };
+        if (!state.activity.some(entry => entry.night === state.night && entry.line === line)) state = addActivity(state, line, merchants[stall].name);
+      }
     }
   }
   return state;
@@ -761,6 +780,9 @@ export function commitRiver(prior: World, world: World, actor: string, intent: R
   return { ...state, traders: { ...state.traders, [actor]: { ...state.traders[actor]!, relationship, lastStop: "shed" } } };
 }
 
+const almanacEntry = (id: AlmanacId | undefined) => id && { id, name: almanacEvents[id].name,
+  village: almanacEvents[id].village, item: almanacEvents[id].item, detail: almanacEvents[id].detail };
+
 export function riverSnapshot(world: World, actor: string): Pick<Snapshot, "villages" | "river" | "barge"> {
   const trader = world.traders[actor], upgrades = trader?.upgrades.filter(id => Object.hasOwn(bargeUpgrades, id)) ?? [];
   const run = Object.values(world.river.runs).find(run => run.actor === actor);
@@ -787,6 +809,7 @@ export function riverSnapshot(world: World, actor: string): Pick<Snapshot, "vill
         open: wreckOpen(world, wreck), nightsLeft: Math.max(0, wreck.sank + wreckNights - world.night + 1),
         claimed: !!wreck.claimedBy })).filter(wreck => Object.keys(wreck.cargo).length),
       upriver: Object.values(world.river.runs).map(run => ({ actor: run.actor, name: world.traders[run.actor]!.name })),
+      almanac: { tonight: almanacEntry(almanacTonight(world)), tomorrow: almanacEntry(almanacTomorrow(world)) },
     },
     barge: { hold: String(bargeHold(upgrades)), upgrades, trim: trader?.trim ?? "balanced" },
   };

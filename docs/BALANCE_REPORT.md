@@ -1,20 +1,24 @@
 # Lantern Caravan · River Run balance report
 
-W0 verification (5 November 2026): all five rows below were reproduced in this session. The CLI now fails `--check` for a dark streak above **one** night (previously five), matching §16.2. No economy or balance values changed.
+Rows below are from the W4 run (5 November 2026), with wrecks and the almanac active. W0 verification first reproduced the table. The CLI now fails `--check` for a dark streak above **one** night (previously five), matching §16.2. No economy or balance values changed.
 
 Each checked run used three autonomous traders over 2,000 nights. Run `npm run simulate -- --nights 2000 --seed <seed> --check` to reproduce a row. The CLI writes the summary and per-tick CSV under `sim-output/`.
 
 | Seed | Nights with 3+ open stalls | Stall coins at close | Village coins at sampled ticks | Freight loss entries | Supplier units | Boats lit | Invariant errors |
 | --- | ---: | ---: | ---: | ---: | ---: | ---: | ---: |
-| 17 | 2,000 | 74–240 | 30–232 | 722 | 25,409 | 6,004 | 0 |
-| 42 | 2,000 | 73–258 | 30–208 | 895 | 25,325 | 5,809 | 0 |
-| 93 | 2,000 | 75–263 | 30–204 | 774 | 25,504 | 5,984 | 0 |
-| 166 | 2,000 | 59–254 | 30–226 | 806 | 25,369 | 5,887 | 0 |
-| 271 | 2,000 | 59–250 | 30–221 | 808 | 25,698 | 5,783 | 0 |
+| 17 | 2,000 | 61–228 | 30–231 | 709 | 25,192 | 5,924 | 0 |
+| 42 | 2,000 | 64–243 | 30–204 | 829 | 25,446 | 5,794 | 0 |
+| 93 | 2,000 | 62–250 | 31–206 | 803 | 25,458 | 5,876 | 0 |
+| 166 | 2,000 | 64–237 | 30–195 | 809 | 25,465 | 5,911 | 0 |
+| 271 | 2,000 | 65–226 | 31–220 | 794 | 25,312 | 5,789 | 0 |
 
 The longest dark streak was one night for every seed. During the review, two seeds exposed a stall that sold out while holding 10–15 coins: it couldn't pay a hauler above its 10-coin reserve, so it stayed closed for up to 11 nights. The harbor's relief contract now pays for that haul, priced so rivals will take it. The checks cover nonnegative integer balances, price bounds, outstanding shares, permitted goods mints and burns, village balances between 20 and 300, danger from 0 to 5, and empty run and contract escrows at close. Supplier units include stall-to-stall wholesale. A lost sailing with several cargo lines can produce several freight loss entries.
 
 ## Tuned values
+
+W4 almanac values: an oil glut harvests to 36 oil (24 × 1.5); a pressing strike, mill flood or reed blight harvests to half the usual target (12 oil, 12 paper, 10 reed); a dye bloom adds 6 dye (20). A harvest only tops a village up to its target, so a shortage event matters when the village has already been bought down. When tomorrow's event is a shortage, any stall that sells that good posts a Harbor Bell contract once its stock falls below 90% of target instead of the usual 50–60%, still subject to its cash reserve. Events run on odd nights from Night 3 in endless and live rooms and rotate villages; the campaign has only Night 3's pressing strike.
+
+W3 adds no tuned economy values: wrecks hold exactly the cargo a lost haul carried and break up after two nights; stop gains are hull, fuel and ammo, plus the fisher's 6-coin bounty from the existing fund.
 
 W2 applies A3: skiff 40 HP / 6 bounty, raider 57 HP / 8 bounty (previously 42 HP / 3 bounty), gunboat 96 HP / 14 bounty. At danger 2+, every third spawn starting with the second is a skiff; at danger 3+, every third starting with the third is a gunboat. Danger 0 has no spawns. The existing 36-coin fund is unchanged. Skiffs close at 148 units/s, ram for 8 hull and spill one held good, then retreat for 2.2 seconds. A spill is recoverable for 20 seconds; unrecovered goods use the existing river burn. Gunboats retain 68 units/s and twin fire, now approaching to 300, retreating inside 230 and firing within 460 (raiders: 100 speed, 185/115/360). These values implement the specified fast rammer and long-range gunboat; no economic tuning was needed.
 

@@ -25,6 +25,8 @@ At The Landing's **Barge** tab, choose Balanced, Runner, Ironclad or Gunner trim
 
 Gold **skiffs** ram your barge and spill cargo: recover it within 20 seconds. Coral **raiders** patrol at medium range; purple **gunboats** fire twin shots from farther away. Bounties are 6, 8 and 14 coins respectively, while the harbor fund lasts.
 
+The **harbor almanac** at The Landing warns of village events a night before they happen: an oil glut or a pressing strike at Ember Falls, a mill flood at Millbrook, a dye bloom or reed blight at Reedmarsh. Merchants read it too and restock early before a shortage.
+
 Hauls that pirates sink become **wrecks**: their cargo stays in the water and opens for salvage at the next dusk, for two nights, before the river takes it. The Landing lists every wreck. Two or three optional **riverside stops** appear on each run (a stranded fisher, a lock keeper's shed, an overturned punt), each offering one choice of hull, fuel or ammo.
 
 | First Light | The Dark Wharf | Festival of Lights |

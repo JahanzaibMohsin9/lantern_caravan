@@ -26,6 +26,7 @@ const merchant = z.object({
     total: amount, available: amount, ends: seconds }).optional(),
   buyback: z.object({ id: text, price: amount }).optional(),
 });
+const almanacEntry = z.object({ id: text, name: text, village: text, item: text, detail: z.string() });
 const order = z.object({ id: text, name: text, item: text, remaining: amount, quantity: amount, payout: amount,
   boat: z.int().min(0).max(5), personal: z.boolean(), opens: seconds,
   state: z.enum(["upcoming", "open", "filled", "expired"]), wishes: z.array(z.string()), wishAuthors: z.array(z.string()) });
@@ -43,6 +44,7 @@ export const snapshotSchema = z.object({
     myRun: z.object({ id: text, deadline: time, manifest: manifestSchema }).optional(),
     wrecks: z.array(z.object({ id: text, reach: text, name: text, cargo: amounts, open: z.boolean(),
       nightsLeft: z.int().min(0).max(3), claimed: z.boolean() })),
+    almanac: z.object({ tonight: almanacEntry.optional(), tomorrow: almanacEntry.optional() }),
     upriver: z.array(z.object({ actor: text, name: text })),
     bountyFund: amount,
   }),

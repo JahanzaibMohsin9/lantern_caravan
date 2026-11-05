@@ -5,11 +5,11 @@ import { pack } from "../apps/web/src/backend/saves";
 import { addTrader, advanceClock, closeNight, commit, commitFor, createWorld, newNight, openNight, quote, quoteFor, snapshotFor } from "@lantern/game-core";
 import type { Intent, RunManifest, RunReport } from "@lantern/protocol";
 import { apply } from "../packages/game-core/src/ledger";
-import { get, move, player, shop, type World } from "../packages/game-core/src/model";
+import { get, merchantIds, mint, move, player, shop, stockTargets, type World } from "../packages/game-core/src/model";
 import { harvest, refreshContracts, scheduleFreight, startRivalHaul } from "../packages/game-core/src/river";
-import { items } from "@lantern/content";
+import { items, merchants } from "@lantern/content";
 import { decodeWorld, encodeWorld } from "@lantern/game-core/codec";
-import { stopPlan, type BargeTrimId } from "@lantern/content/river";
+import { almanacEvents, almanacFor, harvestTarget, stopPlan, villageGoods, type BargeTrimId } from "@lantern/content/river";
 
 test.each<BargeTrimId>(["balanced", "runner", "ironclad", "gunner"])("%s is free, manifest-bound, saved across nights, and conserves goods", trim => {
   const world = createWorld("endless");
@@ -450,5 +450,69 @@ describe("riverside stops", () => {
     expect(() => finish({ ...empty(run), stops: [{ stop_id: "stop-9", choice: "mend" }] })).toThrow("RIVER_STOP");
     expect(() => finish({ ...empty(run), stops: [{ stop_id: fisher.id, choice: "fuel" }] })).toThrow("RIVER_STOP");
     expect(() => finish({ ...empty(run), stops: [{ stop_id: fisher.id, choice: "mend" }] })).toThrow("RIVER_CARGO");
+  });
+});
+
+describe("harbor almanac", () => {
+  test("the campaign scripts Night 3's pressing strike; shared rooms get one rotating event every two nights", () => {
+    expect([1, 2, 3, 4].map(night => almanacFor("campaign", night, 42))).toEqual([undefined, undefined, "pressing_strike", undefined]);
+    for (const seed of [17, 42, 93, 166, 271]) {
+      let previous: string | undefined;
+      for (let night = 1; night <= 200; night++) {
+        const id = almanacFor("live", night, seed);
+        expect(id).toBe(almanacFor("live", night, seed));
+        expect(id === undefined).toBe(night < 3 || night % 2 === 0);
+        if (!id) continue;
+        expect(almanacEvents[id].village).not.toBe(previous);
+        previous = almanacEvents[id].village;
+      }
+    }
+  });
+
+  test("an event changes only that good's harvest", () => {
+    const world = createWorld("endless", 42);
+    const night = [3, 5, 7, 9, 11].find(n => almanacFor("endless", n, 42))!;
+    const id = almanacFor("endless", night, 42)!, { village, item } = almanacEvents[id];
+    const drained = { ...world, ledger: apply(world.ledger, [move("v:" + village, "sys:fixture", item, get(world, "v:" + village, item), "Test drain")]) };
+    const event = harvest({ ...drained, night }), plain = harvest({ ...drained, night: night + 1 });
+    const target = villageGoods(village)[item]!;
+    expect(get(event, "v:" + village, item)).toBe(harvestTarget(id, village, item, target));
+    expect(get(plain, "v:" + village, item)).toBe(target);
+    const strip = (state: World) => ({ ...state.ledger, ["v:" + village]: { ...state.ledger["v:" + village], [item]: 0 } });
+    expect(strip(event)).toEqual(strip(plain));
+  });
+
+  test("the almanac announces Night 3's strike on Night 2, and it halves Ember Falls' harvest", () => {
+    const two = prepared();
+    expect(snapshotFor(two, "test").river.almanac).toEqual({ tomorrow: expect.objectContaining({ id: "pressing_strike", village: "ember_falls" }) });
+    expect(two.activity.some(entry => entry.line.startsWith("Harbor almanac: Pressing strike at Ember Falls tomorrow night."))).toBe(true);
+    // The strike changes how much is pressed, not what's already in the store: drain it to see the harvest itself.
+    const closed = closeNight(openNight(two));
+    const three = newNight({ ...closed, ledger: apply(closed.ledger, [move("v:ember_falls", "sys:fixture", "oil", get(closed, "v:ember_falls", "oil"), "Test drain")]) });
+    expect(snapshotFor(three, "test").river.almanac.tonight?.id).toBe("pressing_strike");
+    expect(get(three, "v:ember_falls", "oil")).toBeLessThanOrEqual(12);
+  });
+
+  test("merchants restock early when tomorrow brings a shortage, and log why", () => {
+    for (const seed of [17, 42, 93, 166, 271, 7, 8, 9]) {
+      const id = almanacFor("endless", 3, seed);
+      if (!id || almanacEvents[id].factor >= 1) continue;
+      const { item } = almanacEvents[id];
+      const stall = merchantIds.find(entry => (stockTargets(entry)[item] ?? 0) >= 8)!;
+      const target = stockTargets(stall)[item]!;
+      const base = createWorld("endless", seed);
+      const ready = { ...base, river: { ...base.river, contracts: {} }, ledger: apply(base.ledger, [
+        ...(get(base, shop(stall), item) > Math.floor(target * .8)
+          ? [move(shop(stall), "sys:fixture", item, get(base, shop(stall), item) - Math.floor(target * .8), "Test stock")] : []),
+        mint(shop(stall), "coin", 200, "Test sales"),
+      ]) };
+      const warned = refreshContracts({ ...ready, night: 2 }), calm = refreshContracts({ ...ready, night: 4 });
+      const posted = (state: World) => Object.values(state.river.contracts).some(contract => contract.stall === stall && contract.item === item);
+      expect(posted(warned)).toBe(true);
+      expect(posted(calm)).toBe(false);
+      expect(warned.activity.some(entry => entry.line.startsWith(merchants[stall].name + " is stocking up on " + items[item].name.toLowerCase()))).toBe(true);
+      return;
+    }
+    throw new Error("No seed with a Night 3 shortage.");
   });
 });

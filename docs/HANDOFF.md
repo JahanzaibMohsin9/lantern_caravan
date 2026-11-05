@@ -12,7 +12,7 @@ W0–W2 were delivered by the first implementer; W3 onward continue in order fro
 | W1 · trims | Committed as `0de05b9` |
 | W2 · skiffs | Committed as `9a0c327` |
 | W3 · wrecks/stops | Committed in the `W3:` commit; checks below |
-| W4 · almanac | Not started |
+| W4 · almanac | Committed in the `W4:` commit; checks below |
 | W5 · player Bell orders | Not started |
 | W6 · four-night campaign | Not started |
 | W7 · barge looks/cosmetics | Not started |
@@ -25,6 +25,16 @@ W0–W2 were delivered by the first implementer; W3 onward continue in order fro
 - [ ] Full manual playthrough: not performed. Firefox and physical touch devices: not verified.
 
 Branch remains `river-run`; no push, remote changes, rebase or history rewrite.
+
+### W4 · Harbor almanac
+
+`almanacFor(mode, night, seed)` in `@lantern/content/river` schedules village events: the campaign has Night 3's pressing strike at Ember Falls, and endless and live rooms have one event on every odd night from Night 3, seeded from the room seed with the village rotating so it never repeats back to back. Events are an oil glut, a pressing strike, a mill flood, a dye bloom and a reed blight. Each changes one good's harvest target for one night through `harvestTarget`; the harvest is the only thing that changes. The event is in `snapshot.river.almanac.tomorrow` for the whole night before, logged to the activity feed at both dusks, and shown in an almanac panel at The Landing. When tomorrow brings a shortage, stalls that sell the good post a Harbor Bell contract at 90% of their stock target and log why ("Oil Wharf is stocking up on lamp oil: the almanac warns of a pressing strike at Ember Falls tomorrow."); rival haulers react to those contracts through their normal route scoring, with no special case.
+
+- `npm run schema` — passed; regenerated schema committed.
+- `npm run build` — passed.
+- `npm test` — passed, 129 tests (4 new: schedule and village rotation over 200 nights on five seeds, harvest-only effect, Night 2 announcement and Night 3 strike, merchant stock-up with a control night).
+- `LANTERN_CHROME_CHANNEL=chrome npm run test:e2e -- --project=chrome` — passed, 6 tests. The Night 2 relief path now checks the Landing shows "Tomorrow · Pressing strike at Ember Falls.", and the Night 3 salvage path checks "Tonight · Pressing strike at Ember Falls."
+- `npm run simulate -- --nights 2000 --seed <17|42|93|166|271> --check` — all five passed: longest dark streak 1, zero invariant errors, 2,000 stable nights each. The balance table is refreshed from this run.
 
 ### W3 · Wrecks and riverside stops
 
