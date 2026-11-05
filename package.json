@@ -1,0 +1,18 @@
+{
+  "name": "lantern-row",
+  "private": true,
+  "version": "0.1.0",
+  "type": "module",
+  "engines": { "node": "24.x" },
+  "workspaces": ["apps/*", "packages/*"],
+  "scripts": {
+    "dev": "npm run dev -w @lantern/web",
+    "build": "tsc --noEmit && npm run build -w @lantern/web",
+    "test": "vitest run"
+  },
+  "devDependencies": {
+    "@types/node": "^24.0.0",
+    "typescript": "~5.9.3",
+    "vitest": "^4.0.0"
+  }
+}

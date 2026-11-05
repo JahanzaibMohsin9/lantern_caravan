@@ -1,0 +1,9 @@
+node_modules/
+dist/
+coverage/
+sim-output/
+.env*
+!.env.example
+apps/server/data/
+playwright-report/
+test-results/
