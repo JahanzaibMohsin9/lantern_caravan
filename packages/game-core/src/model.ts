@@ -2,7 +2,7 @@ import { items, merchants, recipes, type ItemId, type StallId } from "@lantern/c
 import { nightPlan, rivalNames, strategies, type FestivalOrder, type StrategyId, type UpgradeId } from "@lantern/content/nights";
 import type { Activity, CashBand, LedgerOp, Mode, Snapshot } from "@lantern/protocol";
 import { apply, balance, type Ledger } from "./ledger";
-import type { BargeTrimId, BargeUpgradeId, VillageId } from "@lantern/content/river";
+import type { BargeCosmeticId, BargeLook, BargeTrimId, BargeUpgradeId, VillageId } from "@lantern/content/river";
 import { beginRiverNight, freshRiver, starterGoods, type RiverState } from "./river";
 
 export const player = "p:guest";
@@ -27,6 +27,7 @@ export const move = (from: string, to: string, asset: string, amount: number, me
   ({ op: "transfer", from, to, asset, amount: String(amount), memo });
 
 export type Trader = {
+  cosmetics: BargeCosmeticId[]; look?: BargeLook;
   boomsTonight: number; contractsTonight: number; wharfBonus: number;
   trim?: BargeTrimId;
   name: string; upgrades: (UpgradeId | BargeUpgradeId)[]; delivered: Partial<Record<ItemId, number>>;
@@ -62,6 +63,7 @@ const defaults: Record<StallId, StrategyId> = {
 };
 
 const freshTrader = (name: string): Trader => ({
+  cosmetics: [],
   boomsTonight: 0, contractsTonight: 0, wharfBonus: 0,
   name, upgrades: [], delivered: {}, crafted: 0, crowdSold: 0, earned: 0, spent: 0,
   jobsDone: 0, relationship: {}, fair: {}, refused: [], cooldowns: {}, votes: {},
@@ -162,6 +164,7 @@ export function newNight(previous: World, mode: Mode = previous.mode): World {
       profit: 0, unitsSold: 0, rescued: false, offerCount: 0, stockClosed: mode === "campaign" ? false : previous.market[stall].stockClosed, thinking: "Watching the river for freight." }])) as World["market"],
     traders: Object.fromEntries(Object.entries(previous.traders).map(([actor, trader]) => [actor, {
       ...freshTrader(trader.name), upgrades: trader.upgrades, relationship: trader.relationship, trim: trader.trim,
+      cosmetics: trader.cosmetics, look: trader.look,
       lifetimeCrafted: trader.lifetimeCrafted, lifetimeDividends: trader.lifetimeDividends,
       boatsHelped: trader.boatsHelped, rescued: trader.rescued, dividends: trader.dividends,
     }])),

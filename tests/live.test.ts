@@ -22,6 +22,28 @@ afterEach(async () => {
 });
 
 describe("authoritative market", () => {
+  test("a cosmetic purchase funds relief once and remains owned after live restart", async () => {
+    vi.useFakeTimers({ toFake: ["Date"] });
+    const { dir, store } = await makeStore();
+    let market = new LiveMarket(store, new DevSettlementProvider(dir));
+    const room = "looks";
+    await market.load(room, true);
+    await market.join(room, { playerId: "a", displayName: "Ari" }, false);
+    const before = await market.snapshot(room, "p:a");
+    const deal = await market.getQuote(room, "p:a", before.night_id, { type: "buy_barge_cosmetic", cosmetic_id: "jade" });
+    expect(deal.effects).toEqual([{ op: "transfer", from: "p:a", to: "sys:rescue", asset: "coin", amount: "15", memo: "Barge finish: Jade" }]);
+    const receipt = await market.submit(room, "p:a", before.night_id, deal.quote_id, "buy-jade");
+    expect(receipt.state).toBe("confirmed");
+    expect(await market.submit(room, "p:a", before.night_id, deal.quote_id, "buy-jade")).toEqual(receipt);
+    market = new LiveMarket(store, new DevSettlementProvider(dir));
+    const restored = await market.snapshot(room, "p:a");
+    expect(restored.coins).toBe(String(Number(before.coins) - 15));
+    expect(restored.barge).toMatchObject({ cosmetics: ["jade"], look: { lantern: "jade" } });
+    const fit = await market.getQuote(room, "p:a", before.night_id, { type: "fit_barge_cosmetic", cosmetic_id: "amber" });
+    expect(fit.effects).toEqual([]);
+    await market.submit(room, "p:a", before.night_id, fit.quote_id, "refit");
+    expect((await market.snapshot(room, "p:a")).barge.look.lantern).toBe("amber");
+  });
   test("a trim is confirmed with the live manifest and survives a server restart", async () => {
     vi.useFakeTimers({ toFake: ["Date"] });
     const { dir, store } = await makeStore();

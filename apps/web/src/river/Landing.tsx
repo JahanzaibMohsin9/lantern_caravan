@@ -5,6 +5,7 @@ import { bargeTrims, bargeUpgrades, bellOrderLimits, reaches, routeDistance, sou
 import { routeLead } from "@lantern/river-sim";
 import type { Intent, Snapshot } from "@lantern/protocol";
 import { cargoColor } from "./render";
+import { BargeLooks } from "./BargeLooks";
 
 /** Seconds of night that must remain to cast off once the market is open. */
 const lateCutoff = 45;
@@ -58,6 +59,7 @@ export function Landing({ snapshot, busy, submit, castOff }: { snapshot: Snapsho
       </button>}
     </div>}
     {tab === "barge" && <>
+      <BargeLooks snapshot={snapshot} busy={busy} canFit={canCast} submit={submit}/>
       {(snapshot.river.almanac.tonight || snapshot.river.almanac.tomorrow) && <div className="landing-almanac" aria-label="Harbor almanac">
         <small>Harbor almanac</small>
         {(["tonight", "tomorrow"] as const).map(when => {

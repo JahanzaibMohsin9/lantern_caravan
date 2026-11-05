@@ -225,3 +225,62 @@ test("posts a Bell order in a live room and a rival hauler delivers it", async (
   await expect(order).toContainText("0 coins held");
   expect(errors).toEqual([]);
 });
+
+test("buys visible barge tiers and finishes, refits free, reloads and casts off with the fitted look", async ({ page }) => {
+  test.setTimeout(120_000);
+  const errors: string[] = [];
+  page.on("pageerror", error => errors.push(error.message));
+  const button = (name: string) => page.getByRole("button", { name, exact: true });
+  await page.goto("/");
+  await button("Enter the Row").click();
+  const save = execFileSync(process.execPath, [join("node_modules", "tsx", "dist", "cli.mjs"), join("tests", "e2e", "fixtures", "barge-looks-save.ts")]);
+  page.on("dialog", dialog => void dialog.accept());
+  await button("Pause").click(); await button("Settings").click();
+  await page.locator('input[type="file"]').setInputFiles({ name: "looks.json", mimeType: "application/json", buffer: save });
+  await expect(page.getByText("NIGHT 04")).toBeVisible();
+  await page.keyboard.press("Escape");
+  await button("The Landing").click(); await button("Barge").click();
+  const preview = page.getByRole("img", { name: "Barge preview" });
+  const pixels = () => preview.evaluate(canvas => (canvas as HTMLCanvasElement).toDataURL());
+  let previous = await pixels();
+  await page.getByText("Barge upgrades", { exact: true }).click();
+  for (const [name, feature] of [["Hold I", "Deck crates"], ["Hold II", "Two cargo rows"], ["Hull I", "Iron bands"],
+    ["Hull II", "Full plating"], ["Cannon I", "Heavy mount"], ["Cannon II", "Twin barrels"],
+    ["Engine I", "Twin stacks"], ["Engine II", "Stern paddle wheel"]]) {
+    await page.getByRole("button", { name: new RegExp("^" + name + " ·") }).click();
+    await expect(page.getByLabel("Visible barge upgrades")).toContainText(feature!);
+    const current = await pixels();
+    expect(current).not.toBe(previous); previous = current;
+  }
+  await page.getByText("Paint, lantern & prow", { exact: true }).click();
+  await page.getByLabel("Hull paint", { exact: true }).selectOption("indigo");
+  await button("Buy Indigo · 35 coins").click();
+  await expect(button("Fitted Indigo")).toBeDisabled();
+  await page.getByLabel("Bow lantern", { exact: true }).selectOption("violet");
+  await button("Buy Violet · 25 coins").click();
+  await page.getByLabel("Prow figure", { exact: true }).selectOption("heron");
+  await button("Buy Heron · 30 coins").click();
+  await expect(button("Fitted Heron")).toBeDisabled();
+  await preview.screenshot({ path: "test-results/barge-w7-preview.png" });
+  const fitted = await pixels();
+  await page.getByLabel("Bow lantern", { exact: true }).selectOption("amber");
+  await button("Fit Amber").click();
+  await expect(button("Fitted Amber")).toBeDisabled();
+  await page.getByLabel("Bow lantern", { exact: true }).selectOption("violet");
+  await button("Fit Violet").click();
+  await page.reload(); await button("Continue").click();
+  await button("The Landing").click(); await button("Barge").click();
+  await expect(preview).toBeVisible();
+  expect(await pixels()).toBe(fitted);
+  await page.getByText("Paint, lantern & prow", { exact: true }).click();
+  await expect(button("Fitted Indigo")).toBeDisabled();
+  await expect(button("Fitted Violet")).toBeDisabled();
+  await expect(button("Fitted Heron")).toBeDisabled();
+  await page.getByRole("button", { name: /^Cast off/ }).click();
+  const river = page.getByRole("region", { name: "River Run" });
+  await expect(river).toBeVisible();
+  await river.screenshot({ path: "test-results/barge-w7-river.png" });
+  await river.getByRole("button", { name: /Moor at The Landing/ }).click();
+  await expect(river).toHaveCount(0);
+  expect(errors).toEqual([]);
+});

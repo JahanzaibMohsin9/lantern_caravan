@@ -23,6 +23,8 @@ On the river, **WASD** or **arrows** steer, **Shift** boosts, **Space** fires at
 
 At The Landing's **Barge** tab, choose Balanced, Runner, Ironclad or Gunner trim. Switching is free and takes effect when you cast off; the HUD names your trim. Trims unlock on campaign Night 3 and are always available in Endless and live rooms.
 
+The Barge tab also previews your upgrades and **paint, bow lantern and prow figure**. Upgrades add deck crates, iron bands and plating, larger cannons and twin barrels, extra stacks and a stern paddle wheel. Paid finishes fund harbor relief; once bought, they stay yours across nights and refit free. Finishes change appearance only.
+
 Gold **skiffs** ram your barge and spill cargo: recover it within 20 seconds. Coral **raiders** patrol at medium range; purple **gunboats** fire twin shots from farther away. Bounties are 6, 8 and 14 coins respectively, while the harbor fund lasts.
 
 You can also **post a Bell order** at The Landing: name a village good, how many and what you'll pay per unit. Your coins wait at the Harbor Bell, and the rival haulers, each with their own purse, decide whether the job is worth the trip. They're paid per unit delivered to you; whatever is left comes back when the night ends.

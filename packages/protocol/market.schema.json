@@ -626,6 +626,40 @@
           "properties": {
             "type": {
               "type": "string",
+              "const": "buy_barge_cosmetic"
+            },
+            "cosmetic_id": {
+              "$ref": "#/$defs/__schema0"
+            }
+          },
+          "required": [
+            "type",
+            "cosmetic_id"
+          ],
+          "additionalProperties": false
+        },
+        {
+          "type": "object",
+          "properties": {
+            "type": {
+              "type": "string",
+              "const": "fit_barge_cosmetic"
+            },
+            "cosmetic_id": {
+              "$ref": "#/$defs/__schema0"
+            }
+          },
+          "required": [
+            "type",
+            "cosmetic_id"
+          ],
+          "additionalProperties": false
+        },
+        {
+          "type": "object",
+          "properties": {
+            "type": {
+              "type": "string",
               "const": "post_bell_order"
             },
             "item_id": {
@@ -1310,6 +1344,40 @@
               "required": [
                 "type",
                 "upgrade_id"
+              ],
+              "additionalProperties": false
+            },
+            {
+              "type": "object",
+              "properties": {
+                "type": {
+                  "type": "string",
+                  "const": "buy_barge_cosmetic"
+                },
+                "cosmetic_id": {
+                  "$ref": "#/$defs/__schema0"
+                }
+              },
+              "required": [
+                "type",
+                "cosmetic_id"
+              ],
+              "additionalProperties": false
+            },
+            {
+              "type": "object",
+              "properties": {
+                "type": {
+                  "type": "string",
+                  "const": "fit_barge_cosmetic"
+                },
+                "cosmetic_id": {
+                  "$ref": "#/$defs/__schema0"
+                }
+              },
+              "required": [
+                "type",
+                "cosmetic_id"
               ],
               "additionalProperties": false
             },
@@ -2284,15 +2352,18 @@
                 "manifest": {
                   "type": "object",
                   "properties": {
+                    "look": {
+                      "$ref": "#/$defs/__schema7"
+                    },
                     "stopLayout": {
                       "type": "string",
                       "const": "campaign_reach"
                     },
                     "trim": {
-                      "$ref": "#/$defs/__schema7"
+                      "$ref": "#/$defs/__schema8"
                     },
                     "id": {
-                      "$ref": "#/$defs/__schema8"
+                      "$ref": "#/$defs/__schema9"
                     },
                     "seed": {
                       "type": "integer",
@@ -2300,26 +2371,26 @@
                       "maximum": 9007199254740991
                     },
                     "deadline": {
-                      "$ref": "#/$defs/__schema9"
+                      "$ref": "#/$defs/__schema10"
                     },
                     "wallet": {
-                      "$ref": "#/$defs/__schema9"
+                      "$ref": "#/$defs/__schema10"
                     },
                     "hold": {
-                      "$ref": "#/$defs/__schema10"
+                      "$ref": "#/$defs/__schema11"
                     },
                     "items": {
                       "maxItems": 6,
                       "type": "array",
                       "items": {
-                        "$ref": "#/$defs/__schema11"
+                        "$ref": "#/$defs/__schema12"
                       }
                     },
                     "reaches": {
                       "maxItems": 4,
                       "type": "array",
                       "items": {
-                        "$ref": "#/$defs/__schema13"
+                        "$ref": "#/$defs/__schema14"
                       }
                     },
                     "boats": {
@@ -2328,16 +2399,16 @@
                         "type": "object",
                         "properties": {
                           "id": {
-                            "$ref": "#/$defs/__schema8"
+                            "$ref": "#/$defs/__schema9"
                           },
                           "name": {
-                            "$ref": "#/$defs/__schema8"
+                            "$ref": "#/$defs/__schema9"
                           },
                           "village": {
-                            "$ref": "#/$defs/__schema8"
+                            "$ref": "#/$defs/__schema9"
                           },
                           "destination": {
-                            "$ref": "#/$defs/__schema8"
+                            "$ref": "#/$defs/__schema9"
                           },
                           "departs": {
                             "type": "number"
@@ -2364,19 +2435,19 @@
                       "type": "object",
                       "properties": {
                         "id": {
-                          "$ref": "#/$defs/__schema8"
+                          "$ref": "#/$defs/__schema9"
                         },
                         "village": {
-                          "$ref": "#/$defs/__schema8"
+                          "$ref": "#/$defs/__schema9"
                         },
                         "item": {
-                          "$ref": "#/$defs/__schema8"
+                          "$ref": "#/$defs/__schema9"
                         },
                         "quantity": {
-                          "$ref": "#/$defs/__schema10"
+                          "$ref": "#/$defs/__schema11"
                         },
                         "payout": {
-                          "$ref": "#/$defs/__schema9"
+                          "$ref": "#/$defs/__schema10"
                         },
                         "kind": {
                           "type": "string",
@@ -2386,7 +2457,7 @@
                           ]
                         },
                         "haul": {
-                          "$ref": "#/$defs/__schema8"
+                          "$ref": "#/$defs/__schema9"
                         },
                         "relief": {
                           "type": "boolean"
@@ -2405,11 +2476,11 @@
                     "upgrades": {
                       "type": "array",
                       "items": {
-                        "$ref": "#/$defs/__schema8"
+                        "$ref": "#/$defs/__schema9"
                       }
                     },
                     "bounty": {
-                      "$ref": "#/$defs/__schema9"
+                      "$ref": "#/$defs/__schema10"
                     },
                     "glow": {
                       "type": "number",
@@ -2425,7 +2496,7 @@
                       "maxItems": 6,
                       "type": "array",
                       "items": {
-                        "$ref": "#/$defs/__schema14"
+                        "$ref": "#/$defs/__schema15"
                       }
                     }
                   },
@@ -2497,10 +2568,10 @@
               "type": "object",
               "properties": {
                 "tonight": {
-                  "$ref": "#/$defs/__schema15"
+                  "$ref": "#/$defs/__schema16"
                 },
                 "tomorrow": {
-                  "$ref": "#/$defs/__schema15"
+                  "$ref": "#/$defs/__schema16"
                 }
               },
               "additionalProperties": false
@@ -2635,13 +2706,24 @@
               }
             },
             "trim": {
+              "$ref": "#/$defs/__schema8"
+            },
+            "look": {
               "$ref": "#/$defs/__schema7"
+            },
+            "cosmetics": {
+              "type": "array",
+              "items": {
+                "$ref": "#/$defs/__schema0"
+              }
             }
           },
           "required": [
             "hold",
             "upgrades",
-            "trim"
+            "trim",
+            "look",
+            "cosmetics"
           ],
           "additionalProperties": false
         },
@@ -2999,6 +3081,45 @@
           ]
         },
         "__schema7": {
+          "type": "object",
+          "properties": {
+            "paint": {
+              "type": "string",
+              "enum": [
+                "wood",
+                "midnight",
+                "vermilion",
+                "moss",
+                "ivory",
+                "indigo"
+              ]
+            },
+            "lantern": {
+              "type": "string",
+              "enum": [
+                "amber",
+                "jade",
+                "rose",
+                "violet"
+              ]
+            },
+            "prow": {
+              "type": "string",
+              "enum": [
+                "none",
+                "heron",
+                "carp"
+              ]
+            }
+          },
+          "required": [
+            "paint",
+            "lantern",
+            "prow"
+          ],
+          "additionalProperties": false
+        },
+        "__schema8": {
           "type": "string",
           "enum": [
             "balanced",
@@ -3007,32 +3128,32 @@
             "gunner"
           ]
         },
-        "__schema8": {
+        "__schema9": {
           "type": "string",
           "minLength": 1,
           "maxLength": 120
         },
-        "__schema9": {
+        "__schema10": {
           "type": "integer",
           "minimum": 0,
           "maximum": 9007199254740991
         },
-        "__schema10": {
+        "__schema11": {
           "type": "integer",
           "minimum": 1,
           "maximum": 20
         },
-        "__schema11": {
+        "__schema12": {
           "type": "object",
           "properties": {
             "village": {
-              "$ref": "#/$defs/__schema8"
+              "$ref": "#/$defs/__schema9"
             },
             "item": {
-              "$ref": "#/$defs/__schema8"
+              "$ref": "#/$defs/__schema9"
             },
             "stock": {
-              "$ref": "#/$defs/__schema9"
+              "$ref": "#/$defs/__schema10"
             },
             "target": {
               "type": "integer",
@@ -3043,11 +3164,11 @@
               "maxItems": 20,
               "type": "array",
               "items": {
-                "$ref": "#/$defs/__schema12"
+                "$ref": "#/$defs/__schema13"
               }
             },
             "coins": {
-              "$ref": "#/$defs/__schema9"
+              "$ref": "#/$defs/__schema10"
             },
             "discount": {
               "type": "boolean"
@@ -3064,16 +3185,16 @@
           ],
           "additionalProperties": false
         },
-        "__schema12": {
+        "__schema13": {
           "type": "integer",
           "exclusiveMinimum": 0,
           "maximum": 9007199254740991
         },
-        "__schema13": {
+        "__schema14": {
           "type": "object",
           "properties": {
             "id": {
-              "$ref": "#/$defs/__schema8"
+              "$ref": "#/$defs/__schema9"
             },
             "danger": {
               "type": "integer",
@@ -3091,14 +3212,14 @@
           ],
           "additionalProperties": false
         },
-        "__schema14": {
+        "__schema15": {
           "type": "object",
           "properties": {
             "id": {
-              "$ref": "#/$defs/__schema8"
+              "$ref": "#/$defs/__schema9"
             },
             "reach": {
-              "$ref": "#/$defs/__schema8"
+              "$ref": "#/$defs/__schema9"
             },
             "at": {
               "type": "number",
@@ -3106,12 +3227,12 @@
               "maximum": 1
             },
             "name": {
-              "$ref": "#/$defs/__schema8"
+              "$ref": "#/$defs/__schema9"
             },
             "cargo": {
               "type": "object",
               "propertyNames": {
-                "$ref": "#/$defs/__schema8"
+                "$ref": "#/$defs/__schema9"
               },
               "additionalProperties": {
                 "type": "integer",
@@ -3129,7 +3250,7 @@
           ],
           "additionalProperties": false
         },
-        "__schema15": {
+        "__schema16": {
           "type": "object",
           "properties": {
             "id": {
@@ -4158,15 +4279,18 @@
                   "manifest": {
                     "type": "object",
                     "properties": {
+                      "look": {
+                        "$ref": "#/$defs/__schema7"
+                      },
                       "stopLayout": {
                         "type": "string",
                         "const": "campaign_reach"
                       },
                       "trim": {
-                        "$ref": "#/$defs/__schema7"
+                        "$ref": "#/$defs/__schema8"
                       },
                       "id": {
-                        "$ref": "#/$defs/__schema8"
+                        "$ref": "#/$defs/__schema9"
                       },
                       "seed": {
                         "type": "integer",
@@ -4174,26 +4298,26 @@
                         "maximum": 9007199254740991
                       },
                       "deadline": {
-                        "$ref": "#/$defs/__schema9"
+                        "$ref": "#/$defs/__schema10"
                       },
                       "wallet": {
-                        "$ref": "#/$defs/__schema9"
+                        "$ref": "#/$defs/__schema10"
                       },
                       "hold": {
-                        "$ref": "#/$defs/__schema10"
+                        "$ref": "#/$defs/__schema11"
                       },
                       "items": {
                         "maxItems": 6,
                         "type": "array",
                         "items": {
-                          "$ref": "#/$defs/__schema11"
+                          "$ref": "#/$defs/__schema12"
                         }
                       },
                       "reaches": {
                         "maxItems": 4,
                         "type": "array",
                         "items": {
-                          "$ref": "#/$defs/__schema13"
+                          "$ref": "#/$defs/__schema14"
                         }
                       },
                       "boats": {
@@ -4202,16 +4326,16 @@
                           "type": "object",
                           "properties": {
                             "id": {
-                              "$ref": "#/$defs/__schema8"
+                              "$ref": "#/$defs/__schema9"
                             },
                             "name": {
-                              "$ref": "#/$defs/__schema8"
+                              "$ref": "#/$defs/__schema9"
                             },
                             "village": {
-                              "$ref": "#/$defs/__schema8"
+                              "$ref": "#/$defs/__schema9"
                             },
                             "destination": {
-                              "$ref": "#/$defs/__schema8"
+                              "$ref": "#/$defs/__schema9"
                             },
                             "departs": {
                               "type": "number"
@@ -4238,19 +4362,19 @@
                         "type": "object",
                         "properties": {
                           "id": {
-                            "$ref": "#/$defs/__schema8"
+                            "$ref": "#/$defs/__schema9"
                           },
                           "village": {
-                            "$ref": "#/$defs/__schema8"
+                            "$ref": "#/$defs/__schema9"
                           },
                           "item": {
-                            "$ref": "#/$defs/__schema8"
+                            "$ref": "#/$defs/__schema9"
                           },
                           "quantity": {
-                            "$ref": "#/$defs/__schema10"
+                            "$ref": "#/$defs/__schema11"
                           },
                           "payout": {
-                            "$ref": "#/$defs/__schema9"
+                            "$ref": "#/$defs/__schema10"
                           },
                           "kind": {
                             "type": "string",
@@ -4260,7 +4384,7 @@
                             ]
                           },
                           "haul": {
-                            "$ref": "#/$defs/__schema8"
+                            "$ref": "#/$defs/__schema9"
                           },
                           "relief": {
                             "type": "boolean"
@@ -4279,11 +4403,11 @@
                       "upgrades": {
                         "type": "array",
                         "items": {
-                          "$ref": "#/$defs/__schema8"
+                          "$ref": "#/$defs/__schema9"
                         }
                       },
                       "bounty": {
-                        "$ref": "#/$defs/__schema9"
+                        "$ref": "#/$defs/__schema10"
                       },
                       "glow": {
                         "type": "number",
@@ -4299,7 +4423,7 @@
                         "maxItems": 6,
                         "type": "array",
                         "items": {
-                          "$ref": "#/$defs/__schema14"
+                          "$ref": "#/$defs/__schema15"
                         }
                       }
                     },
@@ -4371,10 +4495,10 @@
                 "type": "object",
                 "properties": {
                   "tonight": {
-                    "$ref": "#/$defs/__schema15"
+                    "$ref": "#/$defs/__schema16"
                   },
                   "tomorrow": {
-                    "$ref": "#/$defs/__schema15"
+                    "$ref": "#/$defs/__schema16"
                   }
                 },
                 "additionalProperties": false
@@ -4509,13 +4633,24 @@
                 }
               },
               "trim": {
+                "$ref": "#/$defs/__schema8"
+              },
+              "look": {
                 "$ref": "#/$defs/__schema7"
+              },
+              "cosmetics": {
+                "type": "array",
+                "items": {
+                  "$ref": "#/$defs/__schema0"
+                }
               }
             },
             "required": [
               "hold",
               "upgrades",
-              "trim"
+              "trim",
+              "look",
+              "cosmetics"
             ],
             "additionalProperties": false
           },
@@ -4873,6 +5008,45 @@
             ]
           },
           "__schema7": {
+            "type": "object",
+            "properties": {
+              "paint": {
+                "type": "string",
+                "enum": [
+                  "wood",
+                  "midnight",
+                  "vermilion",
+                  "moss",
+                  "ivory",
+                  "indigo"
+                ]
+              },
+              "lantern": {
+                "type": "string",
+                "enum": [
+                  "amber",
+                  "jade",
+                  "rose",
+                  "violet"
+                ]
+              },
+              "prow": {
+                "type": "string",
+                "enum": [
+                  "none",
+                  "heron",
+                  "carp"
+                ]
+              }
+            },
+            "required": [
+              "paint",
+              "lantern",
+              "prow"
+            ],
+            "additionalProperties": false
+          },
+          "__schema8": {
             "type": "string",
             "enum": [
               "balanced",
@@ -4881,32 +5055,32 @@
               "gunner"
             ]
           },
-          "__schema8": {
+          "__schema9": {
             "type": "string",
             "minLength": 1,
             "maxLength": 120
           },
-          "__schema9": {
+          "__schema10": {
             "type": "integer",
             "minimum": 0,
             "maximum": 9007199254740991
           },
-          "__schema10": {
+          "__schema11": {
             "type": "integer",
             "minimum": 1,
             "maximum": 20
           },
-          "__schema11": {
+          "__schema12": {
             "type": "object",
             "properties": {
               "village": {
-                "$ref": "#/$defs/__schema8"
+                "$ref": "#/$defs/__schema9"
               },
               "item": {
-                "$ref": "#/$defs/__schema8"
+                "$ref": "#/$defs/__schema9"
               },
               "stock": {
-                "$ref": "#/$defs/__schema9"
+                "$ref": "#/$defs/__schema10"
               },
               "target": {
                 "type": "integer",
@@ -4917,11 +5091,11 @@
                 "maxItems": 20,
                 "type": "array",
                 "items": {
-                  "$ref": "#/$defs/__schema12"
+                  "$ref": "#/$defs/__schema13"
                 }
               },
               "coins": {
-                "$ref": "#/$defs/__schema9"
+                "$ref": "#/$defs/__schema10"
               },
               "discount": {
                 "type": "boolean"
@@ -4938,16 +5112,16 @@
             ],
             "additionalProperties": false
           },
-          "__schema12": {
+          "__schema13": {
             "type": "integer",
             "exclusiveMinimum": 0,
             "maximum": 9007199254740991
           },
-          "__schema13": {
+          "__schema14": {
             "type": "object",
             "properties": {
               "id": {
-                "$ref": "#/$defs/__schema8"
+                "$ref": "#/$defs/__schema9"
               },
               "danger": {
                 "type": "integer",
@@ -4965,14 +5139,14 @@
             ],
             "additionalProperties": false
           },
-          "__schema14": {
+          "__schema15": {
             "type": "object",
             "properties": {
               "id": {
-                "$ref": "#/$defs/__schema8"
+                "$ref": "#/$defs/__schema9"
               },
               "reach": {
-                "$ref": "#/$defs/__schema8"
+                "$ref": "#/$defs/__schema9"
               },
               "at": {
                 "type": "number",
@@ -4980,12 +5154,12 @@
                 "maximum": 1
               },
               "name": {
-                "$ref": "#/$defs/__schema8"
+                "$ref": "#/$defs/__schema9"
               },
               "cargo": {
                 "type": "object",
                 "propertyNames": {
-                  "$ref": "#/$defs/__schema8"
+                  "$ref": "#/$defs/__schema9"
                 },
                 "additionalProperties": {
                   "type": "integer",
@@ -5003,7 +5177,7 @@
             ],
             "additionalProperties": false
           },
-          "__schema15": {
+          "__schema16": {
             "type": "object",
             "properties": {
               "id": {
@@ -5419,6 +5593,40 @@
                 "required": [
                   "type",
                   "upgrade_id"
+                ],
+                "additionalProperties": false
+              },
+              {
+                "type": "object",
+                "properties": {
+                  "type": {
+                    "type": "string",
+                    "const": "buy_barge_cosmetic"
+                  },
+                  "cosmetic_id": {
+                    "$ref": "#/$defs/__schema1"
+                  }
+                },
+                "required": [
+                  "type",
+                  "cosmetic_id"
+                ],
+                "additionalProperties": false
+              },
+              {
+                "type": "object",
+                "properties": {
+                  "type": {
+                    "type": "string",
+                    "const": "fit_barge_cosmetic"
+                  },
+                  "cosmetic_id": {
+                    "$ref": "#/$defs/__schema1"
+                  }
+                },
+                "required": [
+                  "type",
+                  "cosmetic_id"
                 ],
                 "additionalProperties": false
               },
@@ -6124,6 +6332,40 @@
                 "required": [
                   "type",
                   "upgrade_id"
+                ],
+                "additionalProperties": false
+              },
+              {
+                "type": "object",
+                "properties": {
+                  "type": {
+                    "type": "string",
+                    "const": "buy_barge_cosmetic"
+                  },
+                  "cosmetic_id": {
+                    "$ref": "#/$defs/__schema0"
+                  }
+                },
+                "required": [
+                  "type",
+                  "cosmetic_id"
+                ],
+                "additionalProperties": false
+              },
+              {
+                "type": "object",
+                "properties": {
+                  "type": {
+                    "type": "string",
+                    "const": "fit_barge_cosmetic"
+                  },
+                  "cosmetic_id": {
+                    "$ref": "#/$defs/__schema0"
+                  }
+                },
+                "required": [
+                  "type",
+                  "cosmetic_id"
                 ],
                 "additionalProperties": false
               },
@@ -7018,6 +7260,40 @@
                     "required": [
                       "type",
                       "upgrade_id"
+                    ],
+                    "additionalProperties": false
+                  },
+                  {
+                    "type": "object",
+                    "properties": {
+                      "type": {
+                        "type": "string",
+                        "const": "buy_barge_cosmetic"
+                      },
+                      "cosmetic_id": {
+                        "$ref": "#/$defs/__schema0"
+                      }
+                    },
+                    "required": [
+                      "type",
+                      "cosmetic_id"
+                    ],
+                    "additionalProperties": false
+                  },
+                  {
+                    "type": "object",
+                    "properties": {
+                      "type": {
+                        "type": "string",
+                        "const": "fit_barge_cosmetic"
+                      },
+                      "cosmetic_id": {
+                        "$ref": "#/$defs/__schema0"
+                      }
+                    },
+                    "required": [
+                      "type",
+                      "cosmetic_id"
                     ],
                     "additionalProperties": false
                   },
@@ -8185,15 +8461,18 @@
                   "manifest": {
                     "type": "object",
                     "properties": {
+                      "look": {
+                        "$ref": "#/$defs/__schema7"
+                      },
                       "stopLayout": {
                         "type": "string",
                         "const": "campaign_reach"
                       },
                       "trim": {
-                        "$ref": "#/$defs/__schema7"
+                        "$ref": "#/$defs/__schema8"
                       },
                       "id": {
-                        "$ref": "#/$defs/__schema8"
+                        "$ref": "#/$defs/__schema9"
                       },
                       "seed": {
                         "type": "integer",
@@ -8201,26 +8480,26 @@
                         "maximum": 9007199254740991
                       },
                       "deadline": {
-                        "$ref": "#/$defs/__schema9"
+                        "$ref": "#/$defs/__schema10"
                       },
                       "wallet": {
-                        "$ref": "#/$defs/__schema9"
+                        "$ref": "#/$defs/__schema10"
                       },
                       "hold": {
-                        "$ref": "#/$defs/__schema10"
+                        "$ref": "#/$defs/__schema11"
                       },
                       "items": {
                         "maxItems": 6,
                         "type": "array",
                         "items": {
-                          "$ref": "#/$defs/__schema11"
+                          "$ref": "#/$defs/__schema12"
                         }
                       },
                       "reaches": {
                         "maxItems": 4,
                         "type": "array",
                         "items": {
-                          "$ref": "#/$defs/__schema13"
+                          "$ref": "#/$defs/__schema14"
                         }
                       },
                       "boats": {
@@ -8229,16 +8508,16 @@
                           "type": "object",
                           "properties": {
                             "id": {
-                              "$ref": "#/$defs/__schema8"
+                              "$ref": "#/$defs/__schema9"
                             },
                             "name": {
-                              "$ref": "#/$defs/__schema8"
+                              "$ref": "#/$defs/__schema9"
                             },
                             "village": {
-                              "$ref": "#/$defs/__schema8"
+                              "$ref": "#/$defs/__schema9"
                             },
                             "destination": {
-                              "$ref": "#/$defs/__schema8"
+                              "$ref": "#/$defs/__schema9"
                             },
                             "departs": {
                               "type": "number"
@@ -8265,19 +8544,19 @@
                         "type": "object",
                         "properties": {
                           "id": {
-                            "$ref": "#/$defs/__schema8"
+                            "$ref": "#/$defs/__schema9"
                           },
                           "village": {
-                            "$ref": "#/$defs/__schema8"
+                            "$ref": "#/$defs/__schema9"
                           },
                           "item": {
-                            "$ref": "#/$defs/__schema8"
+                            "$ref": "#/$defs/__schema9"
                           },
                           "quantity": {
-                            "$ref": "#/$defs/__schema10"
+                            "$ref": "#/$defs/__schema11"
                           },
                           "payout": {
-                            "$ref": "#/$defs/__schema9"
+                            "$ref": "#/$defs/__schema10"
                           },
                           "kind": {
                             "type": "string",
@@ -8287,7 +8566,7 @@
                             ]
                           },
                           "haul": {
-                            "$ref": "#/$defs/__schema8"
+                            "$ref": "#/$defs/__schema9"
                           },
                           "relief": {
                             "type": "boolean"
@@ -8306,11 +8585,11 @@
                       "upgrades": {
                         "type": "array",
                         "items": {
-                          "$ref": "#/$defs/__schema8"
+                          "$ref": "#/$defs/__schema9"
                         }
                       },
                       "bounty": {
-                        "$ref": "#/$defs/__schema9"
+                        "$ref": "#/$defs/__schema10"
                       },
                       "glow": {
                         "type": "number",
@@ -8326,7 +8605,7 @@
                         "maxItems": 6,
                         "type": "array",
                         "items": {
-                          "$ref": "#/$defs/__schema14"
+                          "$ref": "#/$defs/__schema15"
                         }
                       }
                     },
@@ -8398,10 +8677,10 @@
                 "type": "object",
                 "properties": {
                   "tonight": {
-                    "$ref": "#/$defs/__schema15"
+                    "$ref": "#/$defs/__schema16"
                   },
                   "tomorrow": {
-                    "$ref": "#/$defs/__schema15"
+                    "$ref": "#/$defs/__schema16"
                   }
                 },
                 "additionalProperties": false
@@ -8536,13 +8815,24 @@
                 }
               },
               "trim": {
+                "$ref": "#/$defs/__schema8"
+              },
+              "look": {
                 "$ref": "#/$defs/__schema7"
+              },
+              "cosmetics": {
+                "type": "array",
+                "items": {
+                  "$ref": "#/$defs/__schema0"
+                }
               }
             },
             "required": [
               "hold",
               "upgrades",
-              "trim"
+              "trim",
+              "look",
+              "cosmetics"
             ],
             "additionalProperties": false
           },
@@ -8900,6 +9190,45 @@
             ]
           },
           "__schema7": {
+            "type": "object",
+            "properties": {
+              "paint": {
+                "type": "string",
+                "enum": [
+                  "wood",
+                  "midnight",
+                  "vermilion",
+                  "moss",
+                  "ivory",
+                  "indigo"
+                ]
+              },
+              "lantern": {
+                "type": "string",
+                "enum": [
+                  "amber",
+                  "jade",
+                  "rose",
+                  "violet"
+                ]
+              },
+              "prow": {
+                "type": "string",
+                "enum": [
+                  "none",
+                  "heron",
+                  "carp"
+                ]
+              }
+            },
+            "required": [
+              "paint",
+              "lantern",
+              "prow"
+            ],
+            "additionalProperties": false
+          },
+          "__schema8": {
             "type": "string",
             "enum": [
               "balanced",
@@ -8908,32 +9237,32 @@
               "gunner"
             ]
           },
-          "__schema8": {
+          "__schema9": {
             "type": "string",
             "minLength": 1,
             "maxLength": 120
           },
-          "__schema9": {
+          "__schema10": {
             "type": "integer",
             "minimum": 0,
             "maximum": 9007199254740991
           },
-          "__schema10": {
+          "__schema11": {
             "type": "integer",
             "minimum": 1,
             "maximum": 20
           },
-          "__schema11": {
+          "__schema12": {
             "type": "object",
             "properties": {
               "village": {
-                "$ref": "#/$defs/__schema8"
+                "$ref": "#/$defs/__schema9"
               },
               "item": {
-                "$ref": "#/$defs/__schema8"
+                "$ref": "#/$defs/__schema9"
               },
               "stock": {
-                "$ref": "#/$defs/__schema9"
+                "$ref": "#/$defs/__schema10"
               },
               "target": {
                 "type": "integer",
@@ -8944,11 +9273,11 @@
                 "maxItems": 20,
                 "type": "array",
                 "items": {
-                  "$ref": "#/$defs/__schema12"
+                  "$ref": "#/$defs/__schema13"
                 }
               },
               "coins": {
-                "$ref": "#/$defs/__schema9"
+                "$ref": "#/$defs/__schema10"
               },
               "discount": {
                 "type": "boolean"
@@ -8965,16 +9294,16 @@
             ],
             "additionalProperties": false
           },
-          "__schema12": {
+          "__schema13": {
             "type": "integer",
             "exclusiveMinimum": 0,
             "maximum": 9007199254740991
           },
-          "__schema13": {
+          "__schema14": {
             "type": "object",
             "properties": {
               "id": {
-                "$ref": "#/$defs/__schema8"
+                "$ref": "#/$defs/__schema9"
               },
               "danger": {
                 "type": "integer",
@@ -8992,14 +9321,14 @@
             ],
             "additionalProperties": false
           },
-          "__schema14": {
+          "__schema15": {
             "type": "object",
             "properties": {
               "id": {
-                "$ref": "#/$defs/__schema8"
+                "$ref": "#/$defs/__schema9"
               },
               "reach": {
-                "$ref": "#/$defs/__schema8"
+                "$ref": "#/$defs/__schema9"
               },
               "at": {
                 "type": "number",
@@ -9007,12 +9336,12 @@
                 "maximum": 1
               },
               "name": {
-                "$ref": "#/$defs/__schema8"
+                "$ref": "#/$defs/__schema9"
               },
               "cargo": {
                 "type": "object",
                 "propertyNames": {
-                  "$ref": "#/$defs/__schema8"
+                  "$ref": "#/$defs/__schema9"
                 },
                 "additionalProperties": {
                   "type": "integer",
@@ -9030,7 +9359,7 @@
             ],
             "additionalProperties": false
           },
-          "__schema15": {
+          "__schema16": {
             "type": "object",
             "properties": {
               "id": {

@@ -47,6 +47,29 @@ export const bargeTrims = {
 export type BargeTrimId = keyof typeof bargeTrims;
 export const trimFor = (manifest: { trim?: BargeTrimId }) => bargeTrims[manifest.trim ?? "balanced"];
 
+/** Cosmetic purchases fund harbor relief. None of these values enter the simulation's stats. */
+export const bargeCosmetics = {
+  wood: { category: "paint", name: "Riverwood", price: 0, color: "#684733" },
+  midnight: { category: "paint", name: "Midnight", price: 0, color: "#303849" },
+  vermilion: { category: "paint", name: "Vermilion", price: 20, color: "#a94c43" },
+  moss: { category: "paint", name: "Moss", price: 25, color: "#57745d" },
+  ivory: { category: "paint", name: "Ivory", price: 30, color: "#d0c2a4" },
+  indigo: { category: "paint", name: "Indigo", price: 35, color: "#6c5892" },
+  amber: { category: "lantern", name: "Amber", price: 0, color: "#ffcf8a" },
+  jade: { category: "lantern", name: "Jade", price: 15, color: "#85e6b5" },
+  rose: { category: "lantern", name: "Rose", price: 20, color: "#ffa4b8" },
+  violet: { category: "lantern", name: "Violet", price: 25, color: "#c4a0ff" },
+  none: { category: "prow", name: "Plain prow", price: 0, color: "#d3b77b" },
+  heron: { category: "prow", name: "Heron", price: 30, color: "#d3b77b" },
+  carp: { category: "prow", name: "Carp", price: 40, color: "#d3b77b" },
+} as const;
+export type BargeCosmeticId = keyof typeof bargeCosmetics;
+export type BargeLook = { paint: "wood" | "midnight" | "vermilion" | "moss" | "ivory" | "indigo";
+  lantern: "amber" | "jade" | "rose" | "violet"; prow: "none" | "heron" | "carp" };
+export const defaultBargeLook: BargeLook = { paint: "wood", lantern: "amber", prow: "none" };
+export const fitBargeLook = (look: BargeLook | undefined, id: BargeCosmeticId): BargeLook =>
+  ({ ...defaultBargeLook, ...look, [bargeCosmetics[id].category]: id });
+
 export const pirateRoles = {
   skiff: { name: "Skiff", color: "#edb16c", hp: 40, bounty: 6, speed: 148, approach: 0, retreat: 0, range: 0 },
   raider: { name: "Raider", color: "#ee7967", hp: 57, bounty: 8, speed: 100, approach: 185, retreat: 115, range: 360 },

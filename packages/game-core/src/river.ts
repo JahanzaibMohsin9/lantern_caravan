@@ -1,8 +1,8 @@
 import { items, merchants, recipes, type ItemId, type StallId } from "@lantern/content";
 import { strategies } from "@lantern/content/nights";
-import { bargeHold, bargeUpgrades, pirateCap, pirateRoleCaps, pirateRoles, reachIds, reaches, routeDistance, runMs, sourceFor, stopChoice,
+import { bargeCosmetics, defaultBargeLook, fitBargeLook, bargeHold, bargeUpgrades, pirateCap, pirateRoleCaps, pirateRoles, reachIds, reaches, routeDistance, runMs, sourceFor, stopChoice,
   stopPlan, villageGoods, villageIds, villageStrategy, villages, wreckNights, almanacEvents, almanacFor, harvestTarget, bellOrderLimits,
-  type AlmanacId, type BargeUpgradeId, type ReachId, type VillageId } from "@lantern/content/river";
+  type AlmanacId, type BargeCosmeticId, type BargeUpgradeId, type ReachId, type VillageId } from "@lantern/content/river";
 import { runReportSchema, type Intent, type LedgerOp, type RunManifest, type RunReport, type Snapshot } from "@lantern/protocol";
 import { apply } from "./ledger";
 import { addActivity, burn, cashBand, get, merchantIds, mint, move, plan, ratio, shop, stockTargets, type World } from "./model";
@@ -606,8 +606,8 @@ export function closeRiver(world: World) {
   return withRiver(state, { orders: {} });
 }
 
-type RiverIntent = Extract<Intent, { type: "start_run" | "finish_run" | "accept_contract" | "buy_barge_upgrade" | "post_bell_order" | "cancel_bell_order" }>;
-const riverIntents = new Set(["start_run", "finish_run", "accept_contract", "buy_barge_upgrade", "post_bell_order", "cancel_bell_order"]);
+type RiverIntent = Extract<Intent, { type: "start_run" | "finish_run" | "accept_contract" | "buy_barge_upgrade" | "buy_barge_cosmetic" | "fit_barge_cosmetic" | "post_bell_order" | "cancel_bell_order" }>;
+const riverIntents = new Set(["start_run", "finish_run", "accept_contract", "buy_barge_upgrade", "buy_barge_cosmetic", "fit_barge_cosmetic", "post_bell_order", "cancel_bell_order"]);
 export const isRiverIntent = (intent: Intent): intent is RiverIntent => riverIntents.has(intent.type);
 const myOrder = (world: World, actor: string) => Object.values(world.river.orders ?? {}).find(order => order.actor === actor);
 const bellOrdersOpen = (world: World) => world.mode !== "campaign" || world.night >= 4;
@@ -682,7 +682,8 @@ function runManifest(world: World, actor: string, intent: Extract<RiverIntent, {
   }));
   const manifest: RunManifest = { id, seed: (world.river.random ^ Math.imul(world.revision + 1, 0x45d9f3b)) >>> 0,
     deadline: now + limitMs, limitMs, wallet: get(world, actor, "coin"), hold, upgrades, boats, bounty: get(world, bounty, "coin"),
-    glow: rowGlow(world), trim, stopLayout: world.mode === "campaign" && world.night === 3 ? "campaign_reach" : undefined,
+    glow: rowGlow(world), trim, look: world.traders[actor]!.look ?? defaultBargeLook,
+    stopLayout: world.mode === "campaign" && world.night === 3 ? "campaign_reach" : undefined,
     wrecks: Object.values(world.river.wrecks).filter(wreck => wreckOpen(world, wreck) && !wreck.claimedBy)
       .map(wreck => ({ id: wreck.id, reach: wreck.reach, at: wreck.at, name: wreck.by, cargo: wreckCargo(world, wreck.id) as Record<string, number> }))
       .filter(wreck => Object.keys(wreck.cargo).length).slice(0, 6),
@@ -828,6 +829,18 @@ export function riverQuote(world: World, actor: string, intent: RiverIntent, id:
   if (intent.type === "post_bell_order" || intent.type === "cancel_bell_order") return bellOrderQuote(world, actor, intent, id);
   if (Object.values(world.river.runs).some(run => run.actor === actor) && intent.type !== "finish_run")
     throw new Error("Your barge is already upriver.");
+  if (intent.type === "buy_barge_cosmetic" || intent.type === "fit_barge_cosmetic") {
+    const id = intent.cosmetic_id as BargeCosmeticId;
+    if (!Object.hasOwn(bargeCosmetics, id)) throw new Error("BARGE_COSMETIC · Choose a catalog finish.");
+    const entry = bargeCosmetics[id], owned = !entry.price || world.traders[actor]!.cosmetics.includes(id);
+    if (intent.type === "fit_barge_cosmetic") {
+      if (!owned) throw new Error("BARGE_COSMETIC_OWNERSHIP · Buy this finish before fitting it.");
+      return { effects: [], summary: "Fitted " + entry.name };
+    }
+    if (owned) throw new Error("BARGE_COSMETIC_OWNED · This finish is already yours; fitting is free.");
+    if (get(world, actor, "coin") < entry.price) throw new Error("BARGE_COSMETIC_FUNDS · You're short on coins.");
+    return { effects: [move(actor, rescueFund, "coin", entry.price, "Barge finish: " + entry.name)], summary: "Bought and fitted " + entry.name };
+  }
   if (intent.type === "accept_contract") {
     availableContract(world, actor, intent.contract_id);
     return { effects: [], summary: "Harbor Bell contract accepted" };
@@ -849,6 +862,11 @@ export function riverQuote(world: World, actor: string, intent: RiverIntent, id:
 
 export function commitRiver(prior: World, world: World, actor: string, intent: RiverIntent, id: string, now: number) {
   const trader = world.traders[actor]!;
+  if (intent.type === "buy_barge_cosmetic" || intent.type === "fit_barge_cosmetic") {
+    const cosmetic = intent.cosmetic_id as BargeCosmeticId;
+    return { ...world, traders: { ...world.traders, [actor]: { ...trader, look: fitBargeLook(trader.look, cosmetic),
+      cosmetics: intent.type === "buy_barge_cosmetic" ? [...trader.cosmetics, cosmetic] : trader.cosmetics } } };
+  }
   if (intent.type === "post_bell_order") {
     const order: BellOrder = { id, actor, item: intent.item_id as ItemId, quantity: intent.quantity, unitPrice: intent.unit_price,
       remaining: intent.quantity, delivered: 0, news: "Waiting for a hauler to take the job." };
@@ -976,6 +994,7 @@ export function riverSnapshot(world: World, actor: string): Pick<Snapshot, "vill
       myOrder: orderView(world, actor),
       bellOrders: Object.values(world.river.orders ?? {}).filter(order => !order.cancelled && order.remaining > 0).length,
     },
-    barge: { hold: String(bargeHold(upgrades)), upgrades, trim: trader?.trim ?? "balanced" },
+    barge: { hold: String(bargeHold(upgrades)), upgrades, trim: trader?.trim ?? "balanced",
+      look: trader?.look ?? defaultBargeLook, cosmetics: trader?.cosmetics ?? [] },
   };
 }

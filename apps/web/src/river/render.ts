@@ -1,14 +1,15 @@
-import { landing, pirateRoles, reaches, riverStops, trimFor, villages, type ReachId, type VillageId } from "@lantern/content/river";
+import { bargeCosmetics, landing, pirateRoles, reaches, riverStops, villages, type ReachId, type VillageId } from "@lantern/content/river";
 import { items, type ItemId } from "@lantern/content";
 import { distance, objective, targetedPirate, type Point, type River, type RiverEffect, type StopSite, type WreckSite } from "@lantern/river-sim";
 import type { Snapshot } from "@lantern/protocol";
 import type { RiverCue } from "../world/sound";
 import { bankWidth, bounds, drawTerrain, hash, onWater, riverInfo, type Terrain } from "./terrain";
+import { cargoColor, drawBarge, hull } from "./barge";
+export { cargoColor } from "./barge";
 
 type Ink = CanvasRenderingContext2D;
 const tau = Math.PI * 2;
 const bandLight = { dark: 0, tight: .35, healthy: .7, thriving: 1 } as const;
-export const cargoColor: Record<string, string> = { paper: "#efe2c4", oil: "#f0a24e", reed: "#9fca86", cord: "#cfa978", dye: "#9a86ec" };
 
 type Particle = { x: number; y: number; vx: number; vy: number; life: number; max: number; size: number; color: string;
   kind: "spark" | "smoke" | "debris" | "foam" | "ember" | "glint"; spin?: number; angle?: number };
@@ -346,19 +347,6 @@ function wake(ctx: Ink, scene: Scene, id: string, at: Point & { vx?: number; vy?
   ctx.restore();
 }
 
-function hull(ctx: Ink, length: number, beam: number, fill: string | CanvasGradient, rim: string) {
-  ctx.beginPath();
-  ctx.moveTo(length * .55, 0);
-  ctx.quadraticCurveTo(length * .35, -beam, length * .05, -beam);
-  ctx.lineTo(-length * .45, -beam * .92);
-  ctx.quadraticCurveTo(-length * .52, 0, -length * .45, beam * .92);
-  ctx.lineTo(length * .05, beam);
-  ctx.quadraticCurveTo(length * .35, beam, length * .55, 0);
-  ctx.closePath();
-  ctx.fillStyle = fill; ctx.fill();
-  ctx.strokeStyle = rim; ctx.lineWidth = 2; ctx.stroke();
-}
-
 function playerBarge(ctx: Ink, scene: Scene, state: River, reduced: boolean) {
   const p = state.player, speed = Math.hypot(p.vx, p.vy);
   ctx.save(); ctx.translate(p.x, p.y);
@@ -366,39 +354,18 @@ function playerBarge(ctx: Ink, scene: Scene, state: River, reduced: boolean) {
   ctx.beginPath(); ctx.ellipse(6, 10, 46, 24, p.angle, 0, tau); ctx.fill(); ctx.globalAlpha = 1;
   ctx.rotate(p.angle);
   if (p.invulnerable > 0 && Math.floor(scene.time * 12) % 2 && !reduced) ctx.globalAlpha = .55;
-  const wood = ctx.createLinearGradient(0, -20, 0, 20);
-  wood.addColorStop(0, "#5a3f2f"); wood.addColorStop(.5, "#3f2c22"); wood.addColorStop(1, "#2a1c16");
-  hull(ctx, 78, 20, wood, trimFor(state.manifest).color);
-  ctx.strokeStyle = "#2b1d17"; ctx.lineWidth = 1.2;
-  for (const y of [-10, 0, 10]) { ctx.beginPath(); ctx.moveTo(-30, y); ctx.lineTo(30, y * .8); ctx.stroke(); }
-  // Cargo on deck.
-  const cargo = Object.entries(p.cargo).flatMap(([item, n]) => Array<string>(Math.max(0, n)).fill(item)).slice(0, 12);
-  cargo.forEach((item, i) => {
-    const col = i % 4, row = Math.floor(i / 4);
-    const x = -14 + col * 9, y = -11 + row * 9;
-    ctx.fillStyle = cargoColor[item] ?? "#c9b08a"; ctx.fillRect(x, y, 8, 8);
-    ctx.strokeStyle = "#1d1410"; ctx.lineWidth = 1; ctx.strokeRect(x, y, 8, 8);
-  });
-  // Stern cabin with a lit window.
-  ctx.fillStyle = "#2a2230"; ctx.fillRect(-36, -11, 16, 22);
-  ctx.fillStyle = trimFor(state.manifest).color; ctx.fillRect(-38, -12, 20, 4);
-  ctx.fillStyle = "#ffcf8a"; ctx.fillRect(-31, -4, 6, 8);
-  ctx.restore();
-  // Cannon turret.
-  ctx.save(); ctx.translate(p.x, p.y); ctx.rotate(p.turret);
-  ctx.fillStyle = "#17161b"; ctx.fillRect(4, -3.5, 26, 7);
-  ctx.fillStyle = "#b08a52"; ctx.fillRect(26, -4.5, 4, 9);
-  dot(ctx, 0, 0, 9, "#25222a"); dot(ctx, 0, 0, 4, "#b08a52");
+  drawBarge(ctx, { ...state.manifest, cargo: p.cargo, turret: p.turret - p.angle, time: reduced ? 0 : scene.time });
   ctx.restore();
   // Bow lantern and its beam across the water.
+  const lamp = bargeCosmetics[state.manifest.look?.lantern ?? "amber"].color;
   const bow = { x: p.x + Math.cos(p.angle) * 40, y: p.y + Math.sin(p.angle) * 40 };
   ctx.save(); ctx.globalCompositeOperation = "lighter"; ctx.translate(bow.x, bow.y); ctx.rotate(p.angle);
   const beam = ctx.createLinearGradient(0, 0, 360, 0);
-  beam.addColorStop(0, "rgba(255,206,140,.28)"); beam.addColorStop(1, "rgba(255,206,140,0)");
+  beam.addColorStop(0, lamp + "47"); beam.addColorStop(1, lamp + "00");
   ctx.fillStyle = beam; ctx.beginPath(); ctx.moveTo(0, 0); ctx.lineTo(360, -120); ctx.lineTo(360, 120); ctx.closePath(); ctx.fill();
   ctx.restore();
   const pulse = .9 + Math.sin(scene.time * 5) * .06;
-  glow(ctx, bow.x, bow.y, 230, "#ffb86b", .28 * pulse);
+  glow(ctx, bow.x, bow.y, 230, lamp, .28 * pulse);
   glow(ctx, bow.x, bow.y, 40, "#fff0c8", .9);
   dot(ctx, bow.x, bow.y, 4.5, "#fff6dc");
   if (speed > 200 && !reduced) spray(scene, p.x - Math.cos(p.angle) * 38, p.y - Math.sin(p.angle) * 38, 1, "#d7f1f4", 60, "foam", .5, 3, p.angle + Math.PI);

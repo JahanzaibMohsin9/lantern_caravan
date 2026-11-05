@@ -34,6 +34,8 @@ Quotes are bound to an actor, room, and night and expire after 15 game seconds. 
 
 ## River Run intents
 
+W7 adds `buy_barge_cosmetic { cosmetic_id }` and `fit_barge_cosmetic { cosmetic_id }`, through the existing quote → submit → status flow. Buying transfers the catalog price to `sys:rescue`, records permanent ownership and fits the finish. Fitting a free or owned finish has no ledger effects. Neither is allowed during a run. Invalid IDs, unowned refits, duplicate purchases and insufficient funds return `BARGE_COSMETIC`, `BARGE_COSMETIC_OWNERSHIP`, `BARGE_COSMETIC_OWNED` and `BARGE_COSMETIC_FUNDS` respectively. `snapshot.barge` adds `look: { paint, lantern, prow }` and `cosmetics` (purchased IDs); manifests have optional `look`. Old saves default to Riverwood, Amber and a plain prow, with the four free catalog entries available. Looks never change stats.
+
 W6 moves the campaign finale to Night 4; Endless starts on Night 5. Night 3's existing `objective.steps` now shows the player's boom, successful contract/escort and colored-lantern progress. `boomsTonight`, `contractsTonight` and the Night 2 `wharfBonus` survive saves and reset at the next night (missing fields in old saves default to zero). Only a confirmed finish earns river credit; an empty return or refunded contract does not.
 
 A pre-W6 campaign Night 3 save (all traders lack the new counters) represents the old festival: the codec moves it to Night 4 without changing its ledger, orders or progress. Both the current save and the retry checkpoint use this migration.

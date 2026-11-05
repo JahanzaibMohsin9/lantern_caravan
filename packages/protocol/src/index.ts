@@ -28,8 +28,13 @@ export const runReportSchema = z.object({
 });
 export type RunReport = z.infer<typeof runReportSchema>;
 export const bargeTrimSchema = z.enum(["balanced", "runner", "ironclad", "gunner"]);
+export const bargeLookSchema = z.object({
+  paint: z.enum(["wood", "midnight", "vermilion", "moss", "ivory", "indigo"]),
+  lantern: z.enum(["amber", "jade", "rose", "violet"]), prow: z.enum(["none", "heron", "carp"]),
+});
 
 export const manifestSchema = z.object({
+  look: bargeLookSchema.optional(),
   stopLayout: z.literal("campaign_reach").optional(),
   trim: bargeTrimSchema.optional(),
   id, seed: z.int().nonnegative(), deadline: coins, wallet: coins, hold: units,
@@ -60,6 +65,8 @@ export const intentSchema = z.discriminatedUnion("type", [
   z.object({ type: z.literal("finish_run"), run_id: id, report: runReportSchema }),
   z.object({ type: z.literal("accept_contract"), contract_id: id }),
   z.object({ type: z.literal("buy_barge_upgrade"), upgrade_id: id }),
+  z.object({ type: z.literal("buy_barge_cosmetic"), cosmetic_id: id }),
+  z.object({ type: z.literal("fit_barge_cosmetic"), cosmetic_id: id }),
   z.object({ type: z.literal("post_bell_order"), item_id: id, quantity: z.int().min(1).max(12), unit_price: z.int().min(3).max(20) }),
   z.object({ type: z.literal("cancel_bell_order"), order_id: id }),
   z.object({ type: z.literal("finish_job"), job_id: id }),
@@ -121,7 +128,8 @@ export type Snapshot = {
     upriver: { actor: string; name: string }[];
     bountyFund: string;
   };
-  barge: { hold: string; upgrades: string[]; trim: z.infer<typeof bargeTrimSchema> };
+  barge: { hold: string; upgrades: string[]; trim: z.infer<typeof bargeTrimSchema>;
+    look: z.infer<typeof bargeLookSchema>; cosmetics: string[] };
   orders: {
     id: string; name: string; item: string; remaining: string; quantity: string; payout: string;
     boat: number; personal: boolean; opens: number; state: "upcoming" | "open" | "filled" | "expired";
