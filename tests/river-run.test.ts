@@ -8,6 +8,55 @@ import { apply } from "../packages/game-core/src/ledger";
 import { get, move, player, shop, type World } from "../packages/game-core/src/model";
 import { harvest, refreshContracts, scheduleFreight, startRivalHaul } from "../packages/game-core/src/river";
 import { items } from "@lantern/content";
+import { decodeWorld, encodeWorld } from "@lantern/game-core/codec";
+import type { BargeTrimId } from "@lantern/content/river";
+
+test.each<BargeTrimId>(["balanced", "runner", "ironclad", "gunner"])("%s is free, manifest-bound, saved across nights, and conserves goods", trim => {
+  const world = createWorld("endless");
+  const totals = (state: World) => Object.fromEntries(Object.keys(items).map(item =>
+    [item, Object.values(state.ledger).reduce((sum, account) => sum + (account[item] ?? 0), 0)]));
+  const started = submit(world, { type: "start_run", barge_plan: [], trim }, "trim-run");
+  const run = snapshotFor(started, "test").river.myRun!.manifest;
+  expect(run.trim).toBe(trim);
+  expect(totals(started)).toEqual(totals(world));
+  expect(get(started, player, "coin")).toBe(get(world, player, "coin"));
+  const restored = decodeWorld(encodeWorld(started));
+  expect(snapshotFor(restored, "test").river.myRun!.manifest.trim).toBe(trim);
+  expect(() => submit(started, { type: "start_run", barge_plan: [], trim: "balanced" }, "refit")).toThrow("already upriver");
+  const home = submit(restored, { type: "finish_run", run_id: run.id, report: empty(run) }, "trim-home", 40_000);
+  expect(totals(home)).toEqual(totals(world));
+  const next = newNight(closeNight(openNight(home)));
+  expect(snapshotFor(next, "test").barge.trim).toBe(trim);
+  const refit = submit(next, { type: "start_run", barge_plan: [], trim: "balanced" }, "refit");
+  expect(snapshotFor(refit, "test").river.myRun!.manifest.trim).toBe("balanced");
+  expect(totals(refit)).toEqual(totals(next));
+});
+
+test("old saves use Balanced; unknown trims and early campaign refits are rejected", () => {
+  const old = decodeWorld(encodeWorld(createWorld("endless")));
+  expect(snapshotFor(old, "test").barge.trim).toBe("balanced");
+  expect(() => submit(prepared(), { type: "start_run", barge_plan: [], trim: "runner" }, "early")).toThrow("RIVER_TRIM_LOCKED");
+  for (const trim of ["unknown", "__proto__", "constructor"]) {
+    expect(() => submit(old, { type: "start_run", barge_plan: [], trim } as Intent, "bad")).toThrow();
+  }
+});
+
+test("LocalBackend confirms a trim with departure and preserves it after reload", async () => {
+  vi.useFakeTimers({ toFake: ["Date"] });
+  const backend = new LocalBackend(), slot = "slot-3";
+  await backend.createSession({ slot, mode: "endless" });
+  const night = backend.view().night_id;
+  const deal = await backend.getQuote(slot, night, { type: "start_run", barge_plan: [], trim: "runner" });
+  expect(backend.view().barge.trim).toBe("balanced");
+  const receipt = await backend.submitAction(slot, night, deal.quote_id, "runner");
+  expect(receipt.state).toBe("confirmed");
+  expect(await backend.getActionStatus(slot, night, "runner")).toEqual(receipt);
+  expect(backend.view().river.myRun!.manifest.trim).toBe("runner");
+  const restored = new LocalBackend();
+  await restored.restore(slot);
+  expect(restored.view().barge.trim).toBe("runner");
+  expect(restored.view().river.myRun).toBeUndefined();
+});
 
 test("a run reservation and empty return conserve every good", () => {
   const world = prepared();

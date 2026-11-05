@@ -2,7 +2,7 @@ import { items, merchants, recipes, type ItemId, type StallId } from "@lantern/c
 import { nightPlan, rivalNames, strategies, type FestivalOrder, type StrategyId, type UpgradeId } from "@lantern/content/nights";
 import type { Activity, CashBand, LedgerOp, Mode, Snapshot } from "@lantern/protocol";
 import { apply, balance, type Ledger } from "./ledger";
-import type { BargeUpgradeId, VillageId } from "@lantern/content/river";
+import type { BargeTrimId, BargeUpgradeId, VillageId } from "@lantern/content/river";
 import { beginRiverNight, freshRiver, starterGoods, type RiverState } from "./river";
 
 export const player = "p:guest";
@@ -27,6 +27,7 @@ export const move = (from: string, to: string, asset: string, amount: number, me
   ({ op: "transfer", from, to, asset, amount: String(amount), memo });
 
 export type Trader = {
+  trim?: BargeTrimId;
   name: string; upgrades: (UpgradeId | BargeUpgradeId)[]; delivered: Partial<Record<ItemId, number>>;
   crafted: number; crowdSold: number; earned: number; spent: number; jobsDone: number;
   relationship: Partial<Record<StallId | VillageId, number>>; fair: Partial<Record<StallId, number>>; refused: StallId[];
@@ -158,7 +159,7 @@ export function newNight(previous: World, mode: Mode = previous.mode): World {
     market: Object.fromEntries(merchantIds.map(stall => [stall, { ...previous.market[stall],
       profit: 0, unitsSold: 0, rescued: false, offerCount: 0, stockClosed: mode === "campaign" ? false : previous.market[stall].stockClosed, thinking: "Watching the river for freight." }])) as World["market"],
     traders: Object.fromEntries(Object.entries(previous.traders).map(([actor, trader]) => [actor, {
-      ...freshTrader(trader.name), upgrades: trader.upgrades, relationship: trader.relationship,
+      ...freshTrader(trader.name), upgrades: trader.upgrades, relationship: trader.relationship, trim: trader.trim,
       lifetimeCrafted: trader.lifetimeCrafted, lifetimeDividends: trader.lifetimeDividends,
       boatsHelped: trader.boatsHelped, rescued: trader.rescued, dividends: trader.dividends,
     }])),

@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { Anchor, Bell, Coins, Flame, LifeBuoy } from "lucide-react";
 import { items, merchants, type ItemId, type StallId } from "@lantern/content";
-import { bargeUpgrades, routeDistance, villages, type VillageId } from "@lantern/content/river";
+import { bargeTrims, bargeUpgrades, routeDistance, villages, type BargeTrimId, type VillageId } from "@lantern/content/river";
 import { routeLead } from "@lantern/river-sim";
 import type { Intent, Snapshot } from "@lantern/protocol";
 import { cargoColor } from "./render";
@@ -12,6 +12,9 @@ const lateCutoff = 45;
 export function Landing({ snapshot, busy, submit, castOff }: { snapshot: Snapshot; busy: boolean;
   submit: (intent: Intent) => Promise<void>; castOff: (intent: Extract<Intent, { type: "start_run" }>) => void }) {
   const unlocked = snapshot.mode !== "campaign" || snapshot.night >= 2;
+  const trimsUnlocked = snapshot.mode !== "campaign" || snapshot.night >= 3;
+  const [trim, setTrim] = useState<BargeTrimId>(snapshot.barge.trim);
+  const depart = () => castOff({ type: "start_run", barge_plan: [], trim });
   const left = snapshot.duration - snapshot.elapsed;
   const canCast = unlocked && !snapshot.spectator && (snapshot.phase === "preparation" || (snapshot.phase === "open" && left >= lateCutoff));
   const contracts = snapshot.river.contracts.filter(contract => !contract.taken);
@@ -47,11 +50,18 @@ export function Landing({ snapshot, busy, submit, castOff }: { snapshot: Snapsho
         </button>
       </div>)}
       {!contracts.length && <p className="hint">The Harbor Bell is quiet. You can still buy cargo upriver.</p>}
-      {mine && canCast && <button className="primary wide" disabled={busy} onClick={() => castOff({ type: "start_run", barge_plan: [] })}>
+      {mine && canCast && <button className="primary wide" disabled={busy} onClick={depart}>
         Cast off for {villages[mine.village as VillageId].name} <Anchor size={16}/>
       </button>}
     </div>}
     {tab === "barge" && <>
+      <label className="order-row"><span className="row-main"><strong>Barge trim</strong><small>Free to switch between runs · fitted at cast-off</small></span>
+        <select aria-label="Barge trim" value={trim} disabled={busy || !canCast || !trimsUnlocked}
+          onChange={event => setTrim(event.target.value as BargeTrimId)}>
+          {Object.entries(bargeTrims).map(([id, value]) => <option key={id} value={id}>{value.name}</option>)}
+        </select>
+      </label>
+      <p className="hint">{trimsUnlocked ? bargeTrims[trim].description : "Barge trims unlock on Night 3."}</p>
       {canCast && <p className="hint">{mine ? "Your accepted contract sets the course. " : "Buy freely at any village upriver, up to a full hold. "}{leaving}</p>}
       <div className="landing-board" aria-label="Upriver prices">
         {loads.map(({ village, item, stock, price, label }) => <div className="landing-load" key={item}>
@@ -63,7 +73,7 @@ export function Landing({ snapshot, busy, submit, castOff }: { snapshot: Snapsho
       {leads.length > 0 && <div className="landing-leads"><small>Best spot hauls</small>
         {leads.map(lead => <span key={lead.item + lead.stall}><Flame size={12}/>{items[lead.item as ItemId].name}: {lead.port} {lead.buy} → {merchants[lead.stall as StallId].name} {lead.sell}</span>)}
       </div>}
-      {canCast && <button className="primary wide" disabled={busy} onClick={() => castOff({ type: "start_run", barge_plan: [] })}>
+      {canCast && <button className="primary wide" disabled={busy} onClick={depart}>
         Cast off <small>{mine ? mine.kind === "escort" ? "escort" : "contract" : snapshot.barge.hold + "-unit hold"}</small><Anchor size={16}/>
       </button>}
       <details className="landing-upgrades"><summary>Barge upgrades</summary>

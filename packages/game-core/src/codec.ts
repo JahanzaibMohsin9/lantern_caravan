@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { amount, manifestSchema } from "@lantern/protocol";
+import { amount, bargeTrimSchema, manifestSchema } from "@lantern/protocol";
 import { bargeUpgrades, reachIds, villageIds } from "@lantern/content/river";
 import { items } from "@lantern/content";
 import { freshRiver, harvest } from "./river";
@@ -31,6 +31,7 @@ const strategy = z.enum(["steady", "bold", "festival", "bargain"]);
 const vote = z.partialRecord(stall, strategy);
 const receipt = z.object({ id: z.string(), label: z.string(), url: z.string().optional() });
 const trader = z.object({
+  trim: bargeTrimSchema.optional(),
   name: z.string(), upgrades: z.array(z.enum(["cart_i", "cart_ii", "lantern_strings", ...(Object.keys(bargeUpgrades) as (keyof typeof bargeUpgrades)[])])),
   delivered: numbers, crafted: num, crowdSold: num, earned: num, spent: num, jobsDone: num,
   relationship: z.partialRecord(z.union([stall, village]), signed), fair: z.partialRecord(stall, num),

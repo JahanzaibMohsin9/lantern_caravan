@@ -1,4 +1,4 @@
-import { landing, reaches, villages, type ReachId, type VillageId } from "@lantern/content/river";
+import { landing, reaches, trimFor, villages, type ReachId, type VillageId } from "@lantern/content/river";
 import { items, type ItemId } from "@lantern/content";
 import { distance, objective, type Point, type River, type RiverEffect } from "@lantern/river-sim";
 import type { Snapshot } from "@lantern/protocol";
@@ -368,7 +368,7 @@ function playerBarge(ctx: Ink, scene: Scene, state: River, reduced: boolean) {
   if (p.invulnerable > 0 && Math.floor(scene.time * 12) % 2 && !reduced) ctx.globalAlpha = .55;
   const wood = ctx.createLinearGradient(0, -20, 0, 20);
   wood.addColorStop(0, "#5a3f2f"); wood.addColorStop(.5, "#3f2c22"); wood.addColorStop(1, "#2a1c16");
-  hull(ctx, 78, 20, wood, "#8a6343");
+  hull(ctx, 78, 20, wood, trimFor(state.manifest).color);
   ctx.strokeStyle = "#2b1d17"; ctx.lineWidth = 1.2;
   for (const y of [-10, 0, 10]) { ctx.beginPath(); ctx.moveTo(-30, y); ctx.lineTo(30, y * .8); ctx.stroke(); }
   // Cargo on deck.
@@ -381,7 +381,7 @@ function playerBarge(ctx: Ink, scene: Scene, state: River, reduced: boolean) {
   });
   // Stern cabin with a lit window.
   ctx.fillStyle = "#2a2230"; ctx.fillRect(-36, -11, 16, 22);
-  ctx.fillStyle = "#3b2c33"; ctx.fillRect(-38, -12, 20, 4);
+  ctx.fillStyle = trimFor(state.manifest).color; ctx.fillRect(-38, -12, 20, 4);
   ctx.fillStyle = "#ffcf8a"; ctx.fillRect(-31, -4, 6, 8);
   ctx.restore();
   // Cannon turret.

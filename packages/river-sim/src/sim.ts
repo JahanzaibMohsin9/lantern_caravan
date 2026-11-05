@@ -1,4 +1,4 @@
-import { bargeTier, landing, pirateCap, runMs, villageStrategy, villages, type ReachId, type VillageId } from "@lantern/content/river";
+import { bargeTier, landing, pirateCap, runMs, trimFor, villageStrategy, villages, type ReachId, type VillageId } from "@lantern/content/river";
 import { items, type ItemId } from "@lantern/content";
 import { tradePrice } from "@lantern/game-core/pricing";
 import type { RunManifest, RunReport } from "@lantern/protocol";
@@ -118,12 +118,13 @@ function trade(state: River, order: NonNullable<Input["trade"]>) {
 
 function moveBarge(state: River, input: Input) {
   const p = state.player, previous = { x: p.x, y: p.y };
+  const trim = trimFor(state.manifest);
   let x = clamp(input.x ?? 0, -1, 1), y = clamp(input.y ?? 0, -1, 1);
   const magnitude = Math.hypot(x, y);
   if (magnitude > 1) { x /= magnitude; y /= magnitude; }
   const powered = p.fuel > 0, boost = input.boost && powered;
-  const max = (boost ? 345 : 235) + bargeTier(state.manifest.upgrades, "engine") * 35;
-  const acceleration = powered ? (boost ? 1350 : 1020) : 55;
+  const max = ((boost ? 345 : 235) + bargeTier(state.manifest.upgrades, "engine") * 35) * trim.speed;
+  const acceleration = powered ? (boost ? 1350 : 1020) * trim.speed : 55;
   const drag = Math.exp(-(magnitude > 0 ? powered ? 3.1 : 2.5 : 4.5) * dt);
   p.vx = (p.vx + x * acceleration * dt) * drag;
   p.vy = (p.vy + y * acceleration * dt) * drag;
@@ -134,8 +135,8 @@ function moveBarge(state: River, input: Input) {
   blockBoom(state, previous);
   if (speed > 5) {
     const delta = Math.atan2(p.vy, p.vx) - p.angle;
-    p.angle += Math.atan2(Math.sin(delta), Math.cos(delta)) * dt * 10;
-    p.fuel = Math.max(0, p.fuel - dt * (boost ? .23 : .095) * Math.min(1, speed / 120));
+    p.angle += Math.atan2(Math.sin(delta), Math.cos(delta)) * dt * 10 * trim.turning;
+    p.fuel = Math.max(0, p.fuel - dt * (boost ? .23 : .095) * Math.min(1, speed / 120) * trim.fuel);
   }
   p.cooldown = Math.max(0, p.cooldown - dt);
   p.invulnerable = Math.max(0, p.invulnerable - dt);
@@ -145,7 +146,7 @@ function fire(state: River, point: Point, angle: number, friendly: boolean) {
   const speed = friendly ? 650 : 330;
   state.bullets.push({ x: point.x + Math.cos(angle) * 24, y: point.y + Math.sin(angle) * 24,
     vx: Math.cos(angle) * speed, vy: Math.sin(angle) * speed, life: friendly ? .85 : 1.6, friendly,
-    damage: friendly ? 19 + bargeTier(state.manifest.upgrades, "cannon") * 7 : 5.5 });
+    damage: friendly ? (19 + bargeTier(state.manifest.upgrades, "cannon") * 7) * trimFor(state.manifest).damage : 5.5 });
 }
 
 function combat(state: River, input: Input) {
@@ -171,7 +172,7 @@ function combat(state: River, input: Input) {
   if (input.fire && aim && p.cooldown === 0 && p.ammo) {
     fire(state, p, p.turret, true);
     p.ammo--;
-    p.cooldown = .23 - bargeTier(state.manifest.upgrades, "cannon") * .035;
+    p.cooldown = (.23 - bargeTier(state.manifest.upgrades, "cannon") * .035) / trimFor(state.manifest).fireRate;
     effect(state, "shot", { x: p.x + Math.cos(p.turret) * 26, y: p.y + Math.sin(p.turret) * 26 }, { amount: p.turret });
   }
   for (const pirate of state.pirates) {
@@ -198,7 +199,7 @@ function combat(state: River, input: Input) {
     const bargeSpeed = Math.hypot(p.vx, p.vy);
     if (distance(pirate, p) < (pirate.heavy ? 42 : 34) && bargeSpeed > 100) {
       pirate.hp -= dt * bargeSpeed * (pirate.heavy ? .22 : .4);
-      if (!p.invulnerable) p.hp -= dt * (pirate.heavy ? 16 : 10);
+      if (!p.invulnerable) p.hp -= dt * (pirate.heavy ? 16 : 10) * trimFor(state.manifest).incoming;
     }
   }
   for (const boom of state.booms) {
@@ -222,7 +223,7 @@ function combat(state: River, input: Input) {
       if (bullet.life <= 0) effect(state, "splash", bullet);
       continue;
     }
-    target.hp -= bullet.damage * (target === p ? 1 - bargeTier(state.manifest.upgrades, "hull") * .13 : 1);
+    target.hp -= bullet.damage * (target === p ? (1 - bargeTier(state.manifest.upgrades, "hull") * .13) * trimFor(state.manifest).incoming : 1);
     bullet.life = 0;
     bullet.hit = true;
     effect(state, "hit", bullet, { target: pirate ? "pirate" : boom ? "boom" : barge ? "player" : "boat", amount: Math.round(bullet.damage) });

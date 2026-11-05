@@ -2,6 +2,22 @@
 
 ## Work packages · 5 November 2026
 
+### W1 · Barge trims
+
+Added Balanced, Runner, Ironclad and Gunner with A2's multipliers, applied to movement/turning, shot damage/cadence, fuel and incoming bullet/collision/Floodtide damage. The Landing selector fits for free on `start_run`; manifests and saves retain the choice, old saves default to Balanced, and campaign refits unlock on Night 3. HUD title, barge tint and cruising estimates reflect the trim. Shared game-core/codec behavior is exercised through both existing backends, including local reload and live restart. Every trim has replay and goods-conservation coverage.
+
+- `npm run schema` — passed; generated schema committed.
+- `npm run build` — passed (existing bundle/annotation warnings).
+- `npm test` — initial run: 98 passed, 1 failed because a Runner collected a seeded fuel barrel during the consumption measurement. Isolated that measurement from pickups; final run: 101 tests passed in 7 files.
+- `$env:LANTERN_CHROME_CHANNEL='chrome'; npm run test:e2e -- --project=chrome` — 5 passed, including real-control refits through all four trims in a live room, Night 2's locked selector, offline relief haul, full campaign and live race.
+- `npm run simulate -- --nights 2000 --seed 17 --check` — passed, dark streak 1, zero invariant errors.
+- `npm run simulate -- --nights 2000 --seed 42 --check` — passed, dark streak 1, zero invariant errors.
+- `npm run simulate -- --nights 2000 --seed 93 --check` — passed, dark streak 1, zero invariant errors.
+- `npm run simulate -- --nights 2000 --seed 166 --check` — passed, dark streak 1, zero invariant errors.
+- `npm run simulate -- --nights 2000 --seed 271 --check` — passed, dark streak 1, zero invariant errors.
+
+Firefox, real-device touch and human usability were not verified. No balance tuning beyond the specified trim multipliers.
+
 ### W0 · Lantern Caravan naming
 
 Renamed the title screen, header, browser title, meta description, README and documentation. Lantern Row remains the market name; the planned Night 4 six-boat Floodtide procession is the Lantern Caravan. Package names, repository and save identifiers are unchanged. Added a run-reservation/return goods-conservation test and title assertions to the real-control offline river path. Tightened the simulator's dark-streak failure threshold from five to one; no economy tuning.

@@ -22,6 +22,25 @@ afterEach(async () => {
 });
 
 describe("authoritative market", () => {
+  test("a trim is confirmed with the live manifest and survives a server restart", async () => {
+    vi.useFakeTimers({ toFake: ["Date"] });
+    const { dir, store } = await makeStore();
+    let market = new LiveMarket(store, new DevSettlementProvider(dir));
+    const room = "trim";
+    await market.load(room, true);
+    await market.join(room, { playerId: "a", displayName: "Ari" }, false);
+    const before = await market.snapshot(room, "p:a");
+    const deal = await market.getQuote(room, "p:a", before.night_id, { type: "start_run", barge_plan: [], trim: "ironclad" });
+    const receipt = await market.submit(room, "p:a", before.night_id, deal.quote_id, "cast-off");
+    expect(receipt.state).toBe("confirmed");
+    expect(await market.actionStatus(room, "p:a", before.night_id, "cast-off")).toEqual(receipt);
+    market = new LiveMarket(store, new DevSettlementProvider(dir));
+    const restored = await market.snapshot(room, "p:a");
+    expect(restored.barge.trim).toBe("ironclad");
+    expect(restored.river.myRun!.manifest.trim).toBe("ironclad");
+    expect(restored.coins).toBe(before.coins);
+  });
+
   test("one trader wins a contested order, and both see the same boat", async () => {
     vi.useFakeTimers({ toFake: ["Date"] });
     vi.stubEnv("LANTERN_PREP_SECONDS", "1");

@@ -463,6 +463,9 @@ function rowGlow(world: World) {
 
 function runManifest(world: World, actor: string, intent: Extract<RiverIntent, { type: "start_run" }>, id: string, now: number) {
   const upgrades = world.traders[actor]!.upgrades, hold = bargeHold(upgrades);
+  const trim = intent.trim ?? world.traders[actor]!.trim ?? "balanced";
+  if (world.mode === "campaign" && world.night < 3 && trim !== "balanced")
+    throw new Error("RIVER_TRIM_LOCKED · Barge trims unlock on Night 3.");
   if (intent.escort_id && intent.contract_id) throw new Error("RIVER_CONTRACT_LIMIT · Choose one Harbor Bell contract.");
   const requested = intent.escort_id ?? intent.contract_id ?? Object.values(world.river.contracts).find(c => c.actor === actor)?.id;
   const contract = requested ? availableContract(world, actor, requested) : undefined;
@@ -494,7 +497,7 @@ function runManifest(world: World, actor: string, intent: Extract<RiverIntent, {
   }));
   const manifest: RunManifest = { id, seed: (world.river.random ^ Math.imul(world.revision + 1, 0x45d9f3b)) >>> 0,
     deadline: now + limitMs, limitMs, wallet: get(world, actor, "coin"), hold, upgrades, boats, bounty: get(world, bounty, "coin"),
-    glow: rowGlow(world),
+    glow: rowGlow(world), trim,
     reaches: reachIds.map(id => ({ id, danger: world.river.reaches[id].danger, boom: world.river.reaches[id].boom })),
     contract: contract && { id: contract.id, village: contract.village, item: contract.item, quantity: contract.qty,
       payout: contract.payout, kind: contract.kind, haul: contract.haul, relief: contract.relief },
@@ -624,7 +627,7 @@ export function commitRiver(prior: World, world: World, actor: string, intent: R
   if (intent.type === "start_run") {
     const manifest = runManifest(prior, actor, intent, id, now);
     const contract = manifest.contract && world.river.contracts[manifest.contract.id];
-    return withRiver(world, { runs: { ...world.river.runs, [id]: { actor, started: now, startedAt: prior.phase === "open" ? prior.elapsed : undefined, manifest } },
+    return withRiver({ ...world, traders: { ...world.traders, [actor]: { ...trader, trim: manifest.trim } } }, { runs: { ...world.river.runs, [id]: { actor, started: now, startedAt: prior.phase === "open" ? prior.elapsed : undefined, manifest } },
       ...(contract ? { contracts: { ...world.river.contracts, [contract.id]: { ...contract, actor } } } : {}) });
   }
   const { run, contract, payout } = finishRun(prior, actor, intent.run_id, intent.report, now);
@@ -689,6 +692,6 @@ export function riverSnapshot(world: World, actor: string): Pick<Snapshot, "vill
       myRun: run && { id: run.manifest.id, deadline: run.manifest.deadline, manifest: run.manifest },
       upriver: Object.values(world.river.runs).map(run => ({ actor: run.actor, name: world.traders[run.actor]!.name })),
     },
-    barge: { hold: String(bargeHold(upgrades)), upgrades },
+    barge: { hold: String(bargeHold(upgrades)), upgrades, trim: trader?.trim ?? "balanced" },
   };
 }

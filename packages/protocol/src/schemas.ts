@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { amount, haggleOfferSchema, intentSchema, manifestSchema, quoteSchema, type Snapshot } from "./index";
+import { amount, bargeTrimSchema, haggleOfferSchema, intentSchema, manifestSchema, quoteSchema, type Snapshot } from "./index";
 
 const text = z.string().min(1).max(120);
 const time = z.int().nonnegative();
@@ -44,7 +44,7 @@ export const snapshotSchema = z.object({
     upriver: z.array(z.object({ actor: text, name: text })),
     bountyFund: amount,
   }),
-  barge: z.object({ hold: amount, upgrades: z.array(text) }),
+  barge: z.object({ hold: amount, upgrades: z.array(text), trim: bargeTrimSchema }),
   objective: z.object({ complete: z.boolean(), name: text,
     steps: z.array(z.object({ label: text, count: amount, target: amount, icon: text })) }),
   delivered: amount, crafted: amount, crowdBudget: amount, crowdSold: amount, lifetimeCrafted: amount, lifetimeDividends: amount,

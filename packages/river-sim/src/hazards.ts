@@ -1,4 +1,4 @@
-import { landing, reachIds, reaches, reachWidth, type ReachId } from "@lantern/content/river";
+import { landing, reachIds, reaches, reachWidth, trimFor, type ReachId } from "@lantern/content/river";
 import { distance, routePoint } from "./bell";
 import type { Point, River } from "./sim";
 
@@ -76,7 +76,7 @@ export function tickFloodtide(state: River, dt: number) {
   const flood = state.floodtide!, p = state.player;
   const remaining = (flood.deadline - state.frame) / 60;
   if (distance(p, landing) > 168) {
-    p.hp = Math.max(0, p.hp - dt * (Math.hypot(p.vx, p.vy) > 120 ? .65 : 1.7));
+    p.hp = Math.max(0, p.hp - dt * (Math.hypot(p.vx, p.vy) > 120 ? .65 : 1.7) * trimFor(state.manifest).incoming);
     p.vx += Math.sin(remaining * 1.7) * dt * 85;
     p.vy -= Math.cos(remaining * 1.2) * dt * 70;
   }

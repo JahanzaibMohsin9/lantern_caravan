@@ -42,6 +42,9 @@ test("relights the dark wharf with a relief haul from upriver, then sells spare 
 
   await page.clock.install();
   await button("The Landing").click();
+  await button("Barge").click();
+  await expect(page.getByRole("combobox", { name: "Barge trim" })).toBeDisabled();
+  await page.getByRole("button", { name: /^Harbor Bell/ }).click();
   // The dark wharf rings the Harbor Bell for a relief haul of oil.
   const relief = page.locator(".relief-row").filter({ hasText: "Relight Oil Wharf" });
   await expect(relief).toBeVisible();
@@ -92,4 +95,31 @@ test("relights the dark wharf with a relief haul from upriver, then sells spare 
   await expect(page.getByRole("button", { name: "Cart 3 of 6 items" })).toBeVisible();
   await expect(page.getByRole("button", { name: /Oil Wharf/ }).first()).not.toContainText("Closed");
   expect(errors).toEqual([]);
+});
+
+test("fits each free trim at the Landing and sees it on the live barge HUD", async ({ page }) => {
+  test.setTimeout(90_000);
+  await page.goto("/");
+  await page.getByRole("button", { name: "Live market", exact: true }).click();
+  await page.getByLabel("Display name").fill("Trim captain");
+  await page.getByRole("button", { name: "Sign in", exact: true }).click();
+  await page.getByRole("button", { name: "Create private room" }).click();
+  await expect(page.locator("[data-room-code]")).toBeVisible();
+  for (const trim of ["runner", "ironclad", "gunner", "balanced"]) {
+    const landing = page.getByRole("navigation").getByRole("button", { name: /The Landing/ });
+    await expect(landing).toBeEnabled();
+    await landing.click();
+    await page.getByRole("button", { name: "Barge", exact: true }).click();
+    await page.getByRole("combobox", { name: "Barge trim" }).selectOption(trim);
+    await page.getByRole("button", { name: /^Cast off/ }).click();
+    const river = page.getByRole("region", { name: "River Run" });
+    await expect(river.getByText("BARGE / " + trim.toUpperCase(), { exact: true })).toBeVisible();
+    await river.getByRole("button", { name: /Moor at The Landing/ }).click();
+    await expect(river).toHaveCount(0);
+    await page.keyboard.press("Escape");
+    await landing.click();
+    await page.getByRole("button", { name: "Barge", exact: true }).click();
+    await expect(page.getByRole("combobox", { name: "Barge trim" })).toHaveValue(trim);
+    await page.keyboard.press("Escape");
+  }
 });

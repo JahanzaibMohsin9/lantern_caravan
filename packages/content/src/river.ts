@@ -37,3 +37,12 @@ export type BargeUpgradeId = keyof typeof bargeUpgrades;
 export const bargeTier = (upgrades: readonly string[], kind: string) =>
   upgrades.includes(kind + "_ii") ? 2 : upgrades.includes(kind + "_i") ? 1 : 0;
 export const bargeHold = (upgrades: readonly string[]) => 12 + bargeTier(upgrades, "hold") * 4;
+
+export const bargeTrims = {
+  balanced: { name: "Balanced", color: "#d9c69c", description: "Standard handling, armor and weapons.", speed: 1, turning: 1, damage: 1, incoming: 1, fireRate: 1, fuel: 1 },
+  runner: { name: "Runner", color: "#8bdcd0", description: "+15% speed and turning; shots deal 15% less damage.", speed: 1.15, turning: 1.15, damage: .85, incoming: 1, fireRate: 1, fuel: 1 },
+  ironclad: { name: "Ironclad", color: "#a9b96d", description: "Take 25% less damage; speed and turning drop 15%.", speed: .85, turning: .85, damage: 1, incoming: .75, fireRate: 1, fuel: 1 },
+  gunner: { name: "Gunner", color: "#edb16c", description: "Fire 20% faster; burn 20% more fuel.", speed: 1, turning: 1, damage: 1, incoming: 1, fireRate: 1.2, fuel: 1.2 },
+} as const;
+export type BargeTrimId = keyof typeof bargeTrims;
+export const trimFor = (manifest: { trim?: BargeTrimId }) => bargeTrims[manifest.trim ?? "balanced"];

@@ -1,5 +1,5 @@
 import { describe, expect, test } from "vitest";
-import { landing, reachIds, reaches, villages } from "@lantern/content/river";
+import { landing, reachIds, reaches, villages, type BargeTrimId } from "@lantern/content/river";
 import { tradePrice } from "@lantern/game-core/pricing";
 import type { RunManifest } from "@lantern/protocol";
 import { createRiver, distance, marketQuote, replayRiver, stepRiver, type Point, type River, type RiverInput } from "./sim";
@@ -58,8 +58,8 @@ describe("Caravan Zero engine port", () => {
     expect(s.player.wallet).toBe(30 - quote.amount + sell.amount);
   });
 
-  test("replays steering, combat, trade and mooring into the same report", () => {
-    const input = manifest({ reaches: reachIds.map(id => ({ id, danger: id === "heron_reach" ? 2 : 0, boom: false })) });
+  test.each<BargeTrimId>(["balanced", "runner", "ironclad", "gunner"])("replays %s steering, combat, trade and mooring into the same report", trim => {
+    const input = manifest({ trim, reaches: reachIds.map(id => ({ id, danger: id === "heron_reach" ? 2 : 0, boom: false })) });
     const s = createRiver(input);
     steer(s, villages.ember_falls);
     stepRiver(s, order("buy", 5));
@@ -71,6 +71,50 @@ describe("Caravan Zero engine port", () => {
     expect(original.pirates[0]?.count).toBeGreaterThan(0);
     expect(runReport(replayRiver(input, s.log, s.frame))).toEqual(original);
     expect(runReport(replayRiver(input, structuredClone(s.log), s.frame))).toEqual(original);
+  });
+});
+
+describe("barge trims", () => {
+  test.each([
+    ["balanced", 1, 1, 1, 1, 1], ["runner", 1.15, .85, 1, 1, 1],
+    ["ironclad", .85, 1, .75, 1, 1], ["gunner", 1, 1, 1, 1.2, 1.2],
+  ] as const)("%s applies its movement, damage, protection, cadence and fuel modifiers once", (trim, speed, damage, incoming, rate, fuel) => {
+    for (const boost of [false, true]) {
+      const s = createRiver(manifest({ trim, upgrades: ["engine_i"] }));
+      const base = createRiver(manifest({ upgrades: ["engine_i"] }));
+      // Isolate engine consumption from the seeded floating fuel pickups.
+      s.barrels = []; base.barrels = [];
+      advance(s, 1, { y: -1, boost }); advance(base, 1, { y: -1, boost });
+      expect(s.player.vy / base.player.vy).toBeCloseTo(speed, 9);
+      expect((landing.y - s.player.y) / (landing.y - base.player.y)).toBeCloseTo(speed, 9);
+      // Measure fuel at cruising speed, after acceleration stops affecting consumption.
+      const priorFuel = s.player.fuel, baseFuel = base.player.fuel;
+      advance(s, 1, { y: -1, boost }); advance(base, 1, { y: -1, boost });
+      expect((priorFuel - s.player.fuel) / (baseFuel - base.player.fuel)).toBeCloseTo(fuel, 9);
+    }
+    const turn = createRiver(manifest({ trim }));
+    turn.player.angle = 0;
+    stepRiver(turn, { y: -1 });
+    expect(turn.player.angle).toBeCloseTo(-Math.PI / 2 / 60 * 10 * speed, 9);
+    const shot = createRiver(manifest({ trim, upgrades: ["cannon_i"] }));
+    stepRiver(shot, { fire: true, aim: { x: landing.x, y: landing.y - 100 } });
+    expect(shot.bullets[0]!.damage).toBeCloseTo(26 * damage, 9);
+    expect(shot.player.cooldown).toBeCloseTo((.23 - .035) / rate, 9);
+    const hull = createRiver(manifest({ trim, upgrades: ["hull_i"] }));
+    hull.bullets.push({ ...landing, vx: 0, vy: 0, life: 1, friendly: false, damage: 20 });
+    stepRiver(hull);
+    expect(hull.player.maxHp - hull.player.hp).toBeCloseTo(20 * .87 * incoming, 9);
+    const storm = createRiver(manifest({ trim }));
+    Object.assign(storm.player, reaches.heron_reach.to);
+    stepRiver(storm, { floodtide: true });
+    expect(100 - storm.player.hp).toBeCloseTo(1.7 / 60 * incoming, 9);
+  });
+
+  test("Gunner fires more actual shots over the same interval", () => {
+    const standard = createRiver(manifest()), gunner = createRiver(manifest({ trim: "gunner" }));
+    const input = { fire: true, aim: { x: landing.x, y: landing.y - 100 } };
+    advance(standard, 3, input); advance(gunner, 3, input);
+    expect(gunner.player.ammo).toBeLessThan(standard.player.ammo);
   });
 });
 

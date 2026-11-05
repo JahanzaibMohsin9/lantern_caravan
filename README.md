@@ -21,6 +21,8 @@ From Night 2 onward, visit **The Landing** to cast off on a River Run, before th
 
 On the river, **WASD** or **arrows** steer, **Shift** boosts, **Space** fires at the nearest threat, and the **mouse** aims and fires manually. **E** trades or moors, **Q** spends one oil on a flare, **M** opens the map, **J** opens the Harbor Bell, and **Esc** pauses outside shared rooms. On touchscreens, use the steering stick and the fire, boost and flare buttons. Each run has a 2:30 timer, shorter when you leave late in the night.
 
+At The Landing's **Barge** tab, choose Balanced, Runner, Ironclad or Gunner trim. Switching is free and takes effect when you cast off; the HUD names your trim. Trims unlock on campaign Night 3 and are always available in Endless and live rooms.
+
 | First Light | The Dark Wharf | Festival of Lights |
 | --- | --- | --- |
 | ![The title over the riverside market](docs/media/the-row.png) | ![The closed Oil Wharf and rescue offering](docs/media/dark-wharf.png) | ![The completed festival](docs/media/festival.png) |

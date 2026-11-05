@@ -24,8 +24,10 @@ export const runReportSchema = z.object({
   outcome: z.enum(["moored", "towed", "sunk"]), inputLogHash: z.string().max(120),
 });
 export type RunReport = z.infer<typeof runReportSchema>;
+export const bargeTrimSchema = z.enum(["balanced", "runner", "ironclad", "gunner"]);
 
 export const manifestSchema = z.object({
+  trim: bargeTrimSchema.optional(),
   id, seed: z.int().nonnegative(), deadline: coins, wallet: coins, hold: units,
   items: z.array(z.object({ village: id, item: id, stock: coins, target: z.int().positive(),
     prices: z.array(z.int().positive()).max(20), coins, discount: z.boolean() })).max(6),
@@ -48,7 +50,7 @@ export const intentSchema = z.discriminatedUnion("type", [
   z.object({ type: z.literal("buy_upgrade"), upgrade_id: id }),
   z.object({ type: z.literal("start_job") }),
   z.object({ type: z.literal("start_run"), contract_id: id.optional(), escort_id: id.optional(),
-    barge_plan: z.array(z.object({ village_id: id, item_id: id, quantity })).max(6) }),
+    trim: bargeTrimSchema.optional(), barge_plan: z.array(z.object({ village_id: id, item_id: id, quantity })).max(6) }),
   z.object({ type: z.literal("finish_run"), run_id: id, report: runReportSchema }),
   z.object({ type: z.literal("accept_contract"), contract_id: id }),
   z.object({ type: z.literal("buy_barge_upgrade"), upgrade_id: id }),
@@ -104,7 +106,7 @@ export type Snapshot = {
     upriver: { actor: string; name: string }[];
     bountyFund: string;
   };
-  barge: { hold: string; upgrades: string[] };
+  barge: { hold: string; upgrades: string[]; trim: z.infer<typeof bargeTrimSchema> };
   orders: {
     id: string; name: string; item: string; remaining: string; quantity: string; payout: string;
     boat: number; personal: boolean; opens: number; state: "upcoming" | "open" | "filled" | "expired";

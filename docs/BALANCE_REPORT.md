@@ -16,6 +16,8 @@ The longest dark streak was one night for every seed. During the review, two see
 
 ## Tuned values
 
+W1 uses the A2 values without tuning: Balanced has no modifiers; Runner multiplies speed, acceleration and turning by 1.15 and shot damage by 0.85; Ironclad multiplies speed, acceleration and turning by 0.85 and incoming bullet, collision and Floodtide damage by 0.75; Gunner multiplies firing rate and moving fuel consumption by 1.2. Upgrade bonuses apply before these multipliers. Fits cost no coins or goods. Trims unlock on campaign Night 3 and immediately in endless/live. Physics remains fixed at 60 Hz (firing intervals are quantized to frames).
+
 | Rule | Value |
 | --- | --- |
 | Village harvest targets | Millbrook 24 paper and 16 cord. Ember Falls 24 oil. Reedmarsh 20 reed and 14 dye. |

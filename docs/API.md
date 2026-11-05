@@ -34,6 +34,8 @@ Quotes are bound to an actor, room, and night and expire after 15 game seconds. 
 
 ## River Run intents
 
+W1 adds optional `trim` to `start_run`: `balanced`, `runner`, `ironclad` or `gunner`. Omission retains the actor's previous trim, defaulting to Balanced for old saves. Submission fits it for free and includes it in the authoritative manifest and `snapshot.barge.trim`; quoting alone changes nothing. Refitting is only possible between runs. Non-Balanced trims unlock on campaign Night 3 (`RIVER_TRIM_LOCKED` earlier); endless and live rooms have them immediately. Old manifests without `trim` replay as Balanced. Both backends use the shared rules and codec for this field.
+
 Both LocalBackend and the live server accept the four intents during preparation and during the open night while at least 45 seconds remain (`RIVER_LATE` otherwise). River intents use wall-clock milliseconds for quote expiry (15 seconds) and run timing, on both backends. Submit and check the receipt as for a Row trade.
 
 | Intent | Fields and effects |
