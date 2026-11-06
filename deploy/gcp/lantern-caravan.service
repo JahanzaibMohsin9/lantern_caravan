@@ -1,0 +1,26 @@
+[Unit]
+Description=Lantern Caravan live market server
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=lantern
+Group=lantern
+WorkingDirectory=/opt/lantern-caravan
+EnvironmentFile=/etc/lantern-caravan.env
+ExecStart=/opt/lantern-caravan/node_modules/.bin/tsx apps/server/src/main.ts
+Restart=always
+RestartSec=3
+# Give the settlement outbox time to save on shutdown.
+TimeoutStopSec=20
+
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectSystem=strict
+ProtectHome=true
+ReadWritePaths=/var/lib/lantern-caravan
+MemoryMax=1200M
+
+[Install]
+WantedBy=multi-user.target

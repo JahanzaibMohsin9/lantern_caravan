@@ -1,0 +1,21 @@
+{$DOMAIN} {
+	encode zstd gzip
+
+	# The live market API and chain status.
+	handle /v1/* {
+		reverse_proxy 127.0.0.1:4318
+	}
+
+	# The built game.
+	handle {
+		root * /opt/lantern-caravan/apps/web/dist
+		try_files {path} /index.html
+		file_server
+	}
+
+	header {
+		Strict-Transport-Security "max-age=31536000"
+		X-Content-Type-Options nosniff
+		Referrer-Policy strict-origin-when-cross-origin
+	}
+}
