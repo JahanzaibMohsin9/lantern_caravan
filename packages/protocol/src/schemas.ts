@@ -36,7 +36,7 @@ export const snapshotSchema = z.object({
   coins: amount, cargo: amounts, capacity: amount, upgrades: z.array(text),
   merchants: z.record(z.string(), merchant), orders: z.array(order),
   villages: z.record(z.string(), z.object({ band: merchant.shape.band, coins: amount, stock: amounts,
-    prices: z.record(z.string(), z.object({ buy: amount, sell: amount, label: text })), relationship: z.int() })),
+    prices: z.record(z.string(), z.object({ buy: amount, sell: amount, label: text })), relationship: z.int(), contractsCompleted: time, trusted: z.boolean() })),
   river: z.object({
     reaches: z.array(z.object({ id: text, name: text, danger: z.int().min(0).max(5), boom: z.boolean(), lamps: time })),
     contracts: z.array(z.object({ id: text, stall: text, village: text, item: text, quantity: amount, payout: amount,
@@ -65,8 +65,12 @@ export const snapshotSchema = z.object({
   spectator: z.boolean(), pendingActions: z.array(z.object({ id: text, state: z.enum(["pending", "unknown"]) })),
 }) satisfies z.ZodType<Snapshot>;
 
-export const historyRowSchema = z.object({ time, night: time, stall: text, coins: amount, price: amount,
-  item: text, strategy, dividend: amount, sharePrice: amount.optional() });
+export const historyRowSchema = z.union([
+  z.object({ kind: z.literal("stall").optional(), time, night: time, stall: text, coins: amount, price: amount,
+    item: text, strategy, dividend: amount, sharePrice: amount.optional() }),
+  z.object({ kind: z.literal("village"), time, night: time, village: text, item: text, coins: amount, price: amount, stock: amount }),
+  z.object({ kind: z.literal("reach"), time, night: time, reach: text, danger: z.int().min(0).max(5), boom: z.boolean() }),
+]);
 export const chronicleEntrySchema = activity.extend({ id: text, time });
 export const healthSchema = z.object({ version: z.literal(1), content_version: text, rules_version: text, uptime: time });
 export const loginSchema = z.object({ displayName: z.string().trim().min(1).max(24) });

@@ -1,6 +1,6 @@
 # Lantern Caravan handoff
 
-## Work packages · 5 November 2026
+## Work packages · 5–6 November 2026
 
 ### Scope and §16.4 hand-back
 
@@ -16,7 +16,7 @@ W0–W5 were delivered previously. **W6 adds the four-night campaign; W7–W9 re
 | W5 · player Bell orders | Committed in the `W5:` commit; checks below |
 | W6 · four-night campaign | Committed in the `W6:` commit; checks below |
 | W7 · barge looks/cosmetics | Not started |
-| W8 · Watch/history/trust | Not started |
+| W8 · Watch/history/trust | Committed in the `W8:` commit; checks below |
 | W9 · Floodtide/server replay | Not started |
 
 - [x] Each delivered package has its own W-prefixed commit and a passing build, Vitest, system-Chrome Playwright and five-seed 2,000-night check.

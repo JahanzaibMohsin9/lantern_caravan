@@ -39,7 +39,7 @@ export const manifestSchema = z.object({
   trim: bargeTrimSchema.optional(),
   id, seed: z.int().nonnegative(), deadline: coins, wallet: coins, hold: units,
   items: z.array(z.object({ village: id, item: id, stock: coins, target: z.int().positive(),
-    prices: z.array(z.int().positive()).max(20), coins, discount: z.boolean() })).max(6),
+    prices: z.array(z.int().positive()).max(20), coins, discount: z.boolean(), trusted: z.boolean().optional() })).max(6),
   reaches: z.array(z.object({ id, danger: z.int().min(0).max(5), boom: z.boolean() })).max(4),
   boats: z.array(z.object({ id, name: id, village: id, destination: id.optional(), departs: z.number(), arrives: z.number(), ambient: z.boolean() })),
   contract: z.object({ id, village: id, item: id, quantity: units, payout: coins,
@@ -115,7 +115,7 @@ export type Snapshot = {
   coins: string; cargo: Record<string, string>; capacity: string; upgrades: string[];
   merchants: Record<string, MerchantSnapshot>;
   villages: Record<string, { band: CashBand; coins: string; stock: Record<string, string>;
-    prices: Record<string, { buy: string; sell: string; label: string }>; relationship: number }>;
+    prices: Record<string, { buy: string; sell: string; label: string }>; relationship: number; contractsCompleted: number; trusted: boolean }>;
   river: {
     reaches: { id: string; name: string; danger: number; boom: boolean; lamps: number }[];
     contracts: { id: string; stall: string; village: string; item: string; quantity: string; payout: string;
@@ -153,7 +153,10 @@ export type ProfileSummary = { slot: string; updated: number; night?: number; ph
 export type SaveStatus = { state: Snapshot["saveStatus"] };
 export type Catalog = { version: string; items: Record<string, { name: string; price: string }> };
 export type HistoryRange = "day" | "week" | "all";
-export type HistoryRow = { time: number; night: number; stall: string; coins: string; price: string; item: string; strategy: StrategyId; dividend: string; sharePrice?: string };
+export type StallHistoryRow = { kind?: "stall"; time: number; night: number; stall: string; coins: string; price: string; item: string; strategy: StrategyId; dividend: string; sharePrice?: string };
+export type VillageHistoryRow = { kind: "village"; time: number; night: number; village: string; item: string; coins: string; price: string; stock: string };
+export type ReachHistoryRow = { kind: "reach"; time: number; night: number; reach: string; danger: number; boom: boolean };
+export type HistoryRow = StallHistoryRow | VillageHistoryRow | ReachHistoryRow;
 export type MarketHistory = { rows: HistoryRow[] };
 export type ChronicleEntry = Activity & { id: string; time: number };
 export type ChroniclePage = { entries: ChronicleEntry[]; cursor?: string };

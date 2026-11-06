@@ -284,3 +284,39 @@ test("buys visible barge tiers and finishes, refits free, reloads and casts off 
   await expect(river).toHaveCount(0);
   expect(errors).toEqual([]);
 });
+
+
+test("a trusted hauler sees the village stamp and pays the discounted quote", async ({ page }) => {
+  test.setTimeout(100000);
+  const button = (name: string) => page.getByRole("button", { name, exact: true });
+  await page.goto("/"); await button("Enter the Row").click();
+  const save = execFileSync(process.execPath, [join("node_modules", "tsx", "dist", "cli.mjs"), join("tests", "e2e", "fixtures", "trusted-save.ts")]);
+  page.on("dialog", dialog => void dialog.accept());
+  await button("Pause").click(); await button("Settings").click();
+  await page.locator('input[type="file"]').setInputFiles({ name: "trusted.json", mimeType: "application/json", buffer: save });
+  await expect(page.getByText("NIGHT 03")).toBeVisible();
+  await page.clock.install(); await page.keyboard.press("Escape");
+  await button("The Landing").click(); await button("Barge").click();
+  await expect(page.getByLabel("Upriver prices")).toContainText("Trusted: 10% off");
+  await page.getByRole("button", { name: /^Cast off/ }).click();
+  const river = page.getByRole("region", { name: "River Run" });
+  await expect(river).toBeVisible();
+  await page.clock.pauseAt(await page.evaluate(() => Date.now() + 1000));
+  for (const key of ["w", "Shift", " "]) await page.keyboard.down(key);
+  await page.clock.runFor(7100);
+  await page.keyboard.down("d");
+  const trade = river.getByRole("button", { name: /Trade at Reedmarsh/ });
+  for (let i = 0; i < 160 && !(await trade.isVisible()); i++) await page.clock.runFor(200);
+  for (const key of ["w", "d", "Shift", " "]) await page.keyboard.up(key);
+  await expect(trade).toBeVisible(); await page.keyboard.press("e");
+  const market = page.getByRole("dialog", { name: "Village market" });
+  await expect(market.getByText("Trusted hauler · 10% off village purchases", { exact: true })).toBeVisible();
+  const reed = market.locator(".river-trade").filter({ hasText: "Reed frame" });
+  const buy = reed.getByRole("button", { name: /^Buy 5/ });
+  await expect(buy).toBeEnabled();
+  const quote = (await buy.innerText()).match(/(\d+)\s*$/);
+  expect(quote).not.toBeNull();
+  await buy.click(); await page.clock.runFor(100);
+  await expect(river.getByRole("status").filter({ hasText: "Loaded 5 Reed frame · " + quote![1] + " coins" })).toBeVisible();
+  await page.screenshot({ path: "test-results/river-w8-trust.png" });
+});

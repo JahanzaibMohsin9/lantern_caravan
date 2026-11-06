@@ -4,7 +4,7 @@ import { landing, reaches, villages } from "@lantern/content/river";
 import type { RunManifest } from "@lantern/protocol";
 
 /** Sail using ordinary recorded inputs; no teleports or changed physics. */
-export function reachVoyage(manifest: RunManifest) {
+export function reachVoyage(manifest: RunManifest, cargo = { item: manifest.contract!.item, quantity: manifest.contract!.quantity }) {
   const river = createRiver(manifest);
   const steer = (target: Point, radius = 100) => {
     for (let i = 0; i < 3600 && distance(river.player, target) > radius && !river.outcome; i++) {
@@ -20,7 +20,7 @@ export function reachVoyage(manifest: RunManifest) {
   steer(reaches.heron_reach.to);
   steer(villages.reedmarsh);
   for (let i = 0; i < 5 * 60; i++) stepRiver(river, { fire: true });
-  stepRiver(river, { trade: { village: "reedmarsh", item: manifest.contract!.item, quantity: manifest.contract!.quantity, side: "buy" } });
+  stepRiver(river, { trade: { village: "reedmarsh", item: cargo.item, quantity: cargo.quantity, side: "buy" } });
   steer(reaches.heron_reach.to);
   steer(landing);
   stepRiver(river, { moor: true });

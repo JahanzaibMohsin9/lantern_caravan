@@ -22,3 +22,6 @@ React UI ── MarketBackend ── LocalBackend ── game-core ── Indexe
 - `apps/web/src/river/barge.ts` draws both the Landing preview and the player's river sprite. Upgrade tiers and manifest-bound cosmetic IDs determine appearance; simulation stats depend only on upgrades and trim. Purchases and refits use shared game-core rules and the existing local/live backend action flow.
 
 The reference FileStateStore targets one server process per data directory. The live clock is wall-clock based, while the local clock advances during active play and freezes on pause or a hidden tab.
+
+
+W8 river history extends the existing timestamp-grouped history stream with village and reach variants; legacy stall rows need no migration. Live settlements append public samples after confirmation, and the local backend exposes current samples. Village trust is recorded as completed-contract facts alongside the existing per-village relationship. Game-core's cumulative `villagePurchaseCost` is shared with river-sim and the village dialog, so replay, settlement and displayed prices agree.

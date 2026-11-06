@@ -14,6 +14,7 @@ import { mixMarket, play, unlockSound } from "../world/sound";
 import { LanternMark, stopIcons } from "./icons";
 import { Board, formatTime, Inventory, PanelFrame, Trade, Workshop } from "./Panels";
 import { guideFor, Journal, NightReport, nightLabel, Objective, Preparation, Profiles } from "./Campaign";
+import { RiverStrip } from "../river/RiverStrip";
 import { MarketHistoryPanel, Rooms, Simulator } from "./MarketExtras";
 import { Landing } from "../river/Landing";
 import { RiverRun } from "../river/RiverRun";
@@ -425,6 +426,7 @@ export function App() {
         {event && !panel && <div className="event-flag" title={event.detail}><Sparkles size={16}/><b>{event.label}</b><span>{snapshot.elapsed < event.at ? "· " + formatTime(event.at - snapshot.elapsed) : event.detail}</span></div>}
       </>}
 
+      {entered && online && !panel && <RiverStrip snapshot={snapshot}/>}
       <div className="stage-footer">
         <div className="key-hints"><span><kbd>A</kbd><kbd>D</kbd> Walk</span><span><kbd>E</kbd> Interact</span><span><kbd>I</kbd> Cart</span></div>
         <div className="river-meter" title={`${boats} of 6 boats lit`} aria-label={`${boats} of 6 boats lit`}>

@@ -78,7 +78,7 @@ export function Landing({ snapshot, busy, submit, castOff }: { snapshot: Snapsho
       <div className="landing-board" aria-label="Upriver prices">
         {loads.map(({ village, item, stock, price, label }) => <div className="landing-load" key={item}>
           <i style={{ background: cargoColor[item] }}/>
-          <span><strong>{items[item as ItemId].name}</strong><small>{villages[village as VillageId].name} · {stock} in stock · {label}</small></span>
+          <span><strong>{items[item as ItemId].name}</strong><small>{villages[village as VillageId].name} · {stock} in stock · {label}{snapshot.villages[village]?.trusted ? " · Trusted: 10% off" : ""}</small></span>
           <b>{price}<Coins size={12}/></b>
         </div>)}
       </div>

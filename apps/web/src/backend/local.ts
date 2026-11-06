@@ -2,7 +2,7 @@ import { items } from "@lantern/content";
 import { advanceClock, cancelRun, InvalidRun, isRiverIntent, closeNight, commit, createWorld, newNight, nightId, nowAt, objective, openNight, player,
   quote, recordAction, snapshotFor, validateQuote, type World } from "@lantern/game-core";
 import { haggle as bargain } from "@lantern/game-core/haggle";
-import type { ActionStatus, CreateSessionReq, HaggleOffer, HistoryRange, Intent,
+import type { ActionStatus, CreateSessionReq, HaggleOffer, HistoryRange, HistoryRow, Intent,
   LedgerOp, MarketBackend, Quote, Snapshot } from "@lantern/protocol";
 import { pack, read, remove, slots, unpack, write } from "./saves";
 
@@ -140,9 +140,15 @@ export class LocalBackend implements MarketBackend {
   async getHistory(roomId: string, _range: HistoryRange) {
     this.check(roomId);
     const view = this.view();
-    const rows = Object.entries(view.merchants).flatMap(([stall, merchant]) => Object.entries(merchant.prices).map(([item, hint]) =>
+    const rows: HistoryRow[] = Object.entries(view.merchants).flatMap(([stall, merchant]) => Object.entries(merchant.prices).map(([item, hint]) =>
       ({ time: view.server_time, night: view.night, stall, item, coins: merchant.coins, price: hint.buy,
         strategy: merchant.strategy, dividend: merchant.dividendHistory.at(-1) ?? "0" })));
+    for (const [village, market] of Object.entries(view.villages)) {
+      for (const [item, hint] of Object.entries(market.prices)) rows.push({ kind: "village", village, item,
+        time: view.server_time, night: view.night, coins: market.coins, price: hint.buy, stock: market.stock[item] ?? "0" });
+    }
+    rows.push(...view.river.reaches.map(reach => ({ kind: "reach" as const, reach: reach.id,
+      time: view.server_time, night: view.night, danger: reach.danger, boom: reach.boom })));
     return { rows };
   }
 

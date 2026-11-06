@@ -1,3 +1,4 @@
+import { villagePurchaseCost } from "@lantern/game-core/pricing";
 import { useEffect, useRef, useState, type PointerEvent as ReactPointerEvent } from "react";
 import { Anchor, Bell, Compass, Crosshair, Flame, Fuel, Map as MapIcon, Pause, Play, Shield, Target, Zap } from "lucide-react";
 import { items, merchants, type ItemId, type StallId } from "@lantern/content";
@@ -260,6 +261,7 @@ export function RiverRun({ manifest, snapshot, finish, busy, reduced, live = fal
             <h2>{villages[port].name}</h2>
             <span className={"band " + (snapshot.villages[port]?.band ?? "healthy")}>{snapshot.villages[port]?.band ?? "healthy"}</span>
           </div>
+          {snapshot.villages[port]?.trusted && <p className="trust-stamp">Trusted hauler · 10% off village purchases</p>}
           <p>{villages[port].keeper} trades at source prices. Prices rise as you buy. You have <b>{p.wallet} coins</b> and <b>{manifest.hold - cargo}</b> free hold.</p>
           {contract?.kind === "supply" && contract.village === port && <p className="contract-note">Your contract needs {contract.quantity} {items[contract.item as ItemId].name.toLowerCase()}. You carry {p.cargo[contract.item] ?? 0}.</p>}
           <div className="river-buttons" aria-label="Order size">
@@ -269,11 +271,13 @@ export function RiverRun({ manifest, snapshot, finish, busy, reduced, live = fal
           {lots.map(lot => {
             const buy = marketQuote(river, port, lot.item, "buy", batch);
             const sell = marketQuote(river, port, lot.item, "sell", batch);
-            const available = lot.prices.length - (river.bought[lot.item]?.quantity ?? 0);
+            const bought = river.bought[lot.item]?.quantity ?? 0;
+            const available = lot.prices.length - bought;
+            const nextPrice = villagePurchaseCost(lot, bought + 1) - villagePurchaseCost(lot, bought);
             return <div className="river-trade" key={lot.item}>
               <span className="trade-item"><i style={{ background: cargoColor[lot.item] }}/><span>
                 <strong>{items[lot.item as ItemId].name}</strong>
-                <small>{available ? available + " for your barge · " + lot.prices[lot.prices.length - available] + " coins next unit" : "Sold out"}</small>
+                <small>{available ? available + " for your barge · " + nextPrice + " coins next unit" : "Sold out"}</small>
                 <span className="stock-bar"><b style={{ width: Math.min(100, lot.stock / lot.target * 100) + "%" }}/></span>
               </span></span>
               <button className="primary" disabled={!buy.quantity} onClick={() => {

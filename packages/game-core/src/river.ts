@@ -6,7 +6,7 @@ import { bargeCosmetics, defaultBargeLook, fitBargeLook, bargeHold, bargeUpgrade
 import { runReportSchema, type Intent, type LedgerOp, type RunManifest, type RunReport, type Snapshot } from "@lantern/protocol";
 import { apply } from "./ledger";
 import { addActivity, burn, cashBand, get, merchantIds, mint, move, plan, ratio, shop, stockTargets, type World } from "./model";
-import { ask, tradePrice } from "./pricing";
+import { ask, tradePrice, villagePurchaseCost } from "./pricing";
 
 const freight = "r:freight", freightSink = "sys:freight", bounty = "sys:bounty";
 export const village = (id: VillageId) => "v:" + id;
@@ -694,6 +694,7 @@ function runManifest(world: World, actor: string, intent: Extract<RiverIntent, {
       const id = sourceFor(item)!, target = villageGoods(id)[item]!, count = stock(world, id, item);
       return { village: id, item, stock: count, target, coins: get(world, village(id), "coin"),
         discount: (world.traders[actor]!.relationship[id] ?? 0) >= 3,
+        trusted: (world.traders[actor]!.villageContracts[id] ?? 0) >= 2,
         prices: Array.from({ length: qty }, (_, n) => tradePrice("buy", items[item].price, count - n, target, villageStrategy, 1)) };
     }) };
   return manifest;
@@ -778,7 +779,7 @@ function finishRun(world: World, actor: string, id: string, report: RunReport, n
     const bought = buy?.quantity ?? 0, sold = sell?.quantity ?? 0;
     if (sold > bought + (salvaged[lot.item] ?? 0) || bought > lot.prices.length || (buy && buy.village_id !== lot.village) ||
       (sell && sell.village_id !== lot.village)) reject("RIVER_CARGO", "The cargo does not balance against the manifest.");
-    const paid = lot.prices.slice(0, bought).reduce((a, b) => a + b, 0) - Number(lot.discount && bought >= 4);
+    const paid = villagePurchaseCost(lot, bought);
     const received = tradePrice("sell", items[lot.item as ItemId].price, lot.stock, lot.target, villageStrategy, sold);
     if (paid !== (buy?.paid ?? 0) || received !== (sell?.received ?? 0)) reject("RIVER_PRICE", "A reported price differs from the manifest.");
     if (received > get(world, account, "coin") + paid) reject("RIVER_FUNDS", "The village cannot cover the buyback.");
@@ -903,6 +904,12 @@ export function commitRiver(prior: World, world: World, actor: string, intent: R
   let state = withRiver(world, { runs, wrecks, bountyFund: get(world, bounty, "coin") });
   if (bonus) state = addActivity(state, trader.name + " earned a " + bonus + "-coin bonus dividend for pledging and hauling oil to the wharf.", trader.name);
   const report = intent.report;
+  const describeCargo = (cargo: Record<string, number>) => Object.entries(cargo).filter(([, qty]) => qty > 0)
+    .map(([item, qty]) => qty + " " + items[item as ItemId].name.toLowerCase()).join(", ");
+  if (Object.values(report.delivered).some(qty => qty > 0)) state = addActivity(state,
+    trader.name + " hauled " + describeCargo(report.delivered) + " to The Landing.", trader.name);
+  if (Object.values(report.lost).some(qty => qty > 0)) state = addActivity(state,
+    trader.name + " lost " + describeCargo(report.lost) + " on the river.", trader.name);
   for (const entry of report.salvaged ?? []) {
     const wreck = run.manifest.wrecks!.find(wreck => wreck.id === entry.wreck_id)!;
     state = addActivity(state, trader.name + " salvaged " + entry.quantity + " " + items[entry.item_id as ItemId].name.toLowerCase() +
@@ -912,6 +919,7 @@ export function commitRiver(prior: World, world: World, actor: string, intent: R
     if (entry.choice === "mend") state = addActivity(state, trader.name + " mended a stranded fisher's net.", trader.name);
   }
   const relationship = { ...trader.relationship };
+  const villageContracts = { ...trader.villageContracts };
   const befriend = (id: VillageId) => { relationship[id] = Math.min(10, (relationship[id] ?? 0) + 1); };
   for (const entry of report.bought) befriend(entry.village_id as VillageId);
   for (const id of report.savedBoats ?? []) {
@@ -935,6 +943,11 @@ export function commitRiver(prior: World, world: World, actor: string, intent: R
     state = withRiver(state, { contracts });
     if (payout && contract.kind === "supply") {
       befriend(contract.village);
+      villageContracts[contract.village] = (villageContracts[contract.village] ?? 0) + 1;
+      if (villageContracts[contract.village] === 2) {
+        relationship[contract.village] = Math.max(3, relationship[contract.village] ?? 0);
+        state = addActivity(state, trader.name + " earned trusted status at " + villages[contract.village].name + ".", trader.name);
+      }
       state = recordSupply(state, contract.stall, contract.item, actor, contract.qty, payout);
       state = contract.relief ? relightStall(state, contract.stall, actor)
         : addActivity(state, trader.name + " filled a supply contract for " + merchants[contract.stall].name + ".", trader.name);
@@ -945,7 +958,7 @@ export function commitRiver(prior: World, world: World, actor: string, intent: R
       state = addActivity(state, trader.name + " escorted " + world.traders[haul.actor]?.name + " safely to The Landing.", trader.name);
     }
   }
-  return { ...state, traders: { ...state.traders, [actor]: { ...state.traders[actor]!, relationship, lastStop: "shed",
+  return { ...state, traders: { ...state.traders, [actor]: { ...state.traders[actor]!, relationship, villageContracts, lastStop: "shed",
     lifetimeDividends: trader.lifetimeDividends + bonus,
     wharfBonus: trader.wharfBonus + bonus,
     dividends: bonus ? { ...trader.dividends, oil_wharf: (trader.dividends.oil_wharf ?? 0) + bonus } : trader.dividends,
@@ -971,6 +984,7 @@ export function riverSnapshot(world: World, actor: string): Pick<Snapshot, "vill
     villages: Object.fromEntries(villageIds.map(id => {
       const coins = get(world, village(id), "coin");
       return [id, { coins: String(coins), band: cashBand(coins), relationship: trader?.relationship[id] ?? 0,
+        contractsCompleted: trader?.villageContracts[id] ?? 0, trusted: (trader?.villageContracts[id] ?? 0) >= 2,
         stock: Object.fromEntries(goodsEntries(id).map(([item]) => [item, String(stock(world, id, item))])),
         prices: Object.fromEntries(goodsEntries(id).map(([item, target]) => {
           const count = stock(world, id, item), hint = ask(items[item].price, count, target, villageStrategy);

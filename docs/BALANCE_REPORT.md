@@ -1,6 +1,6 @@
 # Lantern Caravan · River Run balance report
 
-Rows below were reproduced by the W6 five-seed run (5 November 2026), with wrecks, the almanac and a simulated player posting a Bell order every night. They match W5. The CLI fails `--check` for a dark streak above **one** night, matching §16.2. W6 changes only authored campaign values, listed below.
+Rows below were reproduced by the W6, W7 and W8 five-seed runs (5–6 November 2026), with wrecks, the almanac and a simulated player posting a Bell order every night. They match W5. The CLI fails `--check` for a dark streak above **one** night, matching §16.2. W6 changes only authored campaign values, listed below.
 
 Each checked run used three autonomous traders over 2,000 nights. Run `npm run simulate -- --nights 2000 --seed <seed> --check` to reproduce a row. The CLI writes the summary and per-tick CSV under `sim-output/`.
 
@@ -15,6 +15,8 @@ Each checked run used three autonomous traders over 2,000 nights. Run `npm run s
 The longest dark streak was one night for every seed. During the review, two seeds exposed a stall that sold out while holding 10–15 coins: it couldn't pay a hauler above its 10-coin reserve, so it stayed closed for up to 11 nights. The harbor's relief contract now pays for that haul, priced so rivals will take it. The checks cover nonnegative integer balances, price bounds, outstanding shares, permitted goods mints and burns, village balances between 20 and 300, danger from 0 to 5, and empty run and contract escrows at close. Supplier units include stall-to-stall wholesale. A lost sailing with several cargo lines can produce several freight loss entries.
 
 ## Tuned values
+
+W8 trust: two paid supply contracts for the same village earn 10% off that village's purchases for the rest of the campaign/live season. The discount is rounded down to whole coins on the cumulative total for each good per run; incremental purchases pay differences between those totals. This avoids extra savings from splitting a batch. The discount replaces the existing one-coin discount on batches of four for trusted buyers, and reduces the real payment to the village. There is no mint, subsidy or changed harvest/contract payout. Failed deliveries and other players' contracts do not count. The rule tests complete and replay two voyages, then replay a discounted voyage and assert asset conservation. The soak's autonomous hauls do not use player contract trust; its bounds remain a regression check on the shared economy.
 
 W7 cosmetics: Riverwood and Midnight paints are free; Vermilion 20, Moss 25, Ivory 30 and Indigo 35 coins. Amber lantern is free; Jade 15, Rose 20 and Violet 25. Plain prow is free; Heron 30 and Carp 40. Every purchase transfers coins to `sys:rescue`; refits cost zero. Upgrade prices and all simulation/economy values are unchanged. The test suite checks every finish against an otherwise identical simulation and replay, and conserves every asset across purchase and refit.
 

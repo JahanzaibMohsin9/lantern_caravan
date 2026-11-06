@@ -32,7 +32,7 @@ export type Trader = {
   trim?: BargeTrimId;
   name: string; upgrades: (UpgradeId | BargeUpgradeId)[]; delivered: Partial<Record<ItemId, number>>;
   crafted: number; crowdSold: number; earned: number; spent: number; jobsDone: number;
-  relationship: Partial<Record<StallId | VillageId, number>>; fair: Partial<Record<StallId, number>>; refused: StallId[];
+  villageContracts: Partial<Record<VillageId, number>>; relationship: Partial<Record<StallId | VillageId, number>>; fair: Partial<Record<StallId, number>>; refused: StallId[];
   cooldowns: Partial<Record<StallId, number>>; job?: { id: string; readyAt: number };
   lifetimeCrafted: number; lifetimeDividends: number; boatsHelped: number; rescued: number;
   rescuedTonight: StallId[]; votes: Partial<Record<StallId, StrategyId>>; lastStop?: string;
@@ -66,7 +66,7 @@ const freshTrader = (name: string): Trader => ({
   cosmetics: [],
   boomsTonight: 0, contractsTonight: 0, wharfBonus: 0,
   name, upgrades: [], delivered: {}, crafted: 0, crowdSold: 0, earned: 0, spent: 0,
-  jobsDone: 0, relationship: {}, fair: {}, refused: [], cooldowns: {}, votes: {},
+  jobsDone: 0, villageContracts: {}, relationship: {}, fair: {}, refused: [], cooldowns: {}, votes: {},
   lifetimeCrafted: 0, lifetimeDividends: 0, boatsHelped: 0, rescued: 0, rescuedTonight: [], dividends: {},
 });
 
@@ -163,7 +163,7 @@ export function newNight(previous: World, mode: Mode = previous.mode): World {
     market: Object.fromEntries(merchantIds.map(stall => [stall, { ...previous.market[stall],
       profit: 0, unitsSold: 0, rescued: false, offerCount: 0, stockClosed: mode === "campaign" ? false : previous.market[stall].stockClosed, thinking: "Watching the river for freight." }])) as World["market"],
     traders: Object.fromEntries(Object.entries(previous.traders).map(([actor, trader]) => [actor, {
-      ...freshTrader(trader.name), upgrades: trader.upgrades, relationship: trader.relationship, trim: trader.trim,
+      ...freshTrader(trader.name), upgrades: trader.upgrades, villageContracts: trader.villageContracts, relationship: trader.relationship, trim: trader.trim,
       cosmetics: trader.cosmetics, look: trader.look,
       lifetimeCrafted: trader.lifetimeCrafted, lifetimeDividends: trader.lifetimeDividends,
       boatsHelped: trader.boatsHelped, rescued: trader.rescued, dividends: trader.dividends,

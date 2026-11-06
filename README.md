@@ -49,7 +49,7 @@ npm run test:e2e -- --project=chrome
 npm run simulate -- --nights 2000 --seed 42 --check
 ```
 
-**Live market** opens the shared public Row or a private room. **Watch** and **History** are public. The development server uses local providers and saves to `apps/server/data/`. See [Running](docs/RUNNING.md) for deployment and test options.
+**Live market** opens the shared public Row or a private room. **Watch** and **History** are public. The river strip shows reach danger, booms, village cash bands and who is upriver. History includes village cash, source prices and available stock, plus reach danger and booms. Deliver two supply contracts for the same village to earn its trusted-hauler stamp and 10% off future village purchases. The development server uses local providers and saves to `apps/server/data/`. See [Running](docs/RUNNING.md) for deployment and test options.
 
 Built with TypeScript, Phaser, React, Vite, Zod, Vitest, Playwright, Lucide, Fontsource, and original procedural art and synthesized audio. OpenAI Codex assisted implementation and verification. [Asset credits](docs/ASSETS.md)
 

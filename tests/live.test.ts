@@ -5,6 +5,11 @@ import { afterEach, describe, expect, test, vi } from "vitest";
 import { DevIdentityProvider, DevSettlementProvider } from "../apps/server/src/providers/dev";
 import { FileStateStore } from "../apps/server/src/providers/file";
 import { LiveMarket } from "../apps/server/src/live";
+import { items } from "@lantern/content";
+import { supply } from "../packages/game-core/src/model";
+import { historyRowSchema } from "../packages/protocol/src/schemas";
+import { createRiver, stepRiver } from "@lantern/river-sim";
+import { runReport } from "../packages/river-sim/src/report";
 import type { PreparedAction } from "@lantern/protocol";
 
 const paths: string[] = [];
@@ -187,4 +192,61 @@ describe("Bell orders in a live room", () => {
     });
     expect(delivered).toBeGreaterThan(0);
   });
+});
+
+
+test("two barges race for village stock, retain separate reservations through restart, then return every unused unit", async () => {
+  vi.useFakeTimers({ toFake: ["Date"] });
+  const { dir, store } = await makeStore();
+  let market = new LiveMarket(store, new DevSettlementProvider(dir));
+  const room = "river-race";
+  await market.load(room, true);
+  for (const [playerId, displayName] of [["a", "Ari"], ["b", "Bo"]]) await market.join(room, { playerId: playerId!, displayName: displayName! }, false);
+  const before = await market.snapshot(room, "p:a"), night = before.night_id;
+  const assets = [...Object.keys(items), "coin"];
+  const totals = async () => { const world = (await market.load(room)).world; return assets.map(asset => supply(world, asset)); };
+  const initial = await totals();
+  const intent = { type: "start_run" as const, barge_plan: [] };
+  const a = await market.getQuote(room, "p:a", night, intent), b = await market.getQuote(room, "p:b", night, intent);
+  const outcomes = await Promise.allSettled([
+    market.serialized(() => market.submit(room, "p:a", night, a.quote_id, "race-a")),
+    market.serialized(() => market.submit(room, "p:b", night, b.quote_id, "race-b")),
+  ]);
+  expect(outcomes[0]).toMatchObject({ status: "fulfilled", value: { state: "confirmed" } });
+  expect(outcomes[1]).toMatchObject({ status: "rejected" });
+  const fresh = await market.getQuote(room, "p:b", night, intent);
+  expect((await market.submit(room, "p:b", night, fresh.quote_id, "fresh-b")).state).toBe("confirmed");
+  const departing = await Promise.all(["p:a", "p:b"].map(actor => market.snapshot(room, actor)));
+  expect(departing[0]!.river.myRun!.id).not.toBe(departing[1]!.river.myRun!.id);
+  for (const [village, view] of Object.entries(before.villages)) for (const [item, stock] of Object.entries(view.stock)) {
+    const reserved = departing.reduce((sum, view) => sum + (view.river.myRun!.manifest.items.find(lot => lot.item === item)?.prices.length ?? 0), 0);
+    expect(Number(departing[0]!.villages[village]!.stock[item]) + reserved).toBe(Number(stock));
+  }
+  expect(await totals()).toEqual(initial);
+  market = new LiveMarket(store, new DevSettlementProvider(dir));
+  const publicView = await market.snapshot(room, "");
+  expect(publicView.river.upriver.map(barge => barge.name).sort()).toEqual(["Ari", "Bo"]);
+  expect(publicView.river.myRun).toBeUndefined();
+  for (const [index, actor] of ["p:a", "p:b"].entries()) {
+    const restored = await market.snapshot(room, actor);
+    expect(restored.river.myRun).toEqual(departing[index]!.river.myRun);
+    const sim = createRiver(restored.river.myRun!.manifest); stepRiver(sim, { moor: true });
+    vi.setSystemTime(Date.now() + 100);
+    const finish = await market.getQuote(room, actor, night, { type: "finish_run", run_id: restored.river.myRun!.id, report: runReport(sim) });
+    expect(finish.effects.every(op => op.op === "transfer")).toBe(true);
+    const receipt = await market.submit(room, actor, night, finish.quote_id, "home-" + actor);
+    expect(receipt.state).toBe("confirmed");
+    expect(await market.submit(room, actor, night, finish.quote_id, "home-" + actor)).toEqual(receipt);
+  }
+  const home = await market.snapshot(room, "");
+  expect(home.river.upriver).toEqual([]);
+  expect(home.villages).toEqual(before.villages);
+  expect(await totals()).toEqual(initial);
+  const rows = await store.queryHistory(room, "all");
+  expect(rows.every(row => historyRowSchema.safeParse(row).success)).toBe(true);
+  const oil = rows.filter(row => row.kind === "village" && row.village === "ember_falls" && row.item === "oil");
+  expect(oil.length).toBeGreaterThanOrEqual(5);
+  expect(oil.at(-1)).toMatchObject({ stock: before.villages.ember_falls!.stock.oil, coins: before.villages.ember_falls!.coins });
+  expect(rows.some(row => row.kind === "reach" && row.reach === "marsh_bend")).toBe(true);
+  expect(rows.some(row => !row.kind && row.stall === "oil_wharf")).toBe(true);
 });

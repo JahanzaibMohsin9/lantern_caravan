@@ -2234,6 +2234,12 @@
                 "type": "integer",
                 "minimum": -9007199254740991,
                 "maximum": 9007199254740991
+              },
+              "contractsCompleted": {
+                "$ref": "#/$defs/__schema1"
+              },
+              "trusted": {
+                "type": "boolean"
               }
             },
             "required": [
@@ -2241,7 +2247,9 @@
               "coins",
               "stock",
               "prices",
-              "relationship"
+              "relationship",
+              "contractsCompleted",
+              "trusted"
             ],
             "additionalProperties": false
           }
@@ -3172,6 +3180,9 @@
             },
             "discount": {
               "type": "boolean"
+            },
+            "trusted": {
+              "type": "boolean"
             }
           },
           "required": [
@@ -3348,53 +3359,137 @@
     },
     "historyRow": {
       "$schema": "https://json-schema.org/draft/2020-12/schema",
-      "type": "object",
-      "properties": {
-        "time": {
-          "$ref": "#/$defs/__schema0"
+      "anyOf": [
+        {
+          "type": "object",
+          "properties": {
+            "kind": {
+              "type": "string",
+              "const": "stall"
+            },
+            "time": {
+              "$ref": "#/$defs/__schema0"
+            },
+            "night": {
+              "$ref": "#/$defs/__schema0"
+            },
+            "stall": {
+              "$ref": "#/$defs/__schema1"
+            },
+            "coins": {
+              "$ref": "#/$defs/__schema2"
+            },
+            "price": {
+              "$ref": "#/$defs/__schema2"
+            },
+            "item": {
+              "$ref": "#/$defs/__schema1"
+            },
+            "strategy": {
+              "type": "string",
+              "enum": [
+                "steady",
+                "bold",
+                "festival",
+                "bargain"
+              ]
+            },
+            "dividend": {
+              "$ref": "#/$defs/__schema2"
+            },
+            "sharePrice": {
+              "$ref": "#/$defs/__schema2"
+            }
+          },
+          "required": [
+            "time",
+            "night",
+            "stall",
+            "coins",
+            "price",
+            "item",
+            "strategy",
+            "dividend"
+          ],
+          "additionalProperties": false
         },
-        "night": {
-          "$ref": "#/$defs/__schema0"
+        {
+          "type": "object",
+          "properties": {
+            "kind": {
+              "type": "string",
+              "const": "village"
+            },
+            "time": {
+              "$ref": "#/$defs/__schema0"
+            },
+            "night": {
+              "$ref": "#/$defs/__schema0"
+            },
+            "village": {
+              "$ref": "#/$defs/__schema1"
+            },
+            "item": {
+              "$ref": "#/$defs/__schema1"
+            },
+            "coins": {
+              "$ref": "#/$defs/__schema2"
+            },
+            "price": {
+              "$ref": "#/$defs/__schema2"
+            },
+            "stock": {
+              "$ref": "#/$defs/__schema2"
+            }
+          },
+          "required": [
+            "kind",
+            "time",
+            "night",
+            "village",
+            "item",
+            "coins",
+            "price",
+            "stock"
+          ],
+          "additionalProperties": false
         },
-        "stall": {
-          "$ref": "#/$defs/__schema1"
-        },
-        "coins": {
-          "$ref": "#/$defs/__schema2"
-        },
-        "price": {
-          "$ref": "#/$defs/__schema2"
-        },
-        "item": {
-          "$ref": "#/$defs/__schema1"
-        },
-        "strategy": {
-          "type": "string",
-          "enum": [
-            "steady",
-            "bold",
-            "festival",
-            "bargain"
-          ]
-        },
-        "dividend": {
-          "$ref": "#/$defs/__schema2"
-        },
-        "sharePrice": {
-          "$ref": "#/$defs/__schema2"
+        {
+          "type": "object",
+          "properties": {
+            "kind": {
+              "type": "string",
+              "const": "reach"
+            },
+            "time": {
+              "$ref": "#/$defs/__schema0"
+            },
+            "night": {
+              "$ref": "#/$defs/__schema0"
+            },
+            "reach": {
+              "$ref": "#/$defs/__schema1"
+            },
+            "danger": {
+              "type": "integer",
+              "minimum": 0,
+              "maximum": 5
+            },
+            "boom": {
+              "type": "boolean"
+            }
+          },
+          "required": [
+            "kind",
+            "time",
+            "night",
+            "reach",
+            "danger",
+            "boom"
+          ],
+          "additionalProperties": false
         }
-      },
-      "required": [
-        "time",
-        "night",
-        "stall",
-        "coins",
-        "price",
-        "item",
-        "strategy",
-        "dividend"
       ],
-      "additionalProperties": false,
       "$defs": {
         "__schema0": {
           "type": "integer",
@@ -4161,6 +4256,12 @@
                   "type": "integer",
                   "minimum": -9007199254740991,
                   "maximum": 9007199254740991
+                },
+                "contractsCompleted": {
+                  "$ref": "#/$defs/__schema1"
+                },
+                "trusted": {
+                  "type": "boolean"
                 }
               },
               "required": [
@@ -4168,7 +4269,9 @@
                 "coins",
                 "stock",
                 "prices",
-                "relationship"
+                "relationship",
+                "contractsCompleted",
+                "trusted"
               ],
               "additionalProperties": false
             }
@@ -5098,6 +5201,9 @@
                 "$ref": "#/$defs/__schema10"
               },
               "discount": {
+                "type": "boolean"
+              },
+              "trusted": {
                 "type": "boolean"
               }
             },
@@ -8343,6 +8449,12 @@
                   "type": "integer",
                   "minimum": -9007199254740991,
                   "maximum": 9007199254740991
+                },
+                "contractsCompleted": {
+                  "$ref": "#/$defs/__schema1"
+                },
+                "trusted": {
+                  "type": "boolean"
                 }
               },
               "required": [
@@ -8350,7 +8462,9 @@
                 "coins",
                 "stock",
                 "prices",
-                "relationship"
+                "relationship",
+                "contractsCompleted",
+                "trusted"
               ],
               "additionalProperties": false
             }
@@ -9281,6 +9395,9 @@
               },
               "discount": {
                 "type": "boolean"
+              },
+              "trusted": {
+                "type": "boolean"
               }
             },
             "required": [
@@ -9527,53 +9644,137 @@
           "rows": {
             "type": "array",
             "items": {
-              "type": "object",
-              "properties": {
-                "time": {
-                  "$ref": "#/$defs/__schema0"
+              "anyOf": [
+                {
+                  "type": "object",
+                  "properties": {
+                    "kind": {
+                      "type": "string",
+                      "const": "stall"
+                    },
+                    "time": {
+                      "$ref": "#/$defs/__schema0"
+                    },
+                    "night": {
+                      "$ref": "#/$defs/__schema0"
+                    },
+                    "stall": {
+                      "$ref": "#/$defs/__schema1"
+                    },
+                    "coins": {
+                      "$ref": "#/$defs/__schema2"
+                    },
+                    "price": {
+                      "$ref": "#/$defs/__schema2"
+                    },
+                    "item": {
+                      "$ref": "#/$defs/__schema1"
+                    },
+                    "strategy": {
+                      "type": "string",
+                      "enum": [
+                        "steady",
+                        "bold",
+                        "festival",
+                        "bargain"
+                      ]
+                    },
+                    "dividend": {
+                      "$ref": "#/$defs/__schema2"
+                    },
+                    "sharePrice": {
+                      "$ref": "#/$defs/__schema2"
+                    }
+                  },
+                  "required": [
+                    "time",
+                    "night",
+                    "stall",
+                    "coins",
+                    "price",
+                    "item",
+                    "strategy",
+                    "dividend"
+                  ],
+                  "additionalProperties": false
                 },
-                "night": {
-                  "$ref": "#/$defs/__schema0"
+                {
+                  "type": "object",
+                  "properties": {
+                    "kind": {
+                      "type": "string",
+                      "const": "village"
+                    },
+                    "time": {
+                      "$ref": "#/$defs/__schema0"
+                    },
+                    "night": {
+                      "$ref": "#/$defs/__schema0"
+                    },
+                    "village": {
+                      "$ref": "#/$defs/__schema1"
+                    },
+                    "item": {
+                      "$ref": "#/$defs/__schema1"
+                    },
+                    "coins": {
+                      "$ref": "#/$defs/__schema2"
+                    },
+                    "price": {
+                      "$ref": "#/$defs/__schema2"
+                    },
+                    "stock": {
+                      "$ref": "#/$defs/__schema2"
+                    }
+                  },
+                  "required": [
+                    "kind",
+                    "time",
+                    "night",
+                    "village",
+                    "item",
+                    "coins",
+                    "price",
+                    "stock"
+                  ],
+                  "additionalProperties": false
                 },
-                "stall": {
-                  "$ref": "#/$defs/__schema1"
-                },
-                "coins": {
-                  "$ref": "#/$defs/__schema2"
-                },
-                "price": {
-                  "$ref": "#/$defs/__schema2"
-                },
-                "item": {
-                  "$ref": "#/$defs/__schema1"
-                },
-                "strategy": {
-                  "type": "string",
-                  "enum": [
-                    "steady",
-                    "bold",
-                    "festival",
-                    "bargain"
-                  ]
-                },
-                "dividend": {
-                  "$ref": "#/$defs/__schema2"
-                },
-                "sharePrice": {
-                  "$ref": "#/$defs/__schema2"
+                {
+                  "type": "object",
+                  "properties": {
+                    "kind": {
+                      "type": "string",
+                      "const": "reach"
+                    },
+                    "time": {
+                      "$ref": "#/$defs/__schema0"
+                    },
+                    "night": {
+                      "$ref": "#/$defs/__schema0"
+                    },
+                    "reach": {
+                      "$ref": "#/$defs/__schema1"
+                    },
+                    "danger": {
+                      "type": "integer",
+                      "minimum": 0,
+                      "maximum": 5
+                    },
+                    "boom": {
+                      "type": "boolean"
+                    }
+                  },
+                  "required": [
+                    "kind",
+                    "time",
+                    "night",
+                    "reach",
+                    "danger",
+                    "boom"
+                  ],
+                  "additionalProperties": false
                 }
-              },
-              "required": [
-                "time",
-                "night",
-                "stall",
-                "coins",
-                "price",
-                "item",
-                "strategy",
-                "dividend"
-              ],
-              "additionalProperties": false
+              ]
             }
           }
         },

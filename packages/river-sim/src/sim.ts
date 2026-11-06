@@ -1,7 +1,7 @@
 import { bargeTier, landing, pirateCap, pirateRoleAt, pirateRoles, reaches, riverStops, runMs, stopChoice, stopPlan, trimFor, villageStrategy, villages,
   type PirateRole, type ReachId, type StopKind, type VillageId } from "@lantern/content/river";
 import { items, type ItemId } from "@lantern/content";
-import { tradePrice } from "@lantern/game-core/pricing";
+import { tradePrice, villagePurchaseCost } from "@lantern/game-core/pricing";
 import type { RunManifest, RunReport } from "@lantern/protocol";
 import { createBoats, distance, tickBoats } from "./bell";
 import { along, beginFloodtide, blockBoom, clamp, createBooms, flare, keepInChannel, tickFloodtide } from "./hazards";
@@ -175,8 +175,7 @@ export function marketQuote(state: River, village: string, item: string, side: "
   let total = 0, units = 0;
   while (units < limit) {
     const next = buy
-      ? lot.prices.slice(bought, bought + units + 1).reduce((a, b) => a + b, 0)
-        - Number(lot.discount && bought + units + 1 >= 4) + Number(lot.discount && bought >= 4)
+      ? villagePurchaseCost(lot, bought + units + 1) - villagePurchaseCost(lot, bought)
       : tradePrice("sell", items[item as ItemId].price, lot.stock + sold, lot.target, villageStrategy, units + 1);
     if (next > budget) break;
     total = next;

@@ -63,4 +63,5 @@ test("an unsuccessful contract cannot earn Night 3 credit", () => {
   world = commit(world, quote(world, { type: "finish_run", run_id: manifest.id, report }, "home", 0), 0);
   expect(world.traders[player]).toMatchObject({ boomsTonight: 0, contractsTonight: 0 });
   expect(get(world, "esc:contract:" + contract.id, "coin")).toBe(0);
+  expect(world.traders[player]!.villageContracts).toEqual({});
 });

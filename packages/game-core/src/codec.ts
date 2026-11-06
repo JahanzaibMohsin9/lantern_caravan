@@ -41,6 +41,7 @@ const trader = z.object({
   trim: bargeTrimSchema.optional(),
   name: z.string(), upgrades: z.array(z.enum(["cart_i", "cart_ii", "lantern_strings", ...(Object.keys(bargeUpgrades) as (keyof typeof bargeUpgrades)[])])),
   delivered: numbers, crafted: num, crowdSold: num, earned: num, spent: num, jobsDone: num,
+  villageContracts: z.partialRecord(village, num).default({}),
   relationship: z.partialRecord(z.union([stall, village]), signed), fair: z.partialRecord(stall, num),
   refused: z.array(stall), cooldowns: z.partialRecord(stall, num),
   job: z.object({ id: z.string(), readyAt: z.number().nonnegative() }).optional(),

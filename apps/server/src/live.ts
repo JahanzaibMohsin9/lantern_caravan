@@ -5,7 +5,7 @@ import { addActivity, addTrader, advanceClock, commitFor, createWorld, isRiverIn
 import { decodeWorld, encodeWorld } from "@lantern/game-core/codec";
 import { haggle } from "@lantern/game-core/haggle";
 import { netEffects } from "@lantern/game-core/net-effects";
-import type { ActionStatus, HaggleOffer, HistoryRange, Intent, LedgerOp, PreparedAction,
+import type { ActionStatus, HaggleOffer, HistoryRange, HistoryRow, Intent, LedgerOp, PreparedAction,
   Quote, SettlementProvider, StateStore } from "@lantern/protocol";
 
 // River runs are timed in wall-clock milliseconds; market actions use the room clock.
@@ -71,7 +71,7 @@ export class LiveMarket {
       quotes: new Map(), seen: stored.state.seen ?? {}, waiting: stored.state.waiting ?? [] }
       : { id, world: createWorld("live", 42), revision: 0, phaseStarted: Date.now(), quotes: new Map(), seats: [],
         receipts: {}, agentEffects: [], seen: {}, waiting: [] };
-    if (!stored) await this.persist(room);
+    if (!stored) { await this.persist(room); await this.history(room, Date.now()); }
     this.rooms.set(id, room);
     return room;
   }
@@ -110,9 +110,16 @@ export class LiveMarket {
 
   private async history(room: Room, time: number) {
     const view = snapshotFor(room.world, room.id, "", time);
-    await this.store.appendHistory(room.id, Object.entries(view.merchants).flatMap(([stall, market]) =>
+    const rows: HistoryRow[] = Object.entries(view.merchants).flatMap(([stall, market]) =>
       Object.entries(market.prices).map(([item, hint]) => ({ stall, item, coins: market.coins, price: hint.buy,
-        strategy: market.strategy, time, night: view.night, dividend: market.dividendHistory.at(-1) ?? "0", sharePrice: market.sharePrice }))));
+        strategy: market.strategy, time, night: view.night, dividend: market.dividendHistory.at(-1) ?? "0", sharePrice: market.sharePrice })));
+    for (const [village, market] of Object.entries(view.villages)) {
+      for (const [item, hint] of Object.entries(market.prices)) rows.push({ kind: "village", village, item,
+        coins: market.coins, price: hint.buy, stock: market.stock[item] ?? "0", time, night: view.night });
+    }
+    rows.push(...view.river.reaches.map(reach => ({ kind: "reach" as const, reach: reach.id,
+      danger: reach.danger, boom: reach.boom, time, night: view.night })));
+    await this.store.appendHistory(room.id, rows);
   }
 
   private async chronicle(room: Room, before: World, time: number) {
@@ -167,6 +174,7 @@ export class LiveMarket {
     try {
       await this.store.appendActionLog({ ...prepared, status });
       await this.chronicle(room, before, Date.now());
+      if (status.state === "confirmed") await this.history(room, Date.now());
     } catch (error) { console.error("Action settled, journal append failed", shortError(error)); }
   }
 

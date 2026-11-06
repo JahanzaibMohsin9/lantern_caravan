@@ -18,3 +18,9 @@ export function tradePrice(side: "buy" | "sell", base: number, stock: number, ta
   }
   return total;
 }
+
+/** Cumulative manifest cost makes whole-coin discounts independent of purchase splitting. */
+export function villagePurchaseCost(lot: { prices: number[]; discount: boolean; trusted?: boolean }, quantity: number) {
+  const base = lot.prices.slice(0, quantity).reduce((a, b) => a + b, 0);
+  return base - (lot.trusted ? Math.floor(base / 10) : Number(lot.discount && quantity >= 4));
+}

@@ -1,9 +1,10 @@
 import { useEffect, useRef, useState } from "react";
 import { ArrowRight, Eye, Globe2, Pause, Play, Plus } from "lucide-react";
 import { items, merchants, type ItemId, type StallId } from "@lantern/content";
+import { reaches, villageGoods, villages, type VillageId } from "@lantern/content/river";
 import { strategies } from "@lantern/content/nights";
 import { advanceClock, createWorld, newNight, openNight, snapshotFor, type World } from "@lantern/game-core";
-import type { ChronicleEntry, HistoryRange, HistoryRow, MarketBackend } from "@lantern/protocol";
+import type { ChronicleEntry, HistoryRange, HistoryRow, MarketBackend, StallHistoryRow } from "@lantern/protocol";
 import type { DevNameAuth } from "../auth/dev";
 import { formatTime } from "./Panels";
 
@@ -58,6 +59,7 @@ const periods = { day: "24 hours", week: "7 days", all: "All time" } as const;
 const suppliers = ["paper_mill", "oil_wharf", "reed_thread", "indigo_atelier"] as const;
 
 export function MarketHistoryPanel({ backend, room }: { backend: MarketBackend; room: string }) {
+  const [category, setCategory] = useState("stalls");
   const [range, setRange] = useState<HistoryRange>("day");
   const [refresh, setRefresh] = useState(0);
   const [result, setResult] = useState<{ rows: HistoryRow[]; entries: ChronicleEntry[] }>();
@@ -76,9 +78,10 @@ export function MarketHistoryPanel({ backend, room }: { backend: MarketBackend; 
 
   const goods = Object.keys(merchants[stall].goods);
   const item = goods.includes(chosen) ? chosen : goods[0];
-  const selected = result?.rows.filter(row => row.stall === stall && row.item === item) ?? [];
+  const stallRows = (result?.rows ?? []).filter((row): row is StallHistoryRow => !row.kind || row.kind === "stall");
+  const selected = stallRows.filter(row => row.stall === stall && row.item === item);
   const perStrategy = new Map<string, Map<number, number>>();
-  for (const row of result?.rows ?? []) {
+  for (const row of stallRows) {
     if (row.stall !== stall) continue;
     const nights = perStrategy.get(row.strategy) ?? new Map<number, number>();
     nights.set(row.night, Number(row.dividend));
@@ -91,7 +94,11 @@ export function MarketHistoryPanel({ backend, room }: { backend: MarketBackend; 
     </div>
     {error ? <><p role="alert" className="hint">{error}</p><button className="subtle" onClick={() => setRefresh(refresh + 1)}>Retry</button></>
       : !result ? <p className="hint" role="status">Loading market history…</p> : <>
-        <div className="button-pair">
+        <div className="tabs" aria-label="History series">
+          {["stalls", "villages", "reaches"].map(value => <button key={value} className={category === value ? "selected" : ""}
+            onClick={() => setCategory(value)}>{value[0]!.toUpperCase() + value.slice(1)}</button>)}
+        </div>
+        {category === "stalls" ? <><div className="button-pair">
           <select value={stall} aria-label="Stall" onChange={event => setStall(event.target.value as StallId)}>
             {suppliers.map(stall => <option key={stall} value={stall}>{merchants[stall].name}</option>)}
           </select>
@@ -107,13 +114,45 @@ export function MarketHistoryPanel({ backend, room }: { backend: MarketBackend; 
             <span>{strategies[strategy as keyof typeof strategies].name} · {nights.size} nights</span>
             <small>{([...nights.values()].reduce((a, b) => a + b, 0) / nights.size).toFixed(1)} / share</small>
           </div>)}
-        </details>
+        </details></> : <RiverHistory rows={result.rows} category={category}/> }
         <div className="eyebrow">Chronicle</div>
         {!result.entries.length && <p className="hint">Nothing has happened yet.</p>}
         {result.entries.slice(0, 10).map(entry => <div className="order-row" key={entry.id}><div className="row-main">
           <strong>{entry.line}</strong><small>Night {entry.night} · {formatTime(entry.at)} {entry.actor ? "· " + entry.actor : ""}</small>
         </div></div>)}
       </>}
+  </>;
+}
+
+function RiverHistory({ rows, category }: { rows: HistoryRow[]; category: string }) {
+  const [village, setVillage] = useState<VillageId>("millbrook");
+  const [reach, setReach] = useState("heron_reach");
+  const [chosen, setChosen] = useState("");
+  if (category === "reaches") {
+    const selected = rows.filter(row => row.kind === "reach" && row.reach === reach);
+    return <>
+      <select aria-label="Reach" value={reach} onChange={event => setReach(event.target.value)}>
+        {Object.entries(reaches).map(([id, reach]) => <option key={id} value={id}>{reach.name}</option>)}
+      </select>
+      <Chart label="Reach danger" values={selected.flatMap(row => row.kind === "reach" ? [row.danger] : [])}/>
+      <Chart label="Boom present" values={selected.flatMap(row => row.kind === "reach" ? [Number(row.boom)] : [])}/>
+    </>;
+  }
+  const goods = Object.keys(villageGoods(village)), item = goods.includes(chosen) ? chosen : goods[0]!;
+  const selected = rows.filter(row => row.kind === "village" && row.village === village && row.item === item);
+  return <>
+    <div className="button-pair">
+      <select aria-label="Village" value={village} onChange={event => setVillage(event.target.value as VillageId)}>
+        {Object.entries(villages).map(([id, village]) => <option key={id} value={id}>{village.name}</option>)}
+      </select>
+      <select aria-label="Village item" value={item} onChange={event => setChosen(event.target.value)}>
+        {goods.map(id => <option key={id} value={id}>{items[id as ItemId].name}</option>)}
+      </select>
+    </div>
+    <Chart label="Village coins" values={selected.flatMap(row => row.kind === "village" ? [Number(row.coins)] : [])}/>
+    <Chart label={items[item as ItemId].name + " source ask"} values={selected.flatMap(row => row.kind === "village" ? [Number(row.price)] : [])}/>
+    <Chart label={items[item as ItemId].name + " village stock"} values={selected.flatMap(row => row.kind === "village" ? [Number(row.stock)] : [])}/>
+    <p className="hint">Source asks before personal trust discounts. Stock excludes cargo reserved by barges.</p>
   </>;
 }
 
