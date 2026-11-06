@@ -18,7 +18,8 @@
     "dev:server": "tsx tools/dev-server.ts",
     "simulate": "tsx tools/simulate/index.ts",
     "schema": "tsx tools/protocol-schema.ts",
-    "near:smoke": "tsx tools/near-smoke.ts"
+    "near:smoke": "tsx tools/near-smoke.ts",
+    "near:verify": "tsx tools/near-verify.ts"
   },
   "devDependencies": {
     "@playwright/test": "^1.64.1",

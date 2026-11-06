@@ -29,6 +29,12 @@
 
 Branch is `main`. Commit messages credit no AI tool.
 
+### Hosting on Google Cloud (6 November 2026)
+
+The live Row runs at **https://lanterncaravan.duckdns.org** on an e2-small VM in project `lantern-caravan-2026` (`us-central1-a`, static IP `35.193.245.99`, daily snapshots kept 7 days). `deploy/gcp/` holds the setup script, the `lantern-update` script, the systemd service and the Caddyfile; see its README. Caddy serves the game with a Let's Encrypt certificate and forwards `/v1/*` to the server. The operator key lives only in the root-only `/etc/lantern-caravan.env`; its public half was checked against `operator.lantern-caravan.testnet`'s access keys (full access) without printing the key.
+
+With `SETTLEMENT=near` the server minted the live Row's genesis (47 balances, 2 transactions). `near:verify` then ran on the VM during Night 4 with 20 unflushed agent ops: all 38 holders across 14 tokens matched the contract. NEAR's `rpc.testnet.near.org` started answering 429 "endpoint deprecated" during that check, so every default now uses FastNEAR (`https://test.rpc.fastnear.com`), including the VM's settings. A restart now flushes pending agent activity as a normal custody batch before reconciling, so the reconcile only repairs real drift (the first restart had settled it as a generic resync instead).
+
 ### NEAR settlement provider (6 November 2026)
 
 `SETTLEMENT=near` settles the public Row to the items contract through `apps/server/src/near/`:

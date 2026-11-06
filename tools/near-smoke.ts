@@ -20,7 +20,7 @@ const { values } = parseArgs({ options: { keep: { type: "boolean", default: fals
 process.env.LANTERN_PREP_SECONDS = "1";
 const root = process.env.NEAR_ACCOUNT_ROOT ?? "lantern-caravan.testnet";
 const operatorId = process.env.NEAR_OPERATOR_ID ?? "operator." + root;
-const chain = new NearChain({ network: "testnet", rpcUrl: process.env.NEAR_RPC_URL ?? "https://rpc.testnet.near.org",
+const chain = new NearChain({ network: "testnet", rpcUrl: process.env.NEAR_RPC_URL ?? "https://test.rpc.fastnear.com",
   contractId: process.env.NEAR_CONTRACT_ID ?? "items." + root, operatorId, key: await operatorKey(operatorId) });
 const dir = await mkdtemp(join(tmpdir(), "lantern-near-smoke-"));
 const sleep = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));

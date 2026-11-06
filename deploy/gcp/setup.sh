@@ -56,7 +56,7 @@ IDENTITY=dev
 STORE=file
 SETTLEMENT=dev
 NEAR_NETWORK=testnet
-NEAR_RPC_URL=https://rpc.testnet.near.org
+NEAR_RPC_URL=https://test.rpc.fastnear.com
 NEAR_ACCOUNT_ROOT=lantern-caravan.testnet
 EOF
 fi

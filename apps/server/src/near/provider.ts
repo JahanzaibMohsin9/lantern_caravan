@@ -157,34 +157,7 @@ export class NearSettlementProvider implements SettlementProvider {
     return { holders: holders.length, tokens: tokenIds.length, matches: !differences.length, differences };
   }
 
-  private async compare(ledger: Ledger) {
-    const target = new Map<string, Map<string, number>>();
-    for (const [account, assets] of Object.entries(ledger)) {
-      const holder = chainHolder(account, this.accounts);
-      const wallet = target.get(holder) ?? new Map<string, number>();
-      for (const [asset, amount] of Object.entries(assets)) {
-        if (!amount) continue;
-        if (!tokenIds.includes(asset)) throw new Error("NEAR_TOKEN · " + asset + " is not in the items contract.");
-        wallet.set(asset, (wallet.get(asset) ?? 0) + amount);
-      }
-      target.set(holder, wallet);
-    }
-    const holders = [...new Set([...target.keys(), ...this.state.holders])].sort();
-    const mints: ChainOp[] = [], burns: ChainOp[] = [];
-    const differences: { holder: string; token: string; chain: number; game: number }[] = [];
-    let chainTotal = 0;
-    for (const holder of holders) {
-      const onChain = await this.chain.view<string[]>("mt_batch_balance_of", { account_id: holder, token_ids: tokenIds });
-      tokenIds.forEach((token, i) => {
-        const have = Number(onChain[i] ?? 0), want = target.get(holder)?.get(token) ?? 0;
-        chainTotal += have;
-        if (have !== want) differences.push({ holder, token, chain: have, game: want });
-        if (want > have) mints.push({ op: "mint", asset: token, amount: String(want - have), to: holder, memo: "Resync", source: "sys:resync" });
-        if (have > want) burns.push({ op: "burn", asset: token, amount: String(have - want), from: holder, memo: "Resync", sink: "sys:resync" });
-      });
-    }
-    return { mints, burns, chainTotal, holders, differences };
-  }
+  private compare(ledger: Ledger) { return compareChain(this.chain, this.accounts, ledger, this.state.holders); }
 
   /** Registers every merchant, rival and village account that isn't an agent yet. */
   async ensureAgents() {
@@ -274,6 +247,54 @@ export class NearSettlementProvider implements SettlementProvider {
       delete this.state.prepared[id];
     }
   }
+}
+
+/**
+ * Reads every holder's balances from the contract and compares them with a game ledger. `knownHolders` adds
+ * holders that may hold something on chain but nothing in the ledger any more.
+ */
+export async function compareChain(chain: Pick<Chain, "view">, accounts: AccountConfig, ledger: Ledger, knownHolders: readonly string[] = []) {
+  const target = new Map<string, Map<string, number>>();
+  for (const [account, assets] of Object.entries(ledger)) {
+    const holder = chainHolder(account, accounts);
+    const wallet = target.get(holder) ?? new Map<string, number>();
+    for (const [asset, amount] of Object.entries(assets)) {
+      if (!amount) continue;
+      if (!tokenIds.includes(asset)) throw new Error("NEAR_TOKEN · " + asset + " is not in the items contract.");
+      wallet.set(asset, (wallet.get(asset) ?? 0) + amount);
+    }
+    target.set(holder, wallet);
+  }
+  const holders = [...new Set([...target.keys(), ...knownHolders])].sort();
+  const mints: ChainOp[] = [], burns: ChainOp[] = [];
+  const differences: { holder: string; token: string; chain: number; game: number }[] = [];
+  let chainTotal = 0;
+  for (const holder of holders) {
+    const onChain = await chain.view<string[]>("mt_batch_balance_of", { account_id: holder, token_ids: tokenIds });
+    tokenIds.forEach((token, i) => {
+      const have = Number(onChain[i] ?? 0), want = target.get(holder)?.get(token) ?? 0;
+      chainTotal += have;
+      if (have !== want) differences.push({ holder, token, chain: have, game: want });
+      if (want > have) mints.push({ op: "mint", asset: token, amount: String(want - have), to: holder, memo: "Resync", source: "sys:resync" });
+      if (have > want) burns.push({ op: "burn", asset: token, amount: String(have - want), from: holder, memo: "Resync", sink: "sys:resync" });
+    });
+  }
+  return { mints, burns, chainTotal, holders, differences };
+}
+
+
+/** The ledger as the chain should hold it: the live ledger with agent activity that hasn't been flushed yet undone. */
+export function settledLedger(ledger: Ledger, pending: readonly LedgerOp[]): Ledger {
+  const settled: Ledger = JSON.parse(JSON.stringify(ledger));
+  const add = (account: string, asset: string, amount: number) => {
+    const wallet = settled[account] ??= {};
+    wallet[asset] = (wallet[asset] ?? 0) + amount;
+  };
+  for (const op of pending) {
+    if (op.op !== "mint") add(op.from, op.asset, Number(op.amount));
+    if (op.op !== "burn") add(op.to, op.asset, -Number(op.amount));
+  }
+  return settled;
 }
 
 /** Sends the rooms that live on chain to NEAR, and every other room to the local dev ledger. */

@@ -163,6 +163,8 @@ export class LiveMarket {
     const room = await this.load(roomId);
     if (room.reservation) await this.resolve(room);
     if (room.reservation || !this.settlement.reconcile) return undefined;
+    // Unflushed agent activity settles as a normal custody batch first, so the reconcile only repairs real drift.
+    await this.flushAgents(room);
     const result = await this.settlement.reconcile(room.id, room.world.ledger);
     room.agentEffects = [];
     await this.persist(room);

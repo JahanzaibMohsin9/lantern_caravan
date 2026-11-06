@@ -40,6 +40,8 @@ The live server can settle the public Row to the NEP-245 items contract (`contra
 SETTLEMENT=near npm run dev:server
 ```
 
-On start the server registers the merchant, rival and village accounts as agents (once), then reconciles: it reads every holder's balances from the contract and settles whatever differs from the game's ledger. On an empty contract that is the market's genesis. `GET /v1/chain/status` shows the contract, the queue, the last settled transaction and any error. Settings and their defaults are in `.env.example`; the operator key comes from `NEAR_OPERATOR_KEY` (for hosting) or the operator's legacy-keychain file.
+On start the server registers the merchant, rival and village accounts as agents (once), then reconciles: it reads every holder's balances from the contract and settles whatever differs from the game's ledger. On an empty contract that is the market's genesis. `GET /v1/chain/status` shows the contract, the queue, the last settled transaction and any error. Settings and their defaults are in `.env.example` (the RPC defaults to FastNEAR, since `rpc.testnet.near.org` is deprecated and rate-limited); the operator key comes from `NEAR_OPERATOR_KEY` (for hosting) or the operator's legacy-keychain file.
+
+`npm run near:verify -- --data <data folder>` is a read-only check that every on-chain balance matches the room's ledger, at any point in the night.
 
 `npm run near:smoke` runs the whole flow against the real testnet contract in a throwaway data folder: agents, genesis, a player purchase, a full balance check, then a clean-up reconcile that leaves the contract empty (`-- --keep` skips the clean-up).

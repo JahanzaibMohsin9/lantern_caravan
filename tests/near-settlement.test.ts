@@ -7,7 +7,7 @@ import type { LedgerOp, PreparedAction } from "@lantern/protocol";
 import { agentAccounts, chainHolder, isAccountId } from "../apps/server/src/near/accounts";
 import type { CallOutcome, Chain } from "../apps/server/src/near/chain";
 import { custodyOps, deltas } from "../apps/server/src/near/custody";
-import { NearSettlementProvider, RoutedSettlement, tokenIds } from "../apps/server/src/near/provider";
+import { NearSettlementProvider, RoutedSettlement, settledLedger, tokenIds } from "../apps/server/src/near/provider";
 import { DevSettlementProvider } from "../apps/server/src/providers/dev";
 import { FileStateStore } from "../apps/server/src/providers/file";
 import { LiveMarket, publicRoom } from "../apps/server/src/live";
@@ -278,4 +278,18 @@ test("the live public Row settles a real trade on chain and every balance matche
   expect(pending).toEqual([]);
   expect(chain.wallets()).toEqual(mapped(world.ledger));
   expect(chain.calls.some(call => call.method === "game_settle_batch" && call.id!.includes("-r"))).toBe(true);
+  // After more agent activity, a restart-style reconcile flushes it as a custody batch and finds nothing to repair.
+  vi.setSystemTime(Date.now() + 30_000);
+  await market.snapshot(publicRoom, "p:ari");
+  expect((await market.load(publicRoom)).agentEffects.length).toBeGreaterThan(0);
+  expect(await market.reconcileChain(publicRoom)).toMatchObject({ mints: 0, burns: 0, transactions: 0 });
+  expect(chain.wallets()).toEqual(mapped((await market.load(publicRoom)).world.ledger));
+});
+
+test("settledLedger undoes unflushed agent activity, so a check can run mid-night", () => {
+  const live = { "v:ember_falls": { oil: 7, coin: 49 }, "p:ari": { oil: 3, coin: 1 } };
+  const pending: LedgerOp[] = [{ op: "mint", asset: "oil", amount: "10", to: "v:ember_falls", memo: "Harvest" },
+    move("oil", 3, "v:ember_falls", "p:ari"), move("coin", 9, "p:ari", "v:ember_falls")];
+  expect(settledLedger(live, pending)).toEqual({ "v:ember_falls": { oil: 0, coin: 40 }, "p:ari": { oil: 0, coin: 10 } });
+  expect(live["p:ari"].coin).toBe(1);
 });

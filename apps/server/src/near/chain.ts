@@ -19,7 +19,8 @@ export interface Chain {
   call(method: string, args: Record<string, unknown>, gasTera?: number): Promise<CallOutcome>;
 }
 
-export type NearConfig = { network: "testnet"; rpcUrl: string; contractId: string; operatorId: string; key: KeyPairString };
+/** Without a key the client can only read: `call` refuses. */
+export type NearConfig = { network: "testnet"; rpcUrl: string; contractId: string; operatorId: string; key?: KeyPairString };
 
 /** The operator's key comes from `NEAR_OPERATOR_KEY` or the operator's own legacy-keychain file, and nothing else. */
 export async function operatorKey(operatorId: string, env = process.env): Promise<KeyPairString> {
@@ -43,6 +44,7 @@ export class NearChain implements Chain {
   readonly operatorId: string;
   private readonly provider: JsonRpcProvider;
   private readonly account: Account;
+  private readonly canSign: boolean;
 
   constructor(config: NearConfig) {
     if (config.network !== "testnet") throw new Error("NEAR_NETWORK · Only testnet is supported.");
@@ -50,6 +52,7 @@ export class NearChain implements Chain {
     this.operatorId = config.operatorId;
     this.provider = new JsonRpcProvider({ url: config.rpcUrl });
     this.account = new Account(config.operatorId, this.provider, config.key);
+    this.canSign = !!config.key;
   }
 
   explorer = (hash: string) => "https://testnet.nearblocks.io/txns/" + hash;
@@ -59,6 +62,7 @@ export class NearChain implements Chain {
   }
 
   async call(method: string, args: Record<string, unknown>, gasTera = 300): Promise<CallOutcome> {
+    if (!this.canSign) throw new Error("NEAR_KEY · This client is read-only.");
     const response = await this.account.signAndSendTransaction({
       receiverId: this.contractId,
       actions: [actions.functionCall(method, args, teraToGas(gasTera), 0n)],

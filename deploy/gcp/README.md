@@ -31,7 +31,11 @@ The server starts with the local dev ledger. To settle the public Row on testnet
 2. Change `SETTLEMENT=dev` to `SETTLEMENT=near`, and add a line `NEAR_OPERATOR_KEY=ed25519:...` with the `private_key` value from `operator.lantern-caravan.testnet.json` in your `.near-credentials\testnet` folder.
 3. `sudo systemctl restart lantern-caravan`, then check `https://lanterncaravan.duckdns.org/v1/chain/status`.
 
-On its first start with NEAR the server registers any missing agents and mints the market's genesis on the contract.
+On its first start with NEAR the server registers any missing agents and mints the market's genesis on the contract. Use FastNEAR's RPC (`NEAR_RPC_URL=https://test.rpc.fastnear.com`, the default): NEAR's old `rpc.testnet.near.org` endpoint is deprecated and rate-limits requests.
+
+## Checking the chain against the Row
+
+`npm run near:verify -- --data /var/lib/lantern-caravan` (run as the `lantern` user from `/opt/lantern-caravan`) compares every holder's on-chain balance with the live Row, after undoing agent activity that hasn't been flushed yet. It only reads, so it's safe next to the running server.
 
 ## Logs and status
 
