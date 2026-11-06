@@ -34,7 +34,8 @@ Branch is `main`. Commit messages credit no AI tool.
 `contracts/items/` is the NEP-245 multi-token contract the settlement provider will write to: every coin, material, lantern and stall share, with operator-only `game_settle` (atomic, idempotent per action ID), `agent_settle` for merchants and haulers signing their own transfers, standard events whose memos carry the action ID and harvest source, and the NEP-245 views. See its README. Nothing in the game calls it yet; that's the settlement provider.
 
 - `cargo test` (with `AWS_LC_SYS_PREBUILT_NASM=1` on Windows) — passed, 18 tests.
-- `cargo near build non-reproducible-wasm --no-abi` (cargo-near 0.23.0) — passed; 212.8 KB after wasm-opt. Not yet deployed.
+- `cargo near build non-reproducible-wasm --no-abi` (cargo-near 0.23.0) — passed; 212.8 KB after wasm-opt.
+- Deployed to `items.lantern-caravan.testnet` on 6 November and initialized with owner `lantern-caravan.testnet` and operator `operator.lantern-caravan.testnet` (`init-args.json`, passed with `file-args` because Windows PowerShell strips quotes from inline JSON). Read back over RPC: owner, operator, `mt-1.0.0` metadata, all 14 tokens and zero coin supply; the on-chain code's SHA-256 matches the build (`809ab581…3addd5`). Merchants, rivals and villages are not registered as agents yet.
 
 ### W9 · Floodtide and server replay
 

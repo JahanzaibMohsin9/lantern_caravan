@@ -34,7 +34,9 @@ On Windows, `cargo test` needs `AWS_LC_SYS_PREBUILT_NASM=1` set (a test-only dep
 ## Deploy (testnet)
 
 ```bash
-near contract deploy items.lantern-caravan.testnet use-file target/near/lantern_items.wasm with-init-call new json-args '{"owner":"lantern-caravan.testnet","operator":"operator.lantern-caravan.testnet"}' prepaid-gas '30 Tgas' attached-deposit '0 NEAR' network-config testnet sign-with-legacy-keychain send
+near contract deploy items.lantern-caravan.testnet use-file target/near/lantern_items.wasm with-init-call new file-args init-args.json prepaid-gas '30 Tgas' attached-deposit '0 NEAR' network-config testnet sign-with-legacy-keychain send
 ```
 
-The contract account pays for its own storage, so keep a few testnet NEAR on it.
+`init-args.json` holds the owner and operator. Passing them from a file avoids Windows PowerShell 5.1 stripping the quotes from inline JSON. The contract account pays for its own storage, so keep a few testnet NEAR on it.
+
+Deployed: [`items.lantern-caravan.testnet`](https://testnet.nearblocks.io/address/items.lantern-caravan.testnet).
