@@ -8,3 +8,4 @@ sim-output/
 apps/server/data/
 playwright-report/
 test-results/
+contracts/**/target/

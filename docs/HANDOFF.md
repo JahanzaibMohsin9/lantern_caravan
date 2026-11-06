@@ -29,6 +29,13 @@
 
 Branch is `main`. Commit messages credit no AI tool.
 
+### NEAR items contract (6 November 2026)
+
+`contracts/items/` is the NEP-245 multi-token contract the settlement provider will write to: every coin, material, lantern and stall share, with operator-only `game_settle` (atomic, idempotent per action ID), `agent_settle` for merchants and haulers signing their own transfers, standard events whose memos carry the action ID and harvest source, and the NEP-245 views. See its README. Nothing in the game calls it yet; that's the settlement provider.
+
+- `cargo test` (with `AWS_LC_SYS_PREBUILT_NASM=1` on Windows) — passed, 18 tests.
+- `cargo build --target wasm32-unknown-unknown --release` — compiles (451 KB). Not yet built with `cargo near build` or deployed, so compatibility with the NEAR runtime is unverified.
+
 ### W9 · Floodtide and server replay
 
 **Server replay.** Run reports now carry the input log (`inputLog`, at most 9,000 changes and 2 MiB, with each input limited to the barge controls) bound by a canonical `inputLogHash`. `verifyRunReport` in `@lantern/river-sim/report` checks the log's shape, order and hash, replays it against the stored manifest and requires the replayed report to equal the submitted one. The live server runs it on every `finish_run` quote; a mismatch returns `RIVER_REPLAY` and cancels only that player's run, returning its reservations. The HTTP limit was raised to fit the log, and `RIVER_*` errors keep their code on the wire.
