@@ -34,7 +34,7 @@ Branch is `main`. Commit messages credit no AI tool.
 `contracts/items/` is the NEP-245 multi-token contract the settlement provider will write to: every coin, material, lantern and stall share, with operator-only `game_settle` (atomic, idempotent per action ID), `agent_settle` for merchants and haulers signing their own transfers, standard events whose memos carry the action ID and harvest source, and the NEP-245 views. See its README. Nothing in the game calls it yet; that's the settlement provider.
 
 - `cargo test` (with `AWS_LC_SYS_PREBUILT_NASM=1` on Windows) — passed, 18 tests.
-- `cargo build --target wasm32-unknown-unknown --release` — compiles (451 KB). Not yet built with `cargo near build` or deployed, so compatibility with the NEAR runtime is unverified.
+- `cargo near build non-reproducible-wasm --no-abi` (cargo-near 0.23.0) — passed; 212.8 KB after wasm-opt. Not yet deployed.
 
 ### W9 · Floodtide and server replay
 

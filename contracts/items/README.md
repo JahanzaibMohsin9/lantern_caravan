@@ -26,15 +26,15 @@ Views: `mt_balance_of`, `mt_batch_balance_of`, `mt_supply`, `mt_batch_supply`, `
 
 ```bash
 cargo test
-cargo near build
+cargo near build non-reproducible-wasm --no-abi
 ```
 
-On Windows, `cargo test` needs `AWS_LC_SYS_PREBUILT_NASM=1` set (a test-only dependency otherwise needs the NASM assembler). Use `cargo near build` for the deployable file: it optimizes the wasm and checks it against the NEAR runtime. A plain `cargo build --target wasm32-unknown-unknown --release` compiles, but its output hasn't been checked against the runtime.
+On Windows, `cargo test` needs `AWS_LC_SYS_PREBUILT_NASM=1` set (a test-only dependency otherwise needs the NASM assembler). Use `cargo near build non-reproducible-wasm` for the deployable file: it optimizes the wasm for the NEAR runtime and writes `target/near/lantern_items.wasm` (about 213 KB). On Windows add `--no-abi`: generating the ABI links a native library, which fails there, and deploying doesn't need it. A plain `cargo build --target wasm32-unknown-unknown --release` compiles, but its output hasn't been checked against the runtime.
 
 ## Deploy (testnet)
 
 ```bash
-near contract deploy items.lantern-caravan.testnet use-file target/near/lantern_items.wasm with-init-call new json-args '{"owner":"lantern-caravan.testnet","operator":"operator.lantern-caravan.testnet"}' prepaid-gas '30 Tgas' attached-deposit '0 NEAR' network-config testnet sign-with-keychain send
+near contract deploy items.lantern-caravan.testnet use-file target/near/lantern_items.wasm with-init-call new json-args '{"owner":"lantern-caravan.testnet","operator":"operator.lantern-caravan.testnet"}' prepaid-gas '30 Tgas' attached-deposit '0 NEAR' network-config testnet sign-with-legacy-keychain send
 ```
 
 The contract account pays for its own storage, so keep a few testnet NEAR on it.
