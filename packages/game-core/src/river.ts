@@ -1,5 +1,5 @@
 import { items, merchants, recipes, type ItemId, type StallId } from "@lantern/content";
-import { strategies } from "@lantern/content/nights";
+import { floodtideOpens, strategies } from "@lantern/content/nights";
 import { bargeCosmetics, defaultBargeLook, fitBargeLook, bargeHold, bargeUpgrades, pirateCap, pirateRoleCaps, pirateRoles, reachIds, reaches, routeDistance, runMs, sourceFor, stopChoice,
   stopPlan, villageGoods, villageIds, villageStrategy, villages, wreckNights, almanacEvents, almanacFor, harvestTarget, bellOrderLimits,
   type AlmanacId, type BargeCosmeticId, type BargeUpgradeId, type ReachId, type VillageId } from "@lantern/content/river";
@@ -11,6 +11,7 @@ import { ask, tradePrice, villagePurchaseCost } from "./pricing";
 const freight = "r:freight", freightSink = "sys:freight", bounty = "sys:bounty";
 export const village = (id: VillageId) => "v:" + id;
 const runEscrow = (id: string) => "esc:run:" + id;
+const floodEscrow = (id: string) => "esc:flood:" + id;
 const contractEscrow = (id: string) => "esc:contract:" + id;
 export const wreckAccount = (id: string) => "esc:wreck:" + id;
 export const bellAccount = (id: string) => "esc:bell:" + id;
@@ -580,6 +581,9 @@ export function cancelRun(world: World, actor: string) {
   let state = withRiver(applyEffects(world, run.manifest.items.map(lot =>
     move(runEscrow(run.manifest.id), village(lot.village as VillageId), lot.item, lot.prices.length, "Run reservation returned"))),
   { runs, wrecks: releaseWrecks(world, run.manifest.id) });
+  const extra = get(state, floodEscrow(run.manifest.id), "coin");
+  const payer = run.manifest.floodPayer;
+  if (extra && payer) state = applyEffects(state, [move(floodEscrow(run.manifest.id), payer, "coin", extra, "Floodtide premium refund")]);
   const id = run.manifest.contract?.id;
   if (id && state.river.contracts[id]) state = removeContract(state, state.river.contracts[id]!);
   return state;
@@ -673,6 +677,9 @@ function runManifest(world: World, actor: string, intent: Extract<RiverIntent, {
   }
   if (contract?.kind === "supply" && (reserved.get(contract.item) ?? 0) < contract.qty)
     throw new Error("RIVER_PLAN · The village is short on stock for that contract.");
+  const floodOpens = floodtideOpens(world.night, world.mode, world.seed);
+  if (world.phase === "open" && floodOpens !== undefined && world.elapsed >= floodOpens)
+    throw new Error("RIVER_FLOOD_CLOSED · Floodtide has closed departures. Wait until next dusk.");
   const remaining = plan(world).duration - world.elapsed;
   const limitMs = world.phase === "open" ? Math.min(runMs, Math.floor((remaining - 5) * 1000)) : runMs;
   const boats = Object.values(world.river.hauls).map(haul => ({
@@ -683,6 +690,7 @@ function runManifest(world: World, actor: string, intent: Extract<RiverIntent, {
   const manifest: RunManifest = { id, seed: (world.river.random ^ Math.imul(world.revision + 1, 0x45d9f3b)) >>> 0,
     deadline: now + limitMs, limitMs, wallet: get(world, actor, "coin"), hold, upgrades, boats, bounty: get(world, bounty, "coin"),
     glow: rowGlow(world), trim, look: world.traders[actor]!.look ?? defaultBargeLook,
+    floodtideAtMs: world.phase === "open" && floodOpens !== undefined ? Math.round((floodOpens - world.elapsed) * 1000) : undefined,
     stopLayout: world.mode === "campaign" && world.night === 3 ? "campaign_reach" : undefined,
     wrecks: Object.values(world.river.wrecks).filter(wreck => wreckOpen(world, wreck) && !wreck.claimedBy)
       .map(wreck => ({ id: wreck.id, reach: wreck.reach, at: wreck.at, name: wreck.by, cargo: wreckCargo(world, wreck.id) as Record<string, number> }))
@@ -697,6 +705,14 @@ function runManifest(world: World, actor: string, intent: Extract<RiverIntent, {
         trusted: (world.traders[actor]!.villageContracts[id] ?? 0) >= 2,
         prices: Array.from({ length: qty }, (_, n) => tradePrice("buy", items[item].price, count - n, target, villageStrategy, 1)) };
     }) };
+  if (manifest.floodtideAtMs !== undefined && contract?.kind === "supply") {
+    const lot = manifest.items.find(lot => lot.item === contract.item)!;
+    const premium = Math.max(0, contract.payout - villagePurchaseCost(lot, contract.qty));
+    if (get(world, contract.payer, "coin") < premium)
+      throw new Error("RIVER_FLOOD_FUNDS · The issuer cannot fund the Floodtide premium yet.");
+    manifest.floodPremium = premium;
+    manifest.floodPayer = contract.payer;
+  }
   return manifest;
 }
 
@@ -711,8 +727,16 @@ function finishRun(world: World, actor: string, id: string, report: RunReport, n
   if (!runReportSchema.safeParse(report).success || report.run_id !== id || report.seed !== manifest.seed)
     reject("RIVER_REPORT", "The report does not match this run.");
   const limit = manifest.limitMs ?? runMs;
+  const flood = report.floodtide;
+  const flooded = manifest.floodtideAtMs !== undefined && report.durationMs >= manifest.floodtideAtMs;
+  if (flood && (!flooded || flood.completed !== (report.outcome === "moored") || (flood.completed && flood.gates !== 2)))
+    reject("RIVER_FLOOD", "The Floodtide result does not match this voyage.");
+  if (flooded && !flood && report.outcome !== "sunk") reject("RIVER_FLOOD", "The scheduled Floodtide is missing from the report.");
+  const returned = flood?.returned ?? {};
+  if (flood && (flood.completed ? Object.values(returned).some(Boolean) : Object.values(report.delivered).some(Boolean)))
+    reject("RIVER_FLOOD", "Floodtide cargo must either arrive or return upriver.");
   if (now - run.started < report.durationMs * .9 || report.durationMs > limit ||
-    (report.outcome === "towed" && report.durationMs !== limit))
+    (report.outcome === "towed" && report.durationMs !== limit && (!flood || report.durationMs !== Math.min(limit, manifest.floodtideAtMs! + 60000))))
     reject("RIVER_TIME", "The run timer does not match.");
   // Runs from preparation finish before the night clock starts. Open-night runs arrive after their trip: local
   // nights pause while the barge is out and shared rooms keep running, so take whichever is later.
@@ -739,13 +763,13 @@ function finishRun(world: World, actor: string, id: string, report: RunReport, n
   const reserved = new Set(manifest.items.map(lot => lot.item)), carried = new Set([...reserved, ...Object.keys(salvaged)]);
   if (!unique(report.bought.map(entry => entry.item_id)) || !unique(report.soldBack.map(entry => entry.item_id)) ||
     ![...report.bought.map(entry => entry.item_id), ...report.soldBack.map(entry => entry.item_id)].every(item => reserved.has(item)) ||
-    ![...Object.keys(report.delivered), ...Object.keys(report.lost), ...Object.keys(given)].every(item => carried.has(item)) ||
+    ![...Object.keys(report.delivered), ...Object.keys(report.lost), ...Object.keys(returned), ...Object.keys(given)].every(item => carried.has(item)) ||
     (report.flaresUsed && !carried.has("oil"))) reject("RIVER_CARGO", "The report contains unknown or repeated cargo.");
   // Every unit aboard came from a village purchase or a wreck, and left as a buyback, delivery, loss, flare or gift.
   for (const item of carried) {
     const inflow = (report.bought.find(entry => entry.item_id === item)?.quantity ?? 0) + (salvaged[item] ?? 0);
     const outflow = (report.soldBack.find(entry => entry.item_id === item)?.quantity ?? 0) + (report.delivered[item] ?? 0) +
-      (report.lost[item] ?? 0) + (item === "oil" ? report.flaresUsed : 0) + (given[item] ?? 0);
+      (report.lost[item] ?? 0) + (returned[item] ?? 0) + (item === "oil" ? report.flaresUsed : 0) + (given[item] ?? 0);
     if (inflow !== outflow) reject("RIVER_CARGO", "The cargo does not balance against the manifest.");
   }
   const effects: LedgerOp[] = salvage.map(entry => move(wreckAccount(entry.wreck_id), actor, entry.item_id, entry.quantity,
@@ -791,6 +815,20 @@ function finishRun(world: World, actor: string, id: string, report: RunReport, n
     if (lot.prices.length > bought) effects.push(move(source, account, lot.item, lot.prices.length - bought, "Unused run reservation"));
   }
   for (const item of carried) {
+    const back = returned[item] ?? 0;
+    if (back) {
+      const source = sourceFor(item as ItemId)!;
+      const lot = manifest.items.find(lot => lot.item === item);
+      const sold = report.soldBack.find(entry => entry.item_id === item)?.quantity ?? 0;
+      const price = tradePrice("sell", items[item as ItemId].price, (lot?.stock ?? stock(world, source, item as ItemId)) + sold,
+        lot?.target ?? villageGoods(source)[item as ItemId]!, villageStrategy, back);
+      const account = village(source);
+      const incoming = effects.reduce((sum, op) => sum + (op.op === "transfer" && op.asset === "coin"
+        ? Number(op.amount) * (Number(op.to === account) - Number(op.from === account)) : 0), 0);
+      const payment = Math.min(price, get(world, account, "coin") + incoming);
+      effects.push(move(actor, account, item, back, "Floodtide cargo returned upriver"));
+      if (payment) effects.push(move(account, actor, "coin", payment, "Floodtide village buyback"));
+    }
     const lost = report.lost[item] ?? 0, flare = item === "oil" ? report.flaresUsed : 0;
     if (lost) effects.push(lostCargo(actor, item, lost));
     if (flare) effects.push(lostCargo(actor, "oil", flare, "Flare"));
@@ -803,7 +841,8 @@ function finishRun(world: World, actor: string, id: string, report: RunReport, n
   const delta = effects.reduce((coins, op) => coins + (op.op === "transfer" && op.asset === "coin"
     ? Number(op.amount) * (Number(op.to === actor) - Number(op.from === actor)) : 0), 0);
   if (get(world, actor, "coin") + delta < 0) reject("RIVER_FUNDS", "The barge cannot cover its purchases.");
-  const payout = deliveredContract ? contract.payout : 0;
+  const floodBonus = deliveredContract && flood?.completed ? manifest.floodPremium ?? 0 : 0;
+  const payout = deliveredContract ? contract.payout + floodBonus : 0;
   const bonus = payout && !world.traders[actor]!.wharfBonus && world.mode === "campaign" && world.night === 2 && contract?.relief && contract.stall === "oil_wharf" &&
     get(world, actor, "share:oil_wharf") > 0 ? Math.min(2, get(world, rescueFund, "coin")) : 0;
   if (bonus) effects.push(move(rescueFund, actor, "coin", bonus, "Wharf pledge and haul bonus dividend"));
@@ -813,9 +852,11 @@ function finishRun(world: World, actor: string, id: string, report: RunReport, n
       payout ? "Harbor Bell payout" : "Harbor Bell refund"));
     if (payout && contract.relief) effects.push(...reliefEffects(world, contract));
   }
+  if (manifest.floodPremium && manifest.floodPayer) effects.push(move(floodEscrow(id), floodBonus ? actor : manifest.floodPayer,
+    "coin", manifest.floodPremium, floodBonus ? "Floodtide premium" : "Floodtide premium refund"));
   const tow = report.outcome === "moored" ? 0 : Math.min(2, get(world, actor, "coin") + delta + payout);
   if (tow) effects.push(move(actor, freightSink, "coin", tow, "River tow"));
-  const earlyCredit = (op: LedgerOp) => Number(op.op === "transfer" && op.to === actor && op.asset === "coin" && op.memo !== "Harbor Bell payout");
+  const earlyCredit = (op: LedgerOp) => Number(op.op === "transfer" && op.to === actor && op.asset === "coin" && op.memo !== "Harbor Bell payout" && op.memo !== "Floodtide village buyback");
   effects.sort((a, b) => earlyCredit(b) - earlyCredit(a));
   return { effects, contract, payout, bonus, run, summary: report.outcome === "moored" ? "Moored at The Landing" :
     report.outcome === "towed" ? "Towed to The Landing" : "Rescued after sinking" };
@@ -857,8 +898,10 @@ export function riverQuote(world: World, actor: string, intent: RiverIntent, id:
   }
   if (intent.type === "finish_run") return finishRun(world, actor, intent.run_id, intent.report, now);
   const manifest = runManifest(world, actor, intent, id, now);
-  return { effects: manifest.items.map(lot =>
-    move(village(lot.village as VillageId), runEscrow(id), lot.item, lot.prices.length, "Run reservation")), summary: "Cast off from The Landing" };
+  const effects = manifest.items.map(lot => move(village(lot.village as VillageId), runEscrow(id), lot.item, lot.prices.length, "Run reservation"));
+  if (manifest.floodPremium) effects.push(move(world.river.contracts[manifest.contract!.id]!.payer,
+    floodEscrow(id), "coin", manifest.floodPremium, "Floodtide premium escrow"));
+  return { effects, summary: "Cast off from The Landing" };
 }
 
 export function commitRiver(prior: World, world: World, actor: string, intent: RiverIntent, id: string, now: number) {
@@ -904,6 +947,8 @@ export function commitRiver(prior: World, world: World, actor: string, intent: R
   let state = withRiver(world, { runs, wrecks, bountyFund: get(world, bounty, "coin") });
   if (bonus) state = addActivity(state, trader.name + " earned a " + bonus + "-coin bonus dividend for pledging and hauling oil to the wharf.", trader.name);
   const report = intent.report;
+  if (report.floodtide) state = addActivity(state, trader.name + (report.floodtide.completed
+    ? " passed both Floodtide locks and brought the barge home." : " returned Floodtide cargo upriver for a village buyback."), trader.name);
   const describeCargo = (cargo: Record<string, number>) => Object.entries(cargo).filter(([, qty]) => qty > 0)
     .map(([item, qty]) => qty + " " + items[item as ItemId].name.toLowerCase()).join(", ");
   if (Object.values(report.delivered).some(qty => qty > 0)) state = addActivity(state,

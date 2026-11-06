@@ -107,7 +107,7 @@ for (let night = 1; night <= nights; night++) {
   report.merchantCoinMin = Math.min(report.merchantCoinMin, coins);
   report.merchantCoinMax = Math.max(report.merchantCoinMax, coins);
   if (merchants.filter(([, merchant]) => merchant.band !== "dark").length >= 3) report.stableNights++;
-  if (Object.keys(world.ledger).some(id => id.startsWith("esc:run:") || id.startsWith("esc:contract:") || id.startsWith("esc:bell:")) ||
+  if (Object.keys(world.ledger).some(id => id.startsWith("esc:run:") || id.startsWith("esc:contract:") || id.startsWith("esc:bell:") || id.startsWith("esc:flood:")) ||
     Object.keys(world.river.hauls).length || Object.keys(world.river.contracts).length || Object.keys(world.river.runs).length) report.invariantErrors++;
   const entries = world.activity.filter(entry => entry.night === night);
   report.freightLosses += entries.filter(entry => entry.line.startsWith("Freight barge lost")).length;

@@ -29,6 +29,8 @@ Gold **skiffs** ram your barge and spill cargo: recover it within 20 seconds. Co
 
 You can also **post a Bell order** at The Landing: name a village good, how many and what you'll pay per unit. Your coins wait at the Harbor Bell, and the rival haulers, each with their own purse, decide whether the job is worth the trip. They're paid per unit delivered to you; whatever is left comes back when the night ends.
 
+On festival nights the final boat opens **Floodtide**. If you're upriver when it starts, the river rises and you have 60 seconds to sail through both lock gates and moor at The Landing. Make it and a supply contract pays its premium twice; miss it and the village you bought from takes the cargo back at its buyback price. The Landing shows when Floodtide opens, and no barge leaves once it has.
+
 The **harbor almanac** at The Landing warns of village events a night before they happen: an oil glut or a pressing strike at Ember Falls, a mill flood at Millbrook, a dye bloom or reed blight at Reedmarsh. Merchants read it too and restock early before a shortage.
 
 Hauls that pirates sink become **wrecks**: their cargo stays in the water and opens for salvage at the next dusk, for two nights, before the river takes it. The Landing lists every wreck. Two or three optional **riverside stops** appear on each run (a stranded fisher, a lock keeper's shed, an overturned punt), each offering one choice of hull, fuel or ammo.

@@ -64,7 +64,7 @@ export function Preparation({ snapshot, actions, advance, landing }: { snapshot:
       <p className="hint">{snapshot.objective.name}{snapshot.night === 2 && " · 2 floating + 2 paper lanterns"}</p>
       {snapshot.mode === "campaign" && snapshot.night === 2 && <p className="hint">Ring the Harbor Bell → accept the oil relief haul → cast off → trade at Ember Falls → moor at The Landing. A rescue pledge at Oil Wharf also relights it.</p>}
       {snapshot.mode === "campaign" && snapshot.night === 3 && <p className="hint">Break the Marsh Bend boom, fill one contract or escort, and deliver 2 colored lanterns. Try a trim, salvage the storm wreck and visit two stops on Heron Reach. Shareholder strategy votes change contract premiums.</p>}
-      {snapshot.mode === "campaign" && snapshot.night === 4 && <p className="hint">Post an order at The Landing: let the haulers bring the dye. Light all six boats for the Lantern Caravan.</p>}
+      {snapshot.mode === "campaign" && snapshot.night === 4 && <p className="hint">Post an order at The Landing: let the haulers bring the dye. The Firefly opens Floodtide at 1:10: if you are upriver, pass both locks and return within 60 seconds. Light all six boats for the Lantern Caravan.</p>}
       {owned.length > 0 && <div className="prep-list">
         <div className="eyebrow">Strategy votes</div>
         {owned.map(([stall, market]) => <label className="order-row" key={stall}>

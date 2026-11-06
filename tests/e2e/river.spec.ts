@@ -320,3 +320,52 @@ test("a trusted hauler sees the village stamp and pays the discounted quote", as
   await expect(river.getByRole("status").filter({ hasText: "Loaded 5 Reed frame · " + quote![1] + " coins" })).toBeVisible();
   await page.screenshot({ path: "test-results/river-w8-trust.png" });
 });
+
+
+test("Night 4 schedules Floodtide with the Firefly and returns through both lock gates", async ({ page }) => {
+  test.setTimeout(150000);
+  const button = (name: string) => page.getByRole("button", { name, exact: true });
+  await page.goto("/"); await button("Enter the Row").click();
+  const save = execFileSync(process.execPath, [join("node_modules", "tsx", "dist", "cli.mjs"), join("tests", "e2e", "fixtures", "floodtide-save.ts")]);
+  page.on("dialog", dialog => void dialog.accept());
+  await button("Pause").click(); await button("Settings").click();
+  await page.locator('input[type="file"]').setInputFiles({ name: "floodtide.json", mimeType: "application/json", buffer: save });
+  await expect(page.getByText("NIGHT 04")).toBeVisible();
+  await page.clock.install(); await page.keyboard.press("Escape");
+  await page.getByRole("navigation").getByRole("button", { name: /The Landing/ }).click();
+  await expect(page.getByLabel("Floodtide forecast")).toContainText("1:10");
+  await page.getByRole("button", { name: /^Harbor Bell/ }).click();
+  await page.locator(".order-row").filter({ hasText: "3 Dye for Indigo Atelier" }).getByRole("button", { name: "Accept", exact: true }).click();
+  await page.getByRole("button", { name: /^Cast off for Reedmarsh/ }).click();
+  const river = page.getByRole("region", { name: "River Run" });
+  await expect(river).toBeVisible();
+  await page.clock.pauseAt(await page.evaluate(() => Date.now() + 1000));
+  const sail = async (keys: string[], ms: number) => {
+    for (const key of keys) await page.keyboard.down(key);
+    await page.clock.runFor(ms);
+    for (const key of keys) await page.keyboard.up(key);
+  };
+  await sail(["w", "Shift", " "], 7100);
+  for (const key of ["w", "d", "Shift", " "]) await page.keyboard.down(key);
+  const trade = river.getByRole("button", { name: /Trade at Reedmarsh/ });
+  for (let i = 0; i < 160 && !(await trade.isVisible()); i++) await page.clock.runFor(200);
+  for (const key of ["w", "d", "Shift", " "]) await page.keyboard.up(key);
+  await expect(trade).toBeVisible(); await page.keyboard.press("e");
+  const market = page.getByRole("dialog", { name: "Village market" });
+  await market.locator(".river-trade").filter({ hasText: "Dye" }).getByRole("button", { name: /^Buy 5/ }).click();
+  await page.clock.runFor(100);
+  await button("Back to the barge").click();
+  for (let i = 0; i < 50 && !(await river.getByLabel("Floodtide locks").isVisible()); i++) await page.clock.runFor(500);
+  await expect(river.getByLabel("Floodtide locks")).toHaveText("Floodtide locks: 0 / 2");
+  await page.screenshot({ path: "test-results/river-w9-floodtide.png" });
+  await sail(["s", "a", "Shift"], 16000);
+  await expect(river.getByLabel("Floodtide locks")).toHaveText("Floodtide locks: 1 / 2");
+  await page.screenshot({ path: "test-results/river-w9-gate.png" });
+  await page.keyboard.down("s"); await page.keyboard.down("Shift");
+  for (let i = 0; i < 100 && await river.isVisible(); i++) await page.clock.runFor(200);
+  await page.keyboard.up("s"); await page.keyboard.up("Shift");
+  await expect(river).toHaveCount(0);
+  await page.clock.resume(); await page.keyboard.press("Escape");
+  await button("Journal").click();
+  await expect(page.getByText(/passed both Floodtide locks and brought the barge home/).first()).toBeVisible();
+});

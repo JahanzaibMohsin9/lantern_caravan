@@ -112,6 +112,7 @@ export function RiverRun({ manifest, snapshot, finish, busy, reduced, live = fal
           stepRiver(river, input);
           accumulator -= 1 / hz;
         }
+        if (river.floodtide && (active === "village" || active === "stop")) show();
         if ((active === "village" && !nearVillage(river)) || (active === "stop" && !nearStop(river))) show();
       }
       last = now;
@@ -189,7 +190,8 @@ export function RiverRun({ manifest, snapshot, finish, busy, reduced, live = fal
   const danger = reach && !river.broken.includes(here) ? reach.danger : 0;
   const oil = p.cargo.oil ?? 0;
   const flareReady = river.flareCooldown <= 0 && oil > 0;
-  const secondsLeft = Math.max(0, limitMs / 1000 - river.frame / hz);
+  const clockLimit = river.floodtide ? Math.min(limitMs, river.floodtide.deadline * 1000 / hz) : limitMs;
+  const secondsLeft = Math.max(0, clockLimit / 1000 - river.frame / hz);
   const banner = scene.announce;
   const contractLine = contract && (contract.kind === "escort" ? "Escort · " + river.escort
     : (contract.relief ? "Relief · " : "") + contract.quantity + " " + items[contract.item as ItemId].name + " · " + contract.payout + " coins");
@@ -202,12 +204,14 @@ export function RiverRun({ manifest, snapshot, finish, busy, reduced, live = fal
       <span className="eyebrow">{reaches[here].name.toUpperCase()} · {danger ? "DANGER " + danger : "SAFE WATER"}</span>
       <strong><Compass size={16}/> {target.name}</strong>
       {contractLine && <small className={contract?.relief ? "relief" : undefined}>{contractLine}</small>}
+      {river.floodtide && <small aria-label="Floodtide locks">Floodtide locks: {river.floodtide.next} / 2</small>}
+      {!!manifest.floodPremium && <small>Floodtide bonus: {manifest.floodPremium} coins on delivery</small>}
       <small>{Math.ceil(distance(p, target) / ((235 + bargeTier(manifest.upgrades, "engine") * 35) * trimFor(manifest).speed))} s at cruising speed</small>
     </div>
     <div className={"river-card river-clock" + (secondsLeft < 30 ? " urgent" : "")}>
       <svg viewBox="0 0 44 44" aria-hidden="true"><circle cx="22" cy="22" r="19"/><circle cx="22" cy="22" r="19" className="progress"
         style={{ strokeDashoffset: 119.4 * (1 - secondsLeft / (limitMs / 1000)) }}/></svg>
-      <div><small>TIME LEFT</small><strong>{clock(river.frame, limitMs)}</strong></div>
+      <div><small>{river.floodtide ? "FLOODTIDE" : "TIME LEFT"}</small><strong>{clock(river.frame, clockLimit)}</strong></div>
     </div>
     <div className="river-card river-wallet"><strong><span className="coin" aria-hidden="true"/> {p.wallet} coins</strong><small>{river.bounty} bounty fund</small></div>
     {banner && <div className={"river-banner " + banner.tone} role="status" style={{ opacity: Math.min(1, banner.life * 1.6) }}>

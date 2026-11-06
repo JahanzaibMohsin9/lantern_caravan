@@ -12,7 +12,19 @@ export const ledgerOpSchema = z.discriminatedUnion("op", [
 const units = z.int().min(1).max(20);
 const coins = z.int().nonnegative();
 const cargoCounts = z.record(id, z.int().min(0).max(20));
+export const maxRunLogBytes = 2 * 1024 * 1024;
+export const riverInputSchema = z.object({
+  x: z.number().min(-1).max(1).optional(), y: z.number().min(-1).max(1).optional(),
+  boost: z.boolean().optional(), fire: z.boolean().optional(), flare: z.boolean().optional(), moor: z.boolean().optional(),
+  aim: z.object({ x: z.number().min(-20000).max(20000), y: z.number().min(-20000).max(20000) }).strict().optional(),
+  trade: z.object({ village: id, item: id, side: z.enum(["buy", "sell"]), quantity: units }).strict().optional(),
+  salvage: id.optional(), stop: z.object({ id, choice: id }).strict().optional(),
+}).strict();
+export const riverLogSchema = z.array(z.object({ frame: z.int().min(0).max(8999), input: riverInputSchema }).strict()).max(9000)
+  .refine(log => new TextEncoder().encode(JSON.stringify(log)).length <= maxRunLogBytes, "River input log is too large.");
 export const runReportSchema = z.object({
+  inputLog: riverLogSchema.optional(),
+  floodtide: z.object({ gates: z.int().min(0).max(2), completed: z.boolean(), returned: cargoCounts }).optional(),
   run_id: id, seed: z.int().min(0).max(0xffffffff), durationMs: z.int().min(0).max(150_000),
   bought: z.array(z.object({ village_id: id, item_id: id, quantity: units, paid: coins })).max(6),
   soldBack: z.array(z.object({ village_id: id, item_id: id, quantity: units, received: coins })).max(6),
@@ -34,6 +46,7 @@ export const bargeLookSchema = z.object({
 });
 
 export const manifestSchema = z.object({
+  floodtideAtMs: z.int().min(0).max(150000).optional(), floodPremium: coins.optional(), floodPayer: id.optional(),
   look: bargeLookSchema.optional(),
   stopLayout: z.literal("campaign_reach").optional(),
   trim: bargeTrimSchema.optional(),

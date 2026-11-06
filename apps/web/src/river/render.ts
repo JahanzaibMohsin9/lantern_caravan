@@ -1,6 +1,7 @@
 import { bargeCosmetics, landing, pirateRoles, reaches, riverStops, villages, type ReachId, type VillageId } from "@lantern/content/river";
 import { items, type ItemId } from "@lantern/content";
-import { distance, objective, targetedPirate, type Point, type River, type RiverEffect, type StopSite, type WreckSite } from "@lantern/river-sim";
+
+import { distance, lockHalfWidth, objective, targetedPirate, type Point, type River, type RiverEffect, type StopSite, type WreckSite } from "@lantern/river-sim";
 import type { Snapshot } from "@lantern/protocol";
 import type { RiverCue } from "../world/sound";
 import { bankWidth, bounds, drawTerrain, hash, onWater, riverInfo, type Terrain } from "./terrain";
@@ -645,11 +646,30 @@ function gates(ctx: Ink, scene: Scene, state: River) {
   flood.gates.forEach((gate, i) => {
     const open = i < flood.next, current = i === flood.next;
     const color = open ? "#8fe3a8" : current ? "#bfeaff" : "#5d7a8a";
-    glow(ctx, gate.x, gate.y, current ? 220 : 120, color, current ? .45 + Math.sin(scene.time * 4) * .1 : .2);
-    ctx.strokeStyle = color; ctx.lineWidth = current ? 5 : 3;
-    ctx.beginPath(); ctx.arc(gate.x, gate.y, 86, 0, tau); ctx.stroke();
+    // The gate is a timber barrier across the channel with a lamp post at each bank; open gates swing aside.
+    const nx = -gate.dy, ny = gate.dx, half = lockHalfWidth;
+    glow(ctx, gate.x, gate.y, current ? 260 : 140, color, current ? .4 + Math.sin(scene.time * 4) * .1 : .18);
+    ctx.lineCap = "round";
+    if (open) {
+      ctx.strokeStyle = "#6b4b33"; ctx.lineWidth = 10;
+      for (const side of [-1, 1]) {
+        ctx.beginPath(); ctx.moveTo(gate.x + nx * half * side, gate.y + ny * half * side);
+        ctx.lineTo(gate.x + nx * half * side * .62 + gate.dx * 90, gate.y + ny * half * side * .62 + gate.dy * 90); ctx.stroke();
+      }
+    } else {
+      ctx.strokeStyle = "#5a3d29"; ctx.lineWidth = 14;
+      ctx.beginPath(); ctx.moveTo(gate.x - nx * half, gate.y - ny * half); ctx.lineTo(gate.x + nx * half, gate.y + ny * half); ctx.stroke();
+      ctx.strokeStyle = color; ctx.lineWidth = current ? 4 : 2; ctx.setLineDash([18, 14]);
+      ctx.beginPath(); ctx.moveTo(gate.x - nx * half, gate.y - ny * half); ctx.lineTo(gate.x + nx * half, gate.y + ny * half); ctx.stroke();
+      ctx.setLineDash([]);
+    }
+    for (const side of [-1, 1]) {
+      const x = gate.x + nx * (half + 18) * side, y = gate.y + ny * (half + 18) * side;
+      const blink = current ? .7 + Math.sin(scene.time * 6 + side) * .3 : 1;
+      glow(ctx, x, y, 70, color, .5 * blink); dot(ctx, x, y, 6, "#fff4d6");
+    }
     ctx.font = "800 18px Manrope, sans-serif"; ctx.textAlign = "center"; ctx.fillStyle = color;
-    ctx.fillText(open ? "LOCK " + (i + 1) + " ✓" : "LOCK " + (i + 1), gate.x, gate.y - 100);
+    ctx.fillText(open ? "LOCK " + (i + 1) + " OPEN" : "LOCK " + (i + 1), gate.x - gate.dx * 70, gate.y - gate.dy * 70 - 20);
   });
 }
 

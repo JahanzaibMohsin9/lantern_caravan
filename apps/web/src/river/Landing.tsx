@@ -1,3 +1,4 @@
+import { floodtideOpens } from "@lantern/content/nights";
 import { useState } from "react";
 import { Anchor, Bell, Coins, Flame, LifeBuoy, PackagePlus } from "lucide-react";
 import { items, merchants, type ItemId, type StallId } from "@lantern/content";
@@ -17,7 +18,9 @@ export function Landing({ snapshot, busy, submit, castOff }: { snapshot: Snapsho
   const [trim, setTrim] = useState<BargeTrimId>(snapshot.barge.trim);
   const depart = () => castOff({ type: "start_run", barge_plan: [], trim });
   const left = snapshot.duration - snapshot.elapsed;
-  const canCast = unlocked && !snapshot.spectator && (snapshot.phase === "preparation" || (snapshot.phase === "open" && left >= lateCutoff));
+  const floodOpens = floodtideOpens(snapshot.night, snapshot.mode, snapshot.seed);
+  const floodClosed = snapshot.phase === "open" && floodOpens !== undefined && snapshot.elapsed >= floodOpens;
+  const canCast = !floodClosed && unlocked && !snapshot.spectator && (snapshot.phase === "preparation" || (snapshot.phase === "open" && left >= lateCutoff));
   const contracts = snapshot.river.contracts.filter(contract => !contract.taken);
   const ordersOpen = !snapshot.spectator && (snapshot.mode !== "campaign" || snapshot.night >= 4);
   const [tab, setTab] = useState<"barge" | "bell" | "order">(contracts.some(contract => contract.relief) ? "bell" : "barge");
@@ -37,6 +40,9 @@ export function Landing({ snapshot, busy, submit, castOff }: { snapshot: Snapsho
         {contracts.length > 0 && <span className="bell-count">{contracts.length}</span>}</button>
       {ordersOpen && <button className={tab === "order" ? "primary" : "subtle"} onClick={() => setTab("order")}><PackagePlus size={15}/> Post an order</button>}
     </div>
+    {floodOpens !== undefined && <p className="hint" aria-label="Floodtide forecast">{floodClosed
+      ? "Floodtide: departures are closed until next dusk."
+      : "Floodtide opens with the final boat at " + Math.floor(floodOpens / 60) + ":" + String(floodOpens % 60).padStart(2, "0") + " after the market opens. Load cargo first, then pass both lock gates and reach The Landing within 60 seconds. Supply premiums double on a successful return; failed cargo is bought back upriver."}</p>}
     {tab === "order" && ordersOpen && <BellOrderPanel snapshot={snapshot} busy={busy} submit={submit}/>}
     {!unlocked && <p className="hint">The barge is under repair until Night 2.</p>}
     {unlocked && !canCast && !snapshot.spectator && <p className="hint">{snapshot.phase === "open" ? "Too late to cast off tonight. The barge leaves again at preparation." :

@@ -170,10 +170,32 @@ describe("Caravan Zero road port", () => {
     Object.assign(s.player, reaches.heron_reach.to);
     stepRiver(s, { floodtide: true });
     expect(s.floodtide?.gates).toHaveLength(2);
-    for (const gate of s.floodtide!.gates) steer(s, gate, 60);
+    // Sail through each gate: aim a little past its line.
+    for (const gate of s.floodtide!.gates) steer(s, { x: gate.x + gate.dx * 90, y: gate.y + gate.dy * 90 }, 40);
     expect(s.floodtide?.next).toBe(2);
     steer(s, landing);
     expect(s.outcome).toBe("moored");
+  });
+
+  test("a lock gate spans the channel: crossing it near either bank counts, sailing upstream past it does not", () => {
+    for (const side of [-1, 1]) {
+      const s = createRiver(manifest());
+      Object.assign(s.player, reaches.heron_reach.to);
+      stepRiver(s, { floodtide: true });
+      const gate = s.floodtide!.gates[0]!, nx = -gate.dy, ny = gate.dx;
+      // Start upstream of the gate, 250 units off its center, and cross straight downstream.
+      Object.assign(s.player, { x: gate.x - gate.dx * 200 + nx * 250 * side, y: gate.y - gate.dy * 200 + ny * 250 * side, vx: 0, vy: 0 });
+      for (let i = 0; i < 120 && s.floodtide!.next === 0; i++) stepRiver(s, { x: gate.dx, y: gate.dy, boost: true });
+      expect(s.floodtide!.next).toBe(1);
+    }
+    const s = createRiver(manifest());
+    Object.assign(s.player, reaches.heron_reach.to);
+    stepRiver(s, { floodtide: true });
+    const gate = s.floodtide!.gates[0]!;
+    // Already past the line and heading back upstream: the gate stays shut.
+    Object.assign(s.player, { x: gate.x + gate.dx * 400, y: gate.y + gate.dy * 400, vx: 0, vy: 0 });
+    for (let i = 0; i < 90; i++) stepRiver(s, { x: -gate.dx, y: -gate.dy });
+    expect(s.floodtide!.next).toBe(0);
   });
 
   test("the 150-second timeout tows the barge with its cargo", () => {

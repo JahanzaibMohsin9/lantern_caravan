@@ -64,3 +64,11 @@ export function nightPlan(night: number, mode: "campaign" | "endless" | "live", 
 }
 
 export const rivalNames = { "r:pell": "Pell", "r:juno": "Juno", "r:ren": "Ren" };
+
+/** The final festival order starts the 60-second Floodtide return window. */
+export function floodtideOpens(night: number, mode: "campaign" | "endless" | "live", seed: number): number | undefined {
+  if (mode === "campaign" && night !== 4) return;
+  const plan = nightPlan(night, mode, seed);
+  if (!plan.events.some(event => event.id === "festival_rush")) return;
+  return Math.max(...plan.orders.map(order => order.opens));
+}

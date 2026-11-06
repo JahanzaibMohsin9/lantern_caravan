@@ -62,11 +62,18 @@ export function flare(state: River) {
   return true;
 }
 
+/** Half the width of a lock gate: the channel is 660 wide, so a gate reaches almost bank to bank. */
+export const lockHalfWidth = 300;
+
 export function beginFloodtide(state: River) {
   if (state.outcome || state.floodtide || state.rescueAt !== undefined) return;
   const player = state.player, fork = reaches.heron_reach.to;
   const route = player.y < fork.y ? [player, fork, landing] : [player, landing];
-  state.floodtide = { gates: [.37, .73].map(fraction => routePoint(route, fraction)), next: 0, deadline: state.frame + 60 * 60 };
+  state.floodtide = { gates: [.37, .73].map(fraction => {
+    const at = routePoint(route, fraction), ahead = routePoint(route, Math.min(1, fraction + .02));
+    const length = Math.hypot(ahead.x - at.x, ahead.y - at.y) || 1;
+    return { ...at, dx: (ahead.x - at.x) / length, dy: (ahead.y - at.y) / length };
+  }), next: 0, deadline: state.frame + 60 * 60 };
   state.bullets = [];
   player.fuel = Math.max(14, player.fuel);
   state.notice = "Floodtide. Pass both lock gates, then reach The Landing.";
@@ -85,7 +92,11 @@ export function tickFloodtide(state: River, dt: number) {
     return;
   }
   const gate = flood.gates[flood.next];
-  if (gate && distance(p, gate) <= 86) {
+  // A lock gate spans the river: the barge passes it by crossing its line anywhere in the channel, heading downstream.
+  const along = gate ? (p.x - gate.x) * gate.dx + (p.y - gate.y) * gate.dy : 0;
+  const across = gate ? Math.abs((p.x - gate.x) * gate.dy - (p.y - gate.y) * gate.dx) : Infinity;
+  const downstream = gate ? p.vx * gate.dx + p.vy * gate.dy > 0 : false;
+  if (gate && downstream && along >= 0 && along <= 160 && across <= lockHalfWidth) {
     flood.next++;
     state.notice = flood.next === 2 ? "Both locks open. Reach The Landing." : "First lock open. Follow the next beacon.";
   }

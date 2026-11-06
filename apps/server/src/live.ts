@@ -1,10 +1,12 @@
 import { randomUUID } from "node:crypto";
 import { items } from "@lantern/content";
-import { addActivity, addTrader, advanceClock, commitFor, createWorld, isRiverIntent, newNight, nightId, nowAt, openNight,
+import { verifyRunReport } from "@lantern/river-sim/report";
+import { addActivity, addTrader, cancelRun, InvalidRun, advanceClock, commitFor, createWorld, isRiverIntent, newNight, nightId, nowAt, openNight,
   quoteFor, recordAction, snapshotFor, validateQuote, type World } from "@lantern/game-core";
 import { decodeWorld, encodeWorld } from "@lantern/game-core/codec";
 import { haggle } from "@lantern/game-core/haggle";
 import { netEffects } from "@lantern/game-core/net-effects";
+import { intentSchema } from "@lantern/protocol";
 import type { ActionStatus, HaggleOffer, HistoryRange, HistoryRow, Intent, LedgerOp, PreparedAction,
   Quote, SettlementProvider, StateStore } from "@lantern/protocol";
 
@@ -245,7 +247,32 @@ export class LiveMarket {
     const room = await this.load(roomId);
     await this.update(room);
     this.check(room, actor, night);
-    return this.remember(room, actor, quoteFor(room.world, actor, intent, randomUUID(), clockFor(room.world, intent)));
+    try {
+      const parsed = intentSchema.safeParse(intent);
+      if (!parsed.success) {
+        if (intent?.type === "finish_run" && room.world.river.runs[intent.run_id]?.actor === actor)
+          throw new InvalidRun("RIVER_REPLAY · Malformed or oversized input log.");
+        throw parsed.error;
+      }
+      intent = parsed.data;
+      if (intent.type === "finish_run") {
+        const run = room.world.river.runs[intent.run_id];
+        if (!run || run.actor !== actor) throw new Error("RIVER_RUN_UNKNOWN · This run is unavailable.");
+        if (run.actor === actor) {
+          try { verifyRunReport(run.manifest, intent.report); }
+          catch (error) { throw new InvalidRun(shortError(error)); }
+        }
+      }
+      return this.remember(room, actor, quoteFor(room.world, actor, intent, randomUUID(), clockFor(room.world, intent)));
+    } catch (error) {
+      if (error instanceof InvalidRun && intent.type === "finish_run" && room.world.river.runs[intent.run_id]?.actor === actor) {
+        const before = room.world;
+        room.world = cancelRun(before, actor);
+        try { await this.persist(room); } catch (failure) { room.world = before; throw failure; }
+        await this.history(room, Date.now());
+      }
+      throw error;
+    }
   }
 
   async bargain(roomId: string, actor: string, night: string, offer: HaggleOffer) {

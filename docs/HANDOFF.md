@@ -4,27 +4,52 @@
 
 ### Scope and §16.4 hand-back
 
-W0–W5 were delivered previously. **W6 adds the four-night campaign; W7–W9 remain.** Each package below records its own checks.
+**W0–W9 are all delivered.** W6–W8 and most of W9 were written by the third implementer, who ran out of time before finishing W9's checks and before recording W7 and W8 here; W9 was finished, fixed and verified afterwards (see below). Each package below records its own checks.
 
 | Package | Status |
 | --- | --- |
-| W0 · rename | Committed as `3196430` |
-| W1 · trims | Committed as `0de05b9` |
-| W2 · skiffs | Committed as `9a0c327` |
-| W3 · wrecks/stops | Committed in the `W3:` commit; checks below |
-| W4 · almanac | Committed in the `W4:` commit; checks below |
-| W5 · player Bell orders | Committed in the `W5:` commit; checks below |
-| W6 · four-night campaign | Committed in the `W6:` commit; checks below |
-| W7 · barge looks/cosmetics | Not started |
-| W8 · Watch/history/trust | Committed in the `W8:` commit; checks below |
-| W9 · Floodtide/server replay | Not started |
+| W0 · rename | Committed as `3196430` (now `ba9938c` after the history rewrite) |
+| W1 · trims | Committed |
+| W2 · skiffs | Committed |
+| W3 · wrecks/stops | Committed |
+| W4 · almanac | Committed |
+| W5 · player Bell orders | Committed |
+| W6 · four-night campaign | Committed as `fe21c0a` |
+| W7 · barge looks/cosmetics | Committed as `9023cef` |
+| W8 · Watch/history/trust | Committed as `8337d03` |
+| W9 · Floodtide/server replay | Committed in the `W9:` commit; checks below |
 
-- [x] Each delivered package has its own W-prefixed commit and a passing build, Vitest, system-Chrome Playwright and five-seed 2,000-night check.
-- [x] Verification and cuts are recorded here; API and balance changes are documented.
-- [ ] Human new-player test without docs in under three minutes: not performed.
+§16.4 hand-back:
+
+- [x] Every package is committed with a passing build, Vitest, system-Chrome Playwright and five-seed check, and the working tree is clean.
+- [x] Each package is listed here with its verification; nothing was cut.
+- [x] `KNOWN_ISSUES.md` lists what is untested.
+- [ ] Human new-player test without docs in under three minutes: not performed. The automated title → Night 2 → first run → oil sold path passes with Playwright's simulated clock.
 - [ ] Full manual playthrough: not performed. Firefox and physical touch devices: not verified.
 
-Branch is `main`; no push, remote changes, rebase or history rewrite.
+Branch is `main`. Commit messages credit no AI tool.
+
+### W9 · Floodtide and server replay
+
+**Server replay.** Run reports now carry the input log (`inputLog`, at most 9,000 changes and 2 MiB, with each input limited to the barge controls) bound by a canonical `inputLogHash`. `verifyRunReport` in `@lantern/river-sim/report` checks the log's shape, order and hash, replays it against the stored manifest and requires the replayed report to equal the submitted one. The live server runs it on every `finish_run` quote; a mismatch returns `RIVER_REPLAY` and cancels only that player's run, returning its reservations. The HTTP limit was raised to fit the log, and `RIVER_*` errors keep their code on the wire.
+
+**Floodtide.** `floodtideOpens` schedules it from the final festival order: 1:10 on campaign Night 4, and on endless and live festival-rush nights. A barge that is out then gets `floodtideAtMs` in its manifest; the simulation starts Floodtide at that frame, so replay and settlement agree. The Landing shows when it opens and closes departures once it has (`RIVER_FLOOD_CLOSED`); the HUD switches to a Floodtide clock and lock counter. A supply contract's premium is escrowed from the issuer at departure and paid again on a completed return; on a failed return the cargo goes back to its source village at the buyback price and the escrow returns to the issuer. Every movement is a transfer.
+
+**Finishing work (after the third implementer stopped).** The work was uncommitted with no recorded checks. Unit tests passed, but the Floodtide browser test failed every time: lock gates only counted if the barge passed within 86 units of their center, in a 660-wide channel with the flood current pushing sideways, so a barge sailing down the river missed them. Gates now span the channel: crossing a gate's line heading downstream anywhere within 300 units of its center counts. They're drawn as timber barriers with a lamp at each bank and swing open when passed. A new simulation test covers crossing near either bank and sailing back upstream through a gate, which doesn't count. The soak's end-of-night check now also requires empty `esc:flood:` accounts.
+
+- `npm run schema` — passed; regenerated schema committed.
+- `npm run build` — passed (existing bundle-size warning).
+- `npm test` — passed, 175 tests in 11 files, including Floodtide success and failure with replay and full asset conservation, scheduling and cancellation refunds, input-log limits, eight server-rejected forgeries, and the new channel-wide gate test.
+- `LANTERN_CHROME_CHANNEL=chrome npm run test:e2e -- --project=chrome --workers=2` — passed, 11 tests in 4.8 minutes. The Night 4 path imports a festival save, accepts a dye contract, sails to Reedmarsh, waits for Floodtide, then crosses both lock gates and moors. A first full run with four workers, while a soak was also running, timed out on the full-campaign and relief paths; both passed when rerun, and the final run used two workers with nothing else running.
+- `npm run simulate -- --nights 2000 --seed <17|42|93|166|271> --check` — all five passed with W9 complete and nothing else running: longest dark streak 1, zero invariant errors, zero invalid goods ops, 2,000 stable nights and 2,000 Bell orders per seed, and no `esc:bell:` or `esc:flood:` balance at any close.
+
+### W8 · River Watch, history and village trust
+
+Recorded after the fact from commit `8337d03`, its API, README and balance notes, and the W9 verification run, which includes all of W8's tests. Watch shows a river strip with reach danger, booms, village cash bands and named barges upriver. Public history adds village (coins, source price, unreserved stock) and reach (danger, boom) series alongside stall rows, with no sign-in needed. Two paid supply contracts for the same village earn that player the trusted-hauler stamp and 10% off that village's purchases across nights; the discount is taken from the cumulative total per good, so splitting a batch saves nothing, and it reduces what the village receives rather than minting anything. Tests: `tests/village-trust.test.ts`, the two-barge race and restart test in `tests/live.test.ts`, the Watch strip path in `tests/e2e/live.spec.ts` and the trusted-hauler path in `tests/e2e/river.spec.ts`. The third implementer's own per-commit check results were not recorded; all of them pass in the W9 run above.
+
+### W7 · Barge looks and lantern finishes
+
+Recorded after the fact from commit `9023cef` and its API, README and balance notes; its tests pass in the W9 run above. Upgrade tiers change the barge on the river and in the Landing preview through one renderer (`apps/web/src/river/barge.ts`): deck crates, iron bands and plating, bigger cannons and twin barrels, extra stacks and a stern paddle wheel. Paint, bow lantern and prow finishes are bought with `buy_barge_cosmetic` (paid to `sys:rescue`, owned permanently) and refitted free with `fit_barge_cosmetic`; looks never change stats. Tests: `tests/barge-looks.test.ts` (ownership, refits, conservation, identical simulation and replay for every finish), a live-restart test, and the browser path in `tests/e2e/river.spec.ts`.
 
 ### W6 · Four-night campaign
 

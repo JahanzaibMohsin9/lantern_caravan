@@ -4,7 +4,7 @@ import { items, type ItemId } from "@lantern/content";
 import { tradePrice, villagePurchaseCost } from "@lantern/game-core/pricing";
 import type { RunManifest, RunReport } from "@lantern/protocol";
 import { createBoats, distance, tickBoats } from "./bell";
-import { along, beginFloodtide, blockBoom, clamp, createBooms, flare, keepInChannel, tickFloodtide } from "./hazards";
+import { along, beginFloodtide, blockBoom, clamp, createBooms, flare, keepInChannel, lockHalfWidth, tickFloodtide } from "./hazards";
 
 export { distance, objective, escortRadius, abandonSeconds, routeLead } from "./bell";
 export const hz = 60;
@@ -33,7 +33,7 @@ export type RiverEffect = { kind: EffectKind; x: number; y: number; frame: numbe
 type Input = { x?: number; y?: number; boost?: boolean; fire?: boolean; aim?: Point; flare?: boolean; moor?: boolean; floodtide?: boolean;
   trade?: { village: string; item: string; side: "buy" | "sell"; quantity: number }; salvage?: string; stop?: { id: string; choice: string } };
 export type RiverInput = Input;
-export { beginFloodtide };
+export { beginFloodtide, lockHalfWidth };
 type Recorded = { frame: number; input: Input };
 
 export type River = {
@@ -44,7 +44,8 @@ export type River = {
   spawned: Partial<Record<ReachId, number>>; booms: ReturnType<typeof createBooms>; broken: ReachId[];
   pirates: Pirate[]; bullets: Bullet[]; drops: Drop[]; boats: ReturnType<typeof createBoats>; savedBoats: string[];
   escort: "active" | "completed" | "failed"; escortOutside: number; escortJoined: boolean;
-  floodtide?: { gates: Point[]; next: number; deadline: number };
+  /** Lock gates span the channel: each has a center and the downstream direction it must be crossed in. */
+  floodtide?: { gates: (Point & { dx: number; dy: number })[]; next: number; deadline: number };
   rescueAt?: number; outcome?: RunReport["outcome"]; notice: string; log: Recorded[];
   effects: RiverEffect[]; barrels: Barrel[]; serial: number;
   wrecks: WreckSite[]; stops: StopSite[]; salvaged: Record<string, Cargo>; stopsTaken: { stop_id: string; choice: string }[];
@@ -417,7 +418,7 @@ export function stepRiver(state: River, input: Input = {}, record = true) {
   if (record && JSON.stringify(state.log.at(-1)?.input) !== JSON.stringify(input)) state.log.push({ frame: state.frame, input: structuredClone(input) });
   state.frame++;
   state.effects = state.effects.filter(entry => state.frame - entry.frame < 32);
-  if (input.floodtide) beginFloodtide(state);
+  if (input.floodtide || (state.manifest.floodtideAtMs !== undefined && state.frame * 1000 / hz >= state.manifest.floodtideAtMs)) beginFloodtide(state);
   if (state.floodtide) {
     moveBarge(state, input);
     tickFloodtide(state, dt);

@@ -9,7 +9,7 @@ import { items } from "@lantern/content";
 import { supply } from "../packages/game-core/src/model";
 import { historyRowSchema } from "../packages/protocol/src/schemas";
 import { createRiver, stepRiver } from "@lantern/river-sim";
-import { runReport } from "../packages/river-sim/src/report";
+import { inputLogHash, runReport } from "../packages/river-sim/src/report";
 import type { PreparedAction } from "@lantern/protocol";
 
 const paths: string[] = [];
@@ -249,4 +249,45 @@ test("two barges race for village stock, retain separate reservations through re
   expect(oil.at(-1)).toMatchObject({ stock: before.villages.ember_falls!.stock.oil, coins: before.villages.ember_falls!.coins });
   expect(rows.some(row => row.kind === "reach" && row.reach === "marsh_bend")).toBe(true);
   expect(rows.some(row => !row.kind && row.stall === "oil_wharf")).toBe(true);
+});
+
+
+test.each(["kills", "cargo", "hash", "missing", "log", "frame", "duration", "extra-input"])("server rejects %s forgery and refunds only the submitting actor's run", async change => {
+  vi.useFakeTimers({ toFake: ["Date"] });
+  vi.stubEnv("LANTERN_PREP_SECONDS", "1000");
+  const { dir, store } = await makeStore();
+  let market = new LiveMarket(store, new DevSettlementProvider(dir));
+  const room = "replay-" + change;
+  await market.load(room, true);
+  for (const playerId of ["a", "b"]) await market.join(room, { playerId, displayName: playerId }, false);
+  const initial = await market.snapshot(room, "p:a");
+  const initialWorld = (await market.load(room)).world;
+  const before = [...Object.keys(items), "coin"].map(asset => supply(initialWorld, asset));
+  for (const actor of ["p:a", "p:b"]) {
+    const deal = await market.getQuote(room, actor, initial.night_id, { type: "start_run", barge_plan: [] });
+    await market.submit(room, actor, initial.night_id, deal.quote_id, "depart");
+  }
+  market = new LiveMarket(store, new DevSettlementProvider(dir));
+  const manifest = (await market.snapshot(room, "p:a")).river.myRun!.manifest;
+  const sim = createRiver(manifest);
+  for (let i = 0; i < 2400; i++) stepRiver(sim, {});
+  stepRiver(sim, { moor: true });
+  const report = runReport(sim);
+  vi.setSystemTime(Date.now() + report.durationMs);
+  if (change === "kills") report.pirates = [{ reach: "heron_reach", count: 1 }];
+  if (change === "cargo") report.delivered = { oil: 1 };
+  if (change === "hash") report.inputLogHash = "forged";
+  if (change === "missing") delete report.inputLog;
+  if (change === "log") { report.inputLog![0]!.input = { x: 1, boost: true }; report.inputLogHash = inputLogHash(report.inputLog); }
+  if (change === "frame") { report.inputLog![1]!.frame = 0; report.inputLogHash = inputLogHash(report.inputLog); }
+  if (change === "duration") report.durationMs += 1000;
+  if (change === "extra-input") Object.assign(report.inputLog![0]!.input, { floodtide: true });
+  await expect(market.getQuote(room, "p:b", initial.night_id, { type: "finish_run", run_id: manifest.id, report: runReport(sim) })).rejects.toThrow("RIVER_RUN_UNKNOWN");
+  await expect(market.getQuote(room, "p:a", initial.night_id, { type: "finish_run", run_id: manifest.id, report })).rejects.toThrow("RIVER_REPLAY");
+  market = new LiveMarket(store, new DevSettlementProvider(dir));
+  expect((await market.snapshot(room, "p:a")).river.myRun).toBeUndefined();
+  expect((await market.snapshot(room, "p:b")).river.myRun).toBeDefined();
+  const afterWorld = (await market.load(room)).world;
+  expect([...Object.keys(items), "coin"].map(asset => supply(afterWorld, asset))).toEqual(before);
+  expect((await market.snapshot(room, "p:a")).coins).toBe(initial.coins);
 });

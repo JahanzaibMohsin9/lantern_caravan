@@ -1,7 +1,7 @@
 import { createServer, type IncomingMessage, type ServerResponse } from "node:http";
 import { fileURLToPath } from "node:url";
 import { z } from "zod";
-import { haggleOfferSchema, intentSchema, type HistoryRange, type IdentityProvider } from "@lantern/protocol";
+import { maxRunLogBytes, haggleOfferSchema, type Intent, type HistoryRange, type IdentityProvider } from "@lantern/protocol";
 import { contracts, loginSchema, requestEnvelope } from "@lantern/protocol/schemas";
 import { FileStateStore } from "./providers/file";
 import { DevIdentityProvider, DevSettlementProvider } from "./providers/dev";
@@ -34,7 +34,7 @@ async function payload(req: IncomingMessage) {
   let length = 0;
   for await (const chunk of req) {
     length += chunk.length;
-    if (length > 65536) throw new Error("Request is too large.");
+    if (length > maxRunLogBytes + 65536) throw new Error("Request is too large.");
     chunks.push(chunk as Buffer);
   }
   return JSON.parse(Buffer.concat(chunks).toString("utf8")) as unknown;
@@ -50,6 +50,7 @@ const id = z.string().min(1).max(120);
 const messageOf = (error: unknown) => error instanceof Error && !(error instanceof z.ZodError) ? error.message : "Check the request and try again.";
 
 function errorCode(message: string) {
+  if (/^RIVER_[A-Z_]+/.test(message)) return message.split(/[ ·]/)[0]!;
   const errors = [
     [/^AUTH_REQUIRED$/, "AUTH_REQUIRED"], [/UNSUPPORTED_VERSION/, "UNSUPPORTED_VERSION"], [/ACTION_CONFLICT/, "ACTION_CONFLICT"],
     [/confirming/, "ACTION_PENDING"], [/quote expired/i, "QUOTE_EXPIRED"], [/market changed/i, "PRICE_CHANGED"],
@@ -105,7 +106,7 @@ const server = createServer(async (req, res) => {
     const p = call.params;
     const contract = Object.hasOwn(contracts, call.method) ? contracts[call.method as keyof typeof contracts] : undefined;
     if (!contract) throw new Error("Unknown market method.");
-    contract[0].parse(p);
+    if (call.method !== "get_quote") contract[0].parse(p);
     const room = () => id.parse(p.session_id ?? p.room_id);
     const night = () => id.parse(p.night_id);
     const result = await market.serialized(async () => {
@@ -116,7 +117,7 @@ const server = createServer(async (req, res) => {
         case "get_catalog": return catalog;
         case "get_snapshot":
         case "advance_phase": return market.snapshot(room(), actor);
-        case "get_quote": return market.getQuote(room(), actor, night(), intentSchema.parse(p.intent));
+        case "get_quote": return market.getQuote(room(), actor, night(), p.intent as Intent);
         case "haggle": return market.bargain(room(), actor, night(), haggleOfferSchema.parse(p.offer));
         case "submit_action": return market.submit(room(), actor, night(), id.parse(p.quote_id), id.parse(p.action_id));
         case "get_action_status": return market.actionStatus(room(), actor, night(), id.parse(p.action_id));
