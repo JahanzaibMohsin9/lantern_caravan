@@ -31,3 +31,15 @@ Use environment variables in the shell or pass Node an environment file. The che
 Three local slots use IndexedDB for the current browser and origin. The game keeps a previous valid copy. Settings can export and import JSON. Keep a backup before switching browser origins or clearing site storage.
 
 Server rooms live under `apps/server/data/` by default. Preserve the dev signing key and settlement files with the room files when moving that directory. The server persists reservations before handing them to the settlement provider.
+
+## NEAR testnet settlement
+
+The live server can settle the public Row to the NEP-245 items contract (`contracts/items/`, deployed at `items.lantern-caravan.testnet`). Private rooms always keep the dev ledger.
+
+```bash
+SETTLEMENT=near npm run dev:server
+```
+
+On start the server registers the merchant, rival and village accounts as agents (once), then reconciles: it reads every holder's balances from the contract and settles whatever differs from the game's ledger. On an empty contract that is the market's genesis. `GET /v1/chain/status` shows the contract, the queue, the last settled transaction and any error. Settings and their defaults are in `.env.example`; the operator key comes from `NEAR_OPERATOR_KEY` (for hosting) or the operator's legacy-keychain file.
+
+`npm run near:smoke` runs the whole flow against the real testnet contract in a throwaway data folder: agents, genesis, a player purchase, a full balance check, then a clean-up reconcile that leaves the contract empty (`-- --keep` skips the clean-up).

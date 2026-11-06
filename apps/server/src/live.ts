@@ -90,11 +90,20 @@ export class LiveMarket {
       } else {
         const before = room.world;
         this.seat(room, actor, identity.displayName);
+        this.track(room, before);
         await this.chronicle(room, before, Date.now());
       }
       await this.persist(room);
     }
     return { sessionId: room.id, spectator: !room.seats.includes(actor) };
+  }
+
+  /**
+   * Ledger changes outside a market tick or a player's settled action (a new trader's starting purse, a run
+   * cancelled by a forged report) join the agent effects, so the next flush settles them too.
+   */
+  private track(room: Room, before: World) {
+    if (before.ledger !== room.world.ledger) room.agentEffects.push(...netEffects(before.ledger, room.world.ledger));
   }
 
   private seat(room: Room, actor: string, name: string) {
@@ -136,12 +145,37 @@ export class LiveMarket {
     }
   }
 
+  /**
+   * Agents change balances on every tick. Before a player's action settles, the agent activity since the last
+   * flush goes first, so the settled ledger matches the game's when the action lands.
+   */
+  private async flushAgents(room: Room) {
+    if (!room.agentEffects.length || !this.settlement.settleBatch) return;
+    const night = nightId(room.world);
+    await this.settlement.settleBatch({ roomId: room.id, nightId: night, batchId: room.id + "-" + night + "-r" + room.world.revision,
+      effects: coalesce(room.agentEffects) });
+    room.agentEffects = [];
+    await this.persist(room);
+  }
+
+  /** Brings the room's settled balances back to its ledger, for example after a restart or a refused batch. */
+  async reconcileChain(roomId: string) {
+    const room = await this.load(roomId);
+    if (room.reservation) await this.resolve(room);
+    if (room.reservation || !this.settlement.reconcile) return undefined;
+    const result = await this.settlement.reconcile(room.id, room.world.ledger);
+    room.agentEffects = [];
+    await this.persist(room);
+    return result;
+  }
+
   private async resolve(room: Room) {
     const reservation = room.reservation;
     if (!reservation) return;
     const { prepared, requestId, deal, at } = reservation;
     let status: ActionStatus;
     try {
+      await this.flushAgents(room);
       await this.settlement.prepare(prepared);
       await this.settlement.submit(prepared.actionId);
       if (process.env.DEV_SETTLE_DUPLICATE === "1") await this.settlement.submit(prepared.actionId);
@@ -185,6 +219,7 @@ export class LiveMarket {
       await this.resolve(room);
       if (room.reservation) return;
     }
+    if (this.settlement.needsReconcile?.(room.id)) await this.reconcileChain(room.id);
     const before = room.world;
     const seconds = (time - room.phaseStarted) / 1000 * this.speed;
     if (before.phase === "preparation" && seconds >= this.prep) {
@@ -268,7 +303,9 @@ export class LiveMarket {
       if (error instanceof InvalidRun && intent.type === "finish_run" && room.world.river.runs[intent.run_id]?.actor === actor) {
         const before = room.world;
         room.world = cancelRun(before, actor);
-        try { await this.persist(room); } catch (failure) { room.world = before; throw failure; }
+        const pending = room.agentEffects;
+        this.track(room, before);
+        try { await this.persist(room); } catch (failure) { room.world = before; room.agentEffects = pending; throw failure; }
         await this.history(room, Date.now());
       }
       throw error;
@@ -280,8 +317,10 @@ export class LiveMarket {
     await this.update(room);
     this.check(room, actor, night);
     const now = nowAt(room.world);
+    const before = room.world;
     const { state, result } = haggle(room.world, offer, randomUUID(), now, actor);
     room.world = state;
+    this.track(room, before);
     if (result.quote) this.remember(room, actor, result.quote, quoteFor(state, actor, result.quote.intent, result.quote.quote_id, now).effects);
     await this.persist(room);
     return result;

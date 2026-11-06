@@ -26,6 +26,7 @@ Replies echo `version` and `request_id`. A success has `ok: true`, a `result`, a
 | `GET /v1/public/snapshot` | Public spectator view |
 | `GET /v1/public/history?range=day` | Public market samples, with `day`, `week`, and `all` ranges |
 | `GET /v1/public/chronicle?cursor=...` | Public paginated chronicle |
+| `GET /v1/chain/status` | NEAR settlement: contract, operator, queued and settled transactions, the last transaction's explorer link, and any error. `{ enabled: false }` without NEAR settlement. |
 | `POST /v1/rpc` | Methods listed in the generated schema |
 
 `create_session` makes a private live room. `join_room` joins the public `the-row` or a room code. Four human seats are available per night. Viewers on the waiting list can get a seat during preparation. The server returns `spectator` when a viewer cannot trade. Public Watch uses the public snapshot, even when a display name is stored locally.

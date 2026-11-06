@@ -29,6 +29,21 @@
 
 Branch is `main`. Commit messages credit no AI tool.
 
+### NEAR settlement provider (6 November 2026)
+
+`SETTLEMENT=near` settles the public Row to the items contract through `apps/server/src/near/`:
+
+- **`accounts.ts` maps game accounts to holders.** Merchants, rivals, the freight barge and villages are their own sub-accounts of `lantern-caravan.testnet`; `sys:`, `esc:` and `pool:` funds stay internal; village boats are internal `sys:rival-*`. Players settle to `<id>.players.lantern-caravan.testnet` until social login gives them a real account. These player accounts are contract holders only and don't exist on chain yet.
+- **`provider.ts` has one ordered outbox saved to disk.** Agent batches, player actions, agent registration and reconciles all go through it. The chain sees changes in game order, and an interrupted job is resent safely because the contract ignores a repeated ID. Network errors retry with backoff; a contract refusal rejects that player action, or marks the room for a reconcile if it was a batch.
+- **Agent activity is flushed before every player action** (`flushAgents` in `live.ts`), as well as at night close, so the chain matches the game when the action lands. Ledger changes outside a tick, such as a new trader's purse or a run cancelled by a forged report, join that flush too.
+- **`custody.ts` rebuilds netted agent batches** so new supply of a good is minted at its source village (`source: "sys:harvest"`) and then transferred, instead of appearing in a buyer's account.
+- **On start, the server registers agents and reconciles.** `reconcile` brings the chain to the ledger with mints and burns, which on an empty contract is the genesis; `verify` is the read-only comparison. `GET /v1/chain/status` reports the queue and the last transaction.
+
+Agents' transfers are still signed by the operator; `agent_settle` with NEP-366 delegate actions is the next step. Checks:
+
+- `npm test` — passed, 184 tests in 12 files, including 9 new in `tests/near-settlement.test.ts` against a fake chain that follows the contract's rules: account mapping, custody, ordering behind agent batches, rejection and retry, restart resume, genesis, no-op and repair reconciles, `verify`, agent registration, room routing, and a live public-Row trade after which every chain balance equals the game's ledger. `tests/live-soak.test.ts` now counts night-close batches (500) and pre-action flushes separately.
+- `npm run near:smoke` on the real testnet contract (6 November) — passed: registered all 12 agents, genesis minted 48 balances in 2 transactions, a player purchase settled after an agent flush ([transaction](https://testnet.nearblocks.io/txns/DWYTdUQ4sbkBshTwaM5DsVLscQjtremiEXsL4dEZYJi8), 2.96 Tgas for 2 ops), `verify` matched all 29 holders across 14 tokens, and the clean-up burned 51 balances in 2 transactions. Read back over RPC afterwards: Mira is an agent, coin/paper/oil supply is 0, the purchase ID is settled.
+
 ### NEAR items contract (6 November 2026)
 
 `contracts/items/` is the NEP-245 multi-token contract the settlement provider will write to: every coin, material, lantern and stall share, with operator-only `game_settle` (atomic, idempotent per action ID), `agent_settle` for merchants and haulers signing their own transfers, standard events whose memos carry the action ID and harvest source, and the NEP-245 views. See its README. Nothing in the game calls it yet; that's the settlement provider.

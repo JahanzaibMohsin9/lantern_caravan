@@ -1,25 +1,47 @@
 import { createServer, type IncomingMessage, type ServerResponse } from "node:http";
 import { fileURLToPath } from "node:url";
 import { z } from "zod";
-import { maxRunLogBytes, haggleOfferSchema, type Intent, type HistoryRange, type IdentityProvider } from "@lantern/protocol";
+import { maxRunLogBytes, haggleOfferSchema, type Intent, type HistoryRange, type IdentityProvider, type SettlementProvider } from "@lantern/protocol";
 import { contracts, loginSchema, requestEnvelope } from "@lantern/protocol/schemas";
 import { FileStateStore } from "./providers/file";
 import { DevIdentityProvider, DevSettlementProvider } from "./providers/dev";
 import { catalog, LiveMarket, publicRoom } from "./live";
+import { NearChain, operatorKey } from "./near/chain";
+import { NearSettlementProvider, RoutedSettlement } from "./near/provider";
 
 const started = Date.now();
 const directory = process.env.LANTERN_DATA_DIR ?? fileURLToPath(new URL("../data", import.meta.url));
 const store = new FileStateStore<Parameters<ConstructorParameters<typeof LiveMarket>[0]["save"]>[1]>(directory);
 await store.init();
-for (const [name, value] of [["IDENTITY", "dev"], ["SETTLEMENT", "dev"], ["STORE", "file"]] as const) {
-  if (process.env[name] && process.env[name] !== value) throw new Error(`Unknown ${name} provider.`);
+for (const [name, values] of [["IDENTITY", ["dev"]], ["SETTLEMENT", ["dev", "near"]], ["STORE", ["file"]]] as const) {
+  if (process.env[name] && !(values as readonly string[]).includes(process.env[name]!)) throw new Error(`Unknown ${name} provider.`);
 }
 const devAuth = await DevIdentityProvider.create(directory);
 const auth: IdentityProvider = devAuth;
-const market = new LiveMarket(store, new DevSettlementProvider(directory));
+const dev = new DevSettlementProvider(directory);
+let near: NearSettlementProvider | undefined;
+let settlement: SettlementProvider = dev;
+if (process.env.SETTLEMENT === "near") {
+  // Only the public Row settles on chain. Private rooms are separate economies and keep the dev ledger.
+  if ((process.env.NEAR_NETWORK ?? "testnet") !== "testnet") throw new Error("NEAR_NETWORK · Only testnet is supported.");
+  const root = process.env.NEAR_ACCOUNT_ROOT ?? "lantern-caravan.testnet";
+  const operatorId = process.env.NEAR_OPERATOR_ID ?? "operator." + root;
+  const chain = new NearChain({ network: "testnet", rpcUrl: process.env.NEAR_RPC_URL ?? "https://rpc.testnet.near.org",
+    contractId: process.env.NEAR_CONTRACT_ID ?? "items." + root, operatorId, key: await operatorKey(operatorId) });
+  near = new NearSettlementProvider(chain, { root, players: process.env.NEAR_PLAYER_SUFFIX ?? "players." + root }, directory);
+  await near.init();
+  settlement = new RoutedSettlement(near, dev, new Set([publicRoom]));
+}
+const market = new LiveMarket(store, settlement);
 await market.load(publicRoom, true);
 for (const room of await store.roomIds()) {
   if (room !== publicRoom) await market.load(room);
+}
+if (near) {
+  const missing = await near.ensureAgents();
+  if (missing.length) console.log("NEAR · registering " + missing.length + " agent accounts");
+  const synced = await market.serialized(() => market.reconcileChain(publicRoom));
+  console.log("NEAR · " + JSON.stringify(synced) + " · " + near.info().contractUrl);
 }
 let updating = false;
 const ticker = setInterval(() => {
@@ -75,6 +97,10 @@ const server = createServer(async (req, res) => {
     const url = new URL(req.url ?? "/", "http://localhost");
     if (req.method === "GET" && url.pathname === "/v1/health") {
       send(res, 200, { version: 1, content_version: "1", rules_version: "1", uptime: Math.floor((Date.now() - started) / 1000) });
+      return;
+    }
+    if (req.method === "GET" && url.pathname === "/v1/chain/status") {
+      send(res, 200, near ? near.info() : { enabled: false });
       return;
     }
     if (req.method === "GET" && url.pathname.startsWith("/v1/public/")) {

@@ -213,6 +213,10 @@ export interface SettlementProvider {
   submit(actionId: string): Promise<void>;
   status(actionId: string): Promise<SettlementStatus>;
   settleBatch?(batch: { batchId: string; roomId: string; nightId: string; effects: LedgerOp[] }): Promise<SettlementStatus>;
+  /** True when the room's on-chain balances may no longer match its ledger. */
+  needsReconcile?(roomId: string): boolean;
+  /** Settles whatever differs between the room's ledger and the chain. */
+  reconcile?(roomId: string, ledger: Record<string, Record<string, number>>): Promise<unknown>;
 }
 export type ActionLogEntry = PreparedAction & { status: ActionStatus };
 export interface StateStore<WorldState> {

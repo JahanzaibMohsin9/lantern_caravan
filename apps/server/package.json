@@ -1,1 +1,1 @@
-{"name":"@lantern/server","private":true,"type":"module","scripts":{"dev":"tsx src/main.ts"},"dependencies":{"@lantern/content":"*","@lantern/game-core":"*","@lantern/protocol":"*","zod":"^4.0.0"}}
+{"name":"@lantern/server","private":true,"type":"module","scripts":{"dev":"tsx src/main.ts"},"dependencies":{"@lantern/content":"*","@lantern/game-core":"*","@lantern/protocol":"*","near-api-js":"^7.4.0","zod":"^4.0.0"}}

@@ -11,7 +11,7 @@ test("the authoritative loop runs 500 nights and accepts a 20-night player", asy
   vi.stubEnv("LANTERN_PREP_SECONDS", "1");
   const rows = new Map<string, { state: Stored; revision: number }>();
   const submitted = new Set<string>();
-  let batches = 0;
+  let batches = 0, flushes = 0, emptyFlushes = 0;
   const store: StateStore<Stored> = {
     async load(id) { return rows.get(id) ?? null; },
     async save(id, state, previous) {
@@ -26,7 +26,12 @@ test("the authoritative loop runs 500 nights and accepts a 20-night player", asy
     async prepare() {},
     async submit(id) { submitted.add(id); },
     async status(id) { return submitted.has(id) ? { state: "confirmed", receipt: { id, label: "Test receipt" } } : { state: "unknown" }; },
-    async settleBatch() { batches++; return { state: "confirmed" }; },
+    // Night-close batches end in the night ID; flushes before a player's action add "-r<revision>".
+    async settleBatch(batch) {
+      if (/-r\d+$/.test(batch.batchId)) flushes++; else batches++;
+      if (!batch.effects.length) emptyFlushes++;
+      return { state: "confirmed" };
+    },
   };
   const market = new LiveMarket(store, provider);
   const id = "soak";
@@ -79,4 +84,8 @@ test("the authoritative loop runs 500 nights and accepts a 20-night player", asy
   expect(min).toBeGreaterThanOrEqual(50);
   expect(max).toBeLessThanOrEqual(500);
   expect(batches).toBe(500);
+  // At most one flush per player action, and only when agents had changed something.
+  expect(flushes).toBeGreaterThan(0);
+  expect(flushes).toBeLessThanOrEqual(serial);
+  expect(emptyFlushes).toBe(0);
 }, 30000);
