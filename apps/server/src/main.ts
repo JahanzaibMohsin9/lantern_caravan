@@ -124,6 +124,10 @@ const server = createServer(async (req, res) => {
         if (url.pathname === "/v1/public/snapshot") return market.serialized(() => market.snapshot(room));
         if (url.pathname === "/v1/public/history") return market.historyPage(room, range(url.searchParams.get("range")));
         if (url.pathname === "/v1/public/chronicle") return market.chroniclePage(room, url.searchParams.get("cursor") ?? undefined);
+        if (url.pathname === "/v1/public/receipts") {
+          const page = await market.serialized(() => market.receiptsPage(room, account => near?.holder(account) ?? account));
+          return { ...page, chain: near ? near.info() : { enabled: false }, agents: near?.agents() ?? [] };
+        }
         throw new Error("Unknown public endpoint.");
       })();
       send(res, 200, data);

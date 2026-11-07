@@ -3,11 +3,15 @@ import type { ActionStatus, AuthClient, Catalog, ChroniclePage, CreateSessionReq
 
 export type ChainStatus = { enabled: boolean; network?: string; contract?: string; contractUrl?: string; queued?: number;
   settled?: number; last?: { id: string; url: string; at: number } };
+type Party = { name: string; account: string };
+/** The public Verify view: chain status, recent player trades with both legs, and the agents' accounts. */
+export type PublicReceipts = { chain: ChainStatus; agents: string[]; receipts: { actionId: string; night: string; at?: number; actor: string;
+  intent: { type: string } & Record<string, unknown>; url?: string; legs: { op: string; asset: string; amount: string; from?: Party; to?: Party }[] }[] };
 
 class RpcError extends Error {
   constructor(readonly code: string, message: string) { super(message); }
 }
-type Pending = { night: string; quote: string; action: string };
+type Pending = { night: string; quote: string; action: string; /** What to call the trade once it confirms. */ label?: string };
 type Reply<T> = { ok: true; result: T } | { ok: false; error: { code: string; message: string } };
 
 export class HttpBackend implements MarketBackend {
@@ -49,6 +53,8 @@ export class HttpBackend implements MarketBackend {
   }
 
   /** The public Row's NEAR settlement: contract, settled transactions and the latest one. */
+  receipts() { return this.publicRead<PublicReceipts>("receipts"); }
+
   async chainStatus(): Promise<ChainStatus> {
     try {
       const response = await fetch(this.url + "/v1/chain/status", { signal: AbortSignal.timeout(7000) });
@@ -131,9 +137,9 @@ export class HttpBackend implements MarketBackend {
     return this.rpc<HaggleResult>("haggle", { session_id: sessionId, night_id: night, offer });
   }
 
-  async submitAction(sessionId: string, night: string, quote: string, action: string) {
+  async submitAction(sessionId: string, night: string, quote: string, action: string, label?: string) {
     if (this.pending) throw new Error("Your last action is confirming.");
-    const pending = { night, quote, action };
+    const pending = { night, quote, action, label };
     this.remember(sessionId, pending);
     let status: ActionStatus;
     try { status = await this.submit(sessionId, pending); }
@@ -166,7 +172,7 @@ export class HttpBackend implements MarketBackend {
         status = await this.submit(sessionId, pending);
       }
       if (status.state === "confirmed" || status.state === "rejected") {
-        this.notice = status.state === "confirmed" ? "Trade confirmed" : status.reason ?? "Trade declined";
+        this.notice = status.state === "confirmed" ? pending.label ?? "Trade confirmed" : status.reason ?? "Trade declined";
         this.noticeUrl = status.state === "confirmed" ? status.receipt?.url : undefined;
         this.remember(sessionId);
       }

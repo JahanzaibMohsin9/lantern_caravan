@@ -271,3 +271,13 @@ kbd { font: 750 10px/1 "Manrope Variable", sans-serif; border: 1px solid #574653
 .toast-link { margin-left: 4px; display: inline-flex; align-items: center; gap: 4px; color: #9fd3ff; font-weight: 800; text-decoration: underline; text-underline-offset: 2px; }
 .chain-link { display: inline-flex; align-items: center; gap: 5px; color: #9fd3ff; text-decoration: none; }
 .chain-link:hover { text-decoration: underline; }
+.verify { display: grid; gap: 10px; }
+.verify-chain { display: grid; gap: 4px; padding: 10px 12px; border-radius: 8px; background: rgba(143, 207, 154, .07); border-left: 3px solid #8fcf9a; }
+.verify-chain a, .verify-receipt a, .verify-agents a, .verify-party a { color: #f0b17f; display: inline-flex; align-items: center; gap: 4px; }
+.verify-receipt { display: grid; gap: 4px; padding: 10px 12px; border-radius: 8px; background: rgba(255, 255, 255, .03); }
+.verify-receipt ul, .verify-agents { list-style: none; margin: 0; padding: 0; display: grid; gap: 4px; }
+.verify-receipt li { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; font-size: .86rem; }
+.verify-party { display: inline-flex; flex-wrap: wrap; align-items: baseline; gap: 4px; }
+.verify-party small, .verify-agents small { color: #a993a4; }
+.verify-agents li { display: flex; flex-wrap: wrap; align-items: baseline; gap: 6px; font-size: .86rem; }
+.verify-code { display: block; margin-top: 6px; padding: 8px; border-radius: 6px; background: #151420; font-size: .75rem; word-break: break-all; }

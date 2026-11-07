@@ -1,11 +1,12 @@
 import { useState } from "react";
-import { Anchor, ArrowRight, Bell, Coins, Compass, LifeBuoy, ShoppingBasket, Store } from "lucide-react";
+import { Anchor, ArrowRight, Bell, Coins, Compass, LifeBuoy, ShieldAlert, ShoppingBasket, Store } from "lucide-react";
 import { items, merchants, type ItemId, type StallId } from "@lantern/content";
 import { floodtideOpens } from "@lantern/content/nights";
 import { bargeTrims, sourceFor, villages, type BargeTrimId, type VillageId } from "@lantern/content/river";
 import type { Intent, Snapshot } from "@lantern/protocol";
 import { ItemIcon } from "../ui/icons";
 import { Landing, routeLeads } from "./Landing";
+import { runOptions, type RunOption, type ShortageEffect } from "./routes";
 import "./river.css";
 import { cargoColor } from "./render";
 
@@ -14,7 +15,9 @@ const lateCutoff = 45;
 const bandLabel = { thriving: "Thriving", healthy: "Healthy", tight: "Tight", dark: "Closed" } as const;
 
 /** Coins at cast-off and on the way home, so the Dock can show what the last run made. */
-export type Voyage = { night: string; start: number; home?: number; units?: number; spent?: number; aim?: string };
+export type Voyage = { night: string; start: number; home?: number; units?: number; spent?: number; aim?: string;
+  /** Shortages this run eased: each stall's stock and pay before the first delivery and after the latest. */
+  effects?: ShortageEffect[] };
 const signed = (value: number) => (value > 0 ? "+" : value < 0 ? "−" : "") + Math.abs(value);
 
 type Props = {
@@ -39,6 +42,9 @@ export function Dock({ snapshot, busy, online, submit, castOff, openStall, close
     .sort((a, b) => Number(!!b.relief) - Number(!!a.relief) || Number(b.payout) - Number(a.payout));
   const mine = snapshot.river.contracts.find(contract => contract.mine);
   const lead = routeLeads(snapshot)[0];
+  const options = runOptions(snapshot);
+  const [picked, setPicked] = useState<string>();
+  const chosen = options.find(option => option.village === picked) ?? options.find(option => option.recommended);
   const hold = Object.entries(snapshot.cargo).filter(([, count]) => Number(count) > 0)
     .map(([item, count]) => ({ item: item as ItemId, count: Number(count) }));
   const steps = snapshot.objective.steps;
@@ -62,6 +68,10 @@ export function Dock({ snapshot, busy, online, submit, castOff, openStall, close
         <span className="eyebrow">THE BARGE · {snapshot.barge.hold}-UNIT HOLD</span>
         {mine ? <p className="dock-lead"><Bell size={15}/> Job: {mine.kind === "escort" ? "escort a rival home" : mine.quantity + " " +
           items[mine.item as ItemId].name.toLowerCase() + " from " + villages[mine.village as VillageId].name} · {mine.payout} coins</p>
+          : chosen ? <div className="dock-routes" role="radiogroup" aria-label="Choose a run">
+            {options.map(option => <RouteChoice key={option.village} option={option} chosen={option === chosen} single={options.length === 1}
+              pick={() => setPicked(option.village)}/>)}
+          </div>
           : lead ? <p className="dock-lead"><i style={{ background: cargoColor[lead.item] }}/> Best run: <b>{items[lead.item as ItemId].name}</b> from {lead.port} at {lead.buy}
             <ArrowRight size={13}/> {merchants[lead.stall as StallId].name} pays {lead.sell}</p>
           : <p className="dock-lead">{contracts.length ? "Every stall is stocked. Take a Harbor Bell job, or hunt pirates for bounties."
@@ -73,8 +83,8 @@ export function Dock({ snapshot, busy, online, submit, castOff, openStall, close
           <small>{trimsUnlocked ? bargeTrims[trim].description : "Trims unlock on Night 3."}</small>
         </label>
         <button className="primary wide dock-castoff" disabled={busy || !canCast || snapshot.spectator}
-          onClick={() => castOff({ type: "start_run", barge_plan: [], trim }, mine ? undefined : lead?.village)}>
-          <Anchor size={18}/> Cast off {mine ? "for " + villages[mine.village as VillageId].name : ""}</button>
+          onClick={() => castOff({ type: "start_run", barge_plan: [], trim }, mine ? undefined : chosen?.village ?? lead?.village)}>
+          <Anchor size={18}/> Cast off {mine ? "for " + villages[mine.village as VillageId].name : chosen ? "for " + chosen.port : ""}</button>
         {!canCast && <p className="hint">{floodClosed ? "Floodtide has closed the river until the next dusk."
           : snapshot.phase === "results" ? "The river is closed until the next evening." : "Too late to cast off tonight."}</p>}
         {canCast && <p className="hint">{online ? "The Row keeps trading while you're upriver."
@@ -156,6 +166,15 @@ function LastRun({ voyage, coins, hold, snapshot }: { voyage: Voyage; coins: num
     </div>
     <p className="hint">{voyage.units} goods brought home for {voyage.spent} coins upriver.
       {worth > 0 ? " Your hold is worth about " + worth + " more at today's prices." : ""}</p>
+    {!!voyage.effects?.length && <ul className="dock-effects" aria-label="What your haul changed">
+      {voyage.effects.slice(0, 3).map(effect => <li key={effect.stall + effect.item} className={effect.relit ? "relit" : ""}>
+        <strong>{merchants[effect.stall as StallId].name}{effect.relit ? " is lit again" : ""}</strong>
+        <span>{items[effect.item as ItemId].name}: stock {effect.fromStock} → {effect.toStock} of {effect.target}
+          {effect.toPay !== effect.fromPay ? ` · now pays ${effect.toPay} (was ${effect.fromPay})` : ""}</span>
+        <small>{effect.toStock >= effect.target ? "Shortage filled. The next haul here pays less."
+          : effect.toPay < effect.fromPay ? "Shortage easing. The next haul here pays a little less." : "Still short. Another haul would sell here too."}</small>
+      </li>)}
+    </ul>}
   </div>;
 }
 
@@ -171,4 +190,20 @@ function nextStep(snapshot: Snapshot, holding: boolean, hasJob: boolean, canCast
   if (hasJob && canCast) return "You have a job. Cast off and buy what it needs upriver.";
   if (canCast) return "Cast off, buy cargo upriver where it's cheap, and bring it home.";
   return "Wait for the next evening, or trade with the merchants.";
+}
+
+const dangerWord = (danger: number) => danger >= 4 ? "high" : danger >= 2 ? "some" : "low";
+
+/** One run on the Dock: cargo, village, buyer, the expected profit and the danger on the way, as one choice. */
+function RouteChoice({ option, chosen, single, pick }: { option: RunOption; chosen: boolean; single: boolean; pick: () => void }) {
+  const item = items[option.item as ItemId].name;
+  const tag = single ? "Best run" : option.tag === "safer" ? "Safer run" : "Bigger payout";
+  return <button type="button" role="radio" aria-checked={chosen} className={"dock-route" + (chosen ? " chosen" : "")} onClick={pick}
+    aria-label={`${tag}: ${option.units} ${item} from ${option.port} at ${option.buy}, ${merchants[option.stall as StallId].name} pays ${option.sell}, about ${option.profit} coins profit, danger ${option.danger} of 5${option.boom ? ", boom on the way" : ""}`}>
+    <span className="dock-route-tag">{tag}{option.recommended && !single ? " · recommended" : ""}</span>
+    <span className="dock-route-main"><i style={{ background: cargoColor[option.item] }}/> <b>{option.units} {item.toLowerCase()}</b> from {option.port} at {option.buy}
+      <ArrowRight size={13}/> {merchants[option.stall as StallId].name} pays {option.sell}</span>
+    <span className="dock-route-foot"><b className="dock-route-profit">about +{option.profit} {option.profit === 1 ? "coin" : "coins"}</b>
+      <span className={"dock-route-risk " + dangerWord(option.danger)}><ShieldAlert size={13}/> Danger {option.danger}/5{option.boom ? " · boom across the reach" : ""}</span></span>
+  </button>;
 }

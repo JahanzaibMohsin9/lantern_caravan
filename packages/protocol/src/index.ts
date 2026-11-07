@@ -184,7 +184,8 @@ export interface MarketBackend {
   getSnapshot(sessionId: string): Promise<Snapshot>;
   getQuote(sessionId: string, nightId: string, intent: Intent): Promise<Quote>;
   haggle(sessionId: string, nightId: string, offer: HaggleOffer): Promise<HaggleResult>;
-  submitAction(sessionId: string, nightId: string, quoteId: string, actionId: string): Promise<ActionStatus>;
+  /** `label` names the trade for a confirmation that arrives later. */
+  submitAction(sessionId: string, nightId: string, quoteId: string, actionId: string, label?: string): Promise<ActionStatus>;
   getActionStatus(sessionId: string, nightId: string, actionId: string): Promise<ActionStatus>;
   advancePhase(sessionId: string, actionId: string): Promise<Snapshot>;
   getChronicle(roomId: string, cursor?: string): Promise<ChroniclePage>;
@@ -218,11 +219,13 @@ export interface SettlementProvider {
   /** Settles whatever differs between the room's ledger and the chain. */
   reconcile?(roomId: string, ledger: Record<string, Record<string, number>>): Promise<unknown>;
 }
-export type ActionLogEntry = PreparedAction & { status: ActionStatus };
+export type ActionLogEntry = PreparedAction & { status: ActionStatus; /** When the action resolved (newer entries only). */ at?: number };
 export interface StateStore<WorldState> {
   load(roomId: string): Promise<{ state: WorldState; revision: number } | null>;
   save(roomId: string, state: WorldState, expectedRevision: number): Promise<number>;
   appendActionLog(entry: ActionLogEntry): Promise<void>;
+  /** The most recent action log entries, newest first. */
+  recentActions?(roomId: string, limit: number): Promise<ActionLogEntry[]>;
   appendHistory(roomId: string, rows: HistoryRow[]): Promise<void>;
   appendChronicle(roomId: string, entries: ChronicleEntry[]): Promise<void>;
   queryHistory(roomId: string, range: HistoryRange): Promise<HistoryRow[]>;

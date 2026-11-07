@@ -171,6 +171,19 @@
 .dock-next { margin: 0; display: flex; gap: 7px; align-items: center; color: #f3e3cf; font-weight: 600; }
 .dock-lead { margin: 0; display: flex; flex-wrap: wrap; align-items: center; gap: 6px; color: #f0e2d2; }
 .dock-lead i { width: 10px; height: 10px; border-radius: 3px; }
+.dock-routes { display: grid; gap: 8px; }
+.dock-route { display: grid; gap: 4px; text-align: left; padding: 10px 12px; border-radius: 10px; background: rgba(255, 255, 255, .03);
+  border: 1px solid #4a3a4c; color: #f0e2d2; cursor: pointer; font: inherit; }
+.dock-route:hover { border-color: #8a6a5a; }
+.dock-route.chosen { border-color: #f0b17f; background: rgba(240, 177, 127, .09); box-shadow: inset 3px 0 0 #f0b17f; }
+.dock-route-tag { font-size: .68rem; font-weight: 800; letter-spacing: .14em; text-transform: uppercase; color: #f0b17f; }
+.dock-route-main { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; }
+.dock-route-main i { width: 10px; height: 10px; border-radius: 3px; }
+.dock-route-foot { display: flex; flex-wrap: wrap; align-items: center; gap: 12px; font-size: .86rem; }
+.dock-route-profit { color: #9fe0b0; }
+.dock-route-risk { display: inline-flex; align-items: center; gap: 4px; color: #cdb8c4; }
+.dock-route-risk.some { color: #f0c27f; }
+.dock-route-risk.high { color: #ff9a8a; }
 .dock-trim { display: grid; grid-template-columns: auto 1fr; gap: 4px 10px; align-items: center; font-size: .88rem; }
 .dock-trim small { grid-column: 1 / -1; color: var(--muted); }
 .dock-trim select { padding: 6px 8px; border-radius: 8px; font: inherit; }
@@ -203,3 +216,9 @@
 .dock-voyage-row small { font-size: 11px; color: #b9a7b4; }
 .dock-voyage-row .gain b { color: #9fe0b0; }
 .dock-voyage-row .loss b { color: #ffb3a8; }
+.dock-effects { list-style: none; margin: 8px 0 0; padding: 0; display: grid; gap: 6px; }
+.dock-effects li { display: grid; gap: 2px; padding: 8px 10px; border-radius: 8px; background: rgba(255, 255, 255, .03); border-left: 3px solid #8fcf9a; }
+.dock-effects li.relit { border-left-color: #f0b17f; background: rgba(240, 177, 127, .08); }
+.dock-effects strong { color: #fff1df; }
+.dock-effects span { color: #f0e2d2; font-size: .9rem; }
+.dock-effects small { color: #b9a5b4; }

@@ -1,5 +1,7 @@
 import { randomUUID } from "node:crypto";
-import { items } from "@lantern/content";
+import { items, merchants, type StallId } from "@lantern/content";
+import { villages, type VillageId } from "@lantern/content/river";
+import { rivalNames } from "@lantern/content/nights";
 import { verifyRunReport } from "@lantern/river-sim/report";
 import { addActivity, addTrader, cancelRun, InvalidRun, advanceClock, commitFor, createWorld, isRiverIntent, newNight, nightId, nowAt, openNight,
   quoteFor, recordAction, snapshotFor, validateQuote, type World } from "@lantern/game-core";
@@ -216,7 +218,7 @@ export class LiveMarket {
       return;
     }
     try {
-      await this.store.appendActionLog({ ...prepared, status });
+      await this.store.appendActionLog({ ...prepared, status, at: Date.now() });
       await this.chronicle(room, before, Date.now());
       if (status.state === "confirmed") await this.history(room, Date.now());
     } catch (error) { console.error("Action settled, journal append failed", shortError(error)); }
@@ -260,6 +262,32 @@ export class LiveMarket {
     await this.persist(room);
     await this.chronicle(room, before, time);
     if (before.tickAt !== room.world.tickAt || before.phase !== room.world.phase) await this.history(room, time);
+  }
+
+  /**
+   * Public proof for judges and players: the latest confirmed player actions with a chain receipt, each leg mapped to its
+   * on-chain holder and a readable name. Read from the action log, so it needs no sign-in.
+   */
+  async receiptsPage(roomId: string, holder: (account: string) => string, limit = 12) {
+    const room = await this.load(roomId);
+    const entries = (await this.store.recentActions?.(roomId, 400)) ?? [];
+    const name = (account: string) => {
+      const [prefix, id = ""] = account.split(":");
+      if (prefix === "p") return room.world.traders[account]?.name ?? "A captain";
+      if (prefix === "m") return merchants[id as StallId] ? merchants[id as StallId].keeper + " · " + merchants[id as StallId].name : id;
+      if (prefix === "v") return villages[id as VillageId]?.name ?? id;
+      if (prefix === "r") return rivalNames[account as keyof typeof rivalNames] ?? "Rival hauler";
+      return "The harbor";
+    };
+    const receipts = entries.filter(entry => entry.kind === "player" && entry.status.state === "confirmed" && entry.status.receipt.url)
+      .slice(0, limit).map(entry => ({
+        actionId: entry.actionId, night: entry.nightId, at: entry.at, actor: name(entry.actorId), intent: entry.intent,
+        url: entry.status.state === "confirmed" ? entry.status.receipt.url : undefined,
+        legs: entry.effects.map(effect => ({ op: effect.op, asset: effect.asset, amount: effect.amount,
+          from: effect.op === "mint" ? undefined : { name: name(effect.from), account: holder(effect.from) },
+          to: effect.op === "burn" ? undefined : { name: name(effect.to), account: holder(effect.to) } })),
+      }));
+    return { receipts };
   }
 
   async snapshot(roomId: string, actor = "") {

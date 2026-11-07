@@ -94,6 +94,9 @@ export async function playCampaign(page: Page) {
   await expect(dock.getByText("River run 1/1")).toBeVisible();
   await capture("dock-haul");
   await sellHaul();
+  // The Last run card says which shortage the haul eased.
+  await expect(dock.getByLabel("What your haul changed")).toContainText("Oil Wharf");
+  await capture("dock-effects");
   await closeNight();
   await button("Next night").click();
 
@@ -105,6 +108,8 @@ export async function playCampaign(page: Page) {
   await emberFalls(5);
   await moor();
   await expect(page.getByText("Oil Wharf relit!")).toBeVisible();
+  await expect(dock.getByLabel("What your haul changed")).toContainText("Oil Wharf is lit again");
+  await capture("dock-relit");
   await expect(dock.getByRole("heading", { name: "Night complete" })).toBeVisible();
   await closeNight();
   await button("Next night").click();

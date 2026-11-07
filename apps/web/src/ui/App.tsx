@@ -2,8 +2,7 @@ import { useEffect, useRef, useState } from "react";
 import {
   ExternalLink,
   Anchor, ArrowRight, BookOpen, Check, ChevronRight, CircleAlert, Clock3, Coins, Compass, MoonStar,
-  Activity, ChartNoAxesCombined, Eye, Globe2, Package, Pause, Play, Settings2, Sparkles, Users, Volume2, VolumeX, Waves,
-} from "lucide-react";
+  Activity, ChartNoAxesCombined, Eye, Globe2, Package, Pause, Play, Settings2, Sparkles, Users, Volume2, VolumeX, Waves, ShieldCheck } from "lucide-react";
 import { merchants, type ItemId, type StallId } from "@lantern/content";
 import type { HaggleOffer, Intent, ProfileSummary, Quote, RunReport, Snapshot } from "@lantern/protocol";
 import { backend, devAuth, guest, live, liveDefault, publicView } from "../config";
@@ -19,6 +18,9 @@ import { RiverStrip } from "../river/RiverStrip";
 import { MarketHistoryPanel, Rooms, Simulator } from "./MarketExtras";
 import { Landing } from "../river/Landing";
 import { Dock, type Voyage } from "../river/Dock";
+import { deliveryEffects, mergeEffects } from "../river/routes";
+import { describeTrade } from "./describe";
+import { VerifyPanel } from "./Verify";
 import { RiverRun } from "../river/RiverRun";
 
 const tell = (error: unknown) => error instanceof Error ? error.message : "Please try again.";
@@ -331,17 +333,24 @@ export function App() {
   async function settle(quote: Quote) {
     const session = active.current;
     const before = session.view();
-    const status = await session.submitAction(snapshot.session_id, snapshot.night_id, quote.quote_id, id());
+    const label = describeTrade(quote.intent, quote.effects) ?? quote.summary;
+    const status = await session.submitAction(snapshot.session_id, snapshot.night_id, quote.quote_id, id(), label);
     if (status.state === "pending" || status.state === "unknown") { notify("Confirming…"); return true; }
     if (status.state !== "confirmed") throw new Error(status.reason ?? "This action could not settle.");
     const after = session.view();
     const lit = after.orders.filter(order => order.state === "filled").length > before.orders.filter(order => order.state === "filled").length;
     const relit = Object.entries(after.merchants).find(([stall, merchant]) =>
       merchant.band !== "dark" && before.merchants[stall]?.band === "dark");
+    // Sales and deliveries during a run: remember which shortages they eased, for the Dock's Last run card.
+    if (quote.intent.type === "sell" || quote.intent.type === "finish_run") {
+      const eased = deliveryEffects(before, after);
+      if (eased.length) setVoyage(previous => previous && previous.night === snapshot.night_id
+        ? { ...previous, effects: mergeEffects(previous.effects, eased) } : previous);
+    }
     const effect = relit || lit ? undefined : effects[quote.intent.type];
     if (effect) feedback(effect);
     // On the public Row every confirmed action is a NEAR testnet transaction; link it.
-    notify(relit ? merchants[relit[0] as StallId].name + " relit!" : lit ? "A boat is lit!" : quote.summary, false, status.receipt?.url);
+    notify(relit ? merchants[relit[0] as StallId].name + " relit!" : lit ? "A boat is lit!" : label, false, status.receipt?.url);
     return true;
   }
 
@@ -438,6 +447,7 @@ export function App() {
           <button disabled={busy} onClick={() => void enterLive("the-row", "watch")}><Eye size={15}/> Watch</button>
           <button onClick={() => setPanel("history")}><ChartNoAxesCombined size={15}/> History</button>
           <button onClick={() => setPanel("simulator")}><Activity size={15}/> Simulator</button>
+          <button onClick={() => setPanel("verify")}><ShieldCheck size={15}/> Verify on NEAR</button>
         </div>
       </div>}
 
@@ -484,6 +494,9 @@ export function App() {
       </PanelFrame>}
       {panel === "history" && <PanelFrame title="Market History" eyebrow="CHRONICLE" icon={<ChartNoAxesCombined size={24}/>} onClose={close}>
         <MarketHistoryPanel backend={live} room={online ? snapshot.session_id : "the-row"}/>
+      </PanelFrame>}
+      {panel === "verify" && <PanelFrame title="Verify on NEAR" eyebrow="PUBLIC PROOF" icon={<ShieldCheck size={24}/>} onClose={close}>
+        <VerifyPanel backend={publicView}/>
       </PanelFrame>}
       {panel === "simulator" && <PanelFrame title="Market Simulator" eyebrow="RIVALS ONLY" icon={<Activity size={24}/>} onClose={close}><Simulator/></PanelFrame>}
       {panel === "profiles" && <PanelFrame title="Profiles" eyebrow="LOCAL SAVES" icon={<Users size={24}/>} onClose={close}>

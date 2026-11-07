@@ -49,6 +49,15 @@ test("watch and history open without sign-in", async ({ page }) => {
   await expect(page.getByText("Chronicle", { exact: true }).last()).toBeVisible();
 });
 
+test("Verify on NEAR opens from the title without sign-in", async ({ page }) => {
+  await page.goto("/");
+  await page.getByRole("button", { name: "Verify on NEAR" }).click();
+  await expect(page.getByRole("heading", { name: "Verify on NEAR" })).toBeVisible();
+  await expect(page.getByText("RECENT PLAYER TRADES")).toBeVisible();
+  // The test server settles locally, so there are no chain receipts to list.
+  await expect(page.getByText("No player trades yet.", { exact: false })).toBeVisible();
+});
+
 
 test("an unsigned watcher sees a departing barge, village history and reach danger", async ({ browser }) => {
   test.setTimeout(90000);

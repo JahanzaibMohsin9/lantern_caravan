@@ -169,6 +169,14 @@ export class NearSettlementProvider implements SettlementProvider {
     return missing;
   }
 
+  /** The on-chain holder for a game account (merchants and villages are their own sub-accounts). */
+  holder(account: string) {
+    try { return chainHolder(account, this.accounts); } catch { return account; }
+  }
+
+  /** Every agent account with its game role, for the public Verify view. */
+  agents() { return agentAccounts(this.accounts); }
+
   info(): ChainStatus {
     const last = this.state.last;
     return { enabled: true, network: "testnet", contract: this.chain.contractId, operator: this.chain.operatorId,

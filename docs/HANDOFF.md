@@ -1,5 +1,18 @@
 # Lantern Caravan handoff
 
+## Proof one click away · 8 November 2026
+
+- **Named trades.** `describeTrade` (`apps/web/src/ui/describe.ts`) turns a quote into "Sold 2 lamp oil to Paper Mill for 14 coins". The confirmation toast uses it, and a trade that confirms later on the public Row keeps the label in its pending record, so the late toast says the same thing with its **Settled on NEAR** link.
+- **Verify on NEAR** (title screen, `apps/web/src/ui/Verify.tsx`, no sign-in): the contract and queue, the latest player trades with both legs, the holders' NEAR accounts and transaction links, and the agent accounts. It reads `GET /v1/public/receipts`, which `LiveMarket.receiptsPage` builds from the action log (`FileStateStore.recentActions`), mapping each leg to its chain holder through `NearSettlementProvider.holder`. New log entries carry `at`.
+- Tests: `public receipts` in `tests/live.test.ts`; the Verify panel opens without sign-in in `tests/e2e/live.spec.ts`.
+
+## Dock run card · 8 November 2026
+
+- **One card per run** (`runOptions` in `apps/web/src/river/routes.ts`, shown by `RouteChoice` in `Dock.tsx`): cargo and quantity, village and buy price, buyer and what it pays, expected profit, and the worst danger and any boom on the route. Quantity is the smallest of the hold, what the captain can afford, the village's stock and the buyer's shortage.
+- **A real choice when routes differ.** Beside the recommended run (the existing risk-weighted `routeLeads` score), the Dock offers either a **Bigger payout** with more danger or a **Safer run** with less profit. The chosen run sets the **Cast off for <village>** button and the river's aim. Night 1 shows a single "Best run", since its routes are equally calm.
+- `tests/dock-routes.test.ts` covers Night 1's single run, the two-option case and the nothing-to-offer case.
+- **What your haul changed** (Last run card): `deliveryEffects` compares the market before and after each confirmed sale or delivery during a run, and `mergeEffects` keeps each stall's first and latest stock and pay. The card lists up to three, e.g. "Oil Wharf · Lamp oil: stock 2 → 9 of 12 · now pays 5 (was 6)", and says when a stall is lit again. Runs worth under 3 coins are not offered. The campaign e2e asserts both the Night 1 sale and the Night 2 relight.
+
 ## Social login with Privy · 7 November 2026
 
 - **Sign in with Google or email** (Live market panel) loads `apps/web/src/auth/PrivySignIn.tsx` lazily, so Privy's SDK stays out of the main bundle. After Privy's login it creates a NEAR embedded wallet (`useCreateWallet({ chainType: "near" })`) if the user has none, waits for the identity token to list it, then posts the token and display name to `/v1/auth/privy`.

@@ -291,3 +291,37 @@ test.each(["kills", "cargo", "hash", "missing", "log", "frame", "duration", "ext
   expect([...Object.keys(items), "coin"].map(asset => supply(afterWorld, asset))).toEqual(before);
   expect((await market.snapshot(room, "p:a")).coins).toBe(initial.coins);
 });
+
+describe("public receipts", () => {
+  test("a confirmed trade is listed with both legs, readable names and its chain link", async () => {
+    vi.useFakeTimers({ toFake: ["Date"] });
+    const { dir, store } = await makeStore();
+    const dev = new DevSettlementProvider(dir);
+    // Like the NEAR provider, a confirmed action carries an explorer link.
+    const settlement = { ...dev, prepare: dev.prepare.bind(dev), submit: dev.submit.bind(dev),
+      status: async (id: string) => {
+        const status = await dev.status(id);
+        return status.state === "confirmed" ? { ...status, receipt: { id: "tx-" + id, label: "NEAR testnet transaction", url: "https://example.test/tx/" + id } } : status;
+      } };
+    vi.stubEnv("LANTERN_PREP_SECONDS", "1");
+    const market = new LiveMarket(store, settlement);
+    const room = "proof";
+    await market.load(room, true);
+    await market.join(room, { playerId: "a", displayName: "Ari" }, false);
+    vi.setSystemTime(Date.now() + 1100);
+    await market.updateAll();
+    const view = await market.snapshot(room, "p:a");
+    const [stall, item] = Object.entries(view.merchants).flatMap(([id, merchant]) =>
+      Object.keys(merchant.prices).filter(good => Number(merchant.stock[good]) > 0).map(good => [id, good] as const))[0]!;
+    const deal = await market.getQuote(room, "p:a", view.night_id, { type: "buy", stall_id: stall, item_id: item, quantity: "1" });
+    expect((await market.submit(room, "p:a", view.night_id, deal.quote_id, "proof-1")).state).toBe("confirmed");
+    const page = await market.receiptsPage(room, account => account === "p:a" ? "ari.players.test" : account);
+    expect(page.receipts).toHaveLength(1);
+    const [receipt] = page.receipts;
+    expect(receipt).toMatchObject({ actor: "Ari", url: expect.stringContaining("https://example.test/tx/"), intent: { type: "buy", stall_id: stall } });
+    expect(receipt!.at).toBeTypeOf("number");
+    const goods = receipt!.legs.find(leg => leg.asset === item)!;
+    expect(goods.to).toEqual({ name: "Ari", account: "ari.players.test" });
+    expect(goods.from!.name).toContain("·");
+  });
+});

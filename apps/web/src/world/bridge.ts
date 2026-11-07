@@ -12,7 +12,7 @@ export const stops = [
 ] as const;
 
 export type Stop = typeof stops[number]["id"];
-export type Panel = Stop | "inventory" | "settings" | "pause" | "journal" | "profiles" | "rooms" | "history" | "simulator";
+export type Panel = Stop | "inventory" | "settings" | "pause" | "journal" | "profiles" | "rooms" | "history" | "simulator" | "verify";
 export type Effect = "buy" | "sell" | "craft" | "deliver" | "boat" | "deal" | "refuse" | "relit" | "finale";
 
 type Events = {

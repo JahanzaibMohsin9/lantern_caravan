@@ -67,6 +67,15 @@ export class FileStateStore<T> implements StateStore<T> {
   }
 
   async appendActionLog(entry: ActionLogEntry) { await this.append(entry.roomId, "actions-{room}.ndjson", [entry]); }
+
+  async recentActions(roomId: string, limit: number) {
+    const recent: ActionLogEntry[] = [];
+    for await (const entry of this.lines<ActionLogEntry>(roomId, "actions-{room}.ndjson")) {
+      recent.push(entry);
+      if (recent.length > limit) recent.shift();
+    }
+    return recent.reverse();
+  }
   async appendHistory(roomId: string, rows: HistoryRow[]) { await this.append(roomId, "history-{room}.ndjson", rows); }
   async appendChronicle(roomId: string, entries: ChronicleEntry[]) { await this.append(roomId, "chronicle-{room}.ndjson", entries); }
 

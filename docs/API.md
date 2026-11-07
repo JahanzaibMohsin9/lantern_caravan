@@ -22,6 +22,7 @@ Replies echo `version` and `request_id`. A success has `ok: true`, a `result`, a
 | Endpoint | Access |
 | --- | --- |
 | `POST /v1/auth/dev` with `{ "displayName": "Ari" }` | Public dev sign-in, returns `credential` and `player` |
+| `GET /v1/public/receipts` | Public proof for the Row: `chain` (as `/v1/chain/status`), `agents` (their NEAR accounts) and `receipts`, the latest confirmed player actions with a chain link, each with `actor`, `intent`, `url`, `at` and `legs` (`asset`, `amount`, `from`/`to` as `{ name, account }` on-chain holders) |
 | `POST /v1/auth/privy` with `{ "identityToken": "<Privy identity token>", "displayName": "Ari" }` | Social login: verifies the Privy token and returns `credential` and `player`, with `player.nearAccount` when the token lists a NEAR wallet. `401 AUTH_REQUIRED` for an invalid token |
 | `GET /v1/health` | Versions and uptime |
 | `GET /v1/public/snapshot` | Public spectator view |
