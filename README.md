@@ -1,8 +1,8 @@
 # Lantern Caravan
 
-A night market where every merchant is an AI-run business, and you can own a piece of it. The market is **Lantern Row**; the game is **Lantern Caravan**. The planned Night 4 Floodtide procession of six festival boats is **the Lantern Caravan**.
+A river trading game. Run a barge upriver, buy cargo where it's cheap, fight off pirates, and sell it to the merchants of **Lantern Row**, a night market where every merchant is an AI-run business with its own purse. The game is **Lantern Caravan**; the market is **Lantern Row**.
 
-![Festival boats lighting up in Lantern Row](docs/media/first-light.gif)
+![The barge on Ember Cut, about to trade at Ember Falls](docs/media/river-run.png)
 
 ## Play
 
@@ -13,31 +13,42 @@ npm ci
 npm run dev
 ```
 
-Open the URL Vite prints. In **First Light**, your cart starts with two paper and two oil. Visit the Workshop, craft lanterns, then deliver them at the Order Board. Deliver three lanterns to unlock **The Dark Wharf**. Night 3, **Pirates on the Reach**, asks you to break the Marsh Bend boom, fill a contract or escort, and deliver two colored lanterns. Night 4 is the **Festival of Lights**: light all six boats, then carry your cart and shares into Endless.
+Open the URL Vite prints and press **Start**. You arrive at **the Dock**: tonight's goal, a hint for the next step, one **Cast off** button, the Harbor Bell's jobs, your hold, and the Row's merchants. The loop is simple:
 
-Click a location or use **1–8** to walk there. **A/D** or **←/→** walks manually, **E** interacts, **I** opens the cart, **J** opens the journal, **H** opens history, and **Esc** closes or pauses. Hover an ingredient for its name or click it to find a stall. A local save is automatic.
+1. **Cast off.** The Dock suggests the best run: which village sells a good cheap and which merchant is short of it.
+2. **Upriver**, buy cargo at a village, fight off pirates, and race the clock home.
+3. **Sell your haul** from the Dock. A merchant short of a good pays you its full asking price, up to three times the base price when it's scarce. Click a merchant's card for the full trade panel and shares.
 
-From Night 2 onward, visit **The Landing** to cast off on a River Run, before the market opens or during the night. The **Harbor Bell** lists supply contracts, escorts and relief hauls: on The Dark Wharf, haul oil from Ember Falls to relight the wharf, or pledge shares to rescue it. Upriver, buy freely at any village, fight off pirates and armored gunboats, break toll booms, and collect floating fuel, shot and repair barrels. Moor at The Landing to settle, then sell your haul on the Row or use it at the Workshop. Leaving during the night costs night time; shared rooms keep trading while you're away.
+The campaign is four river nights:
 
-On the river, **WASD** or **arrows** steer, **Shift** boosts, **Space** fires at the nearest threat, and the **mouse** aims and fires manually. **E** trades, moors, salvages a wreck or visits a riverside stop, **Q** spends one oil on a flare, **M** opens the map, **J** opens the Harbor Bell, and **Esc** pauses outside shared rooms. On touchscreens, use the steering stick and the fire, boost and flare buttons. Each run has a 2:30 timer, shorter when you leave late in the night.
+| Night | Goal |
+| --- | --- |
+| 1 · First Light | **Your first haul**: one run and six goods sold to the Row. |
+| 2 · The Dark Wharf | **Relight the wharf**: accept the Harbor Bell's relief job and haul oil from Ember Falls. |
+| 3 · Pirates on the Reach | **Clear the reach**: break the Marsh Bend boom and deliver a contract. |
+| 4 · Festival of Lights | **Ride the Floodtide**: get home through both lock gates when the river rises, and sell eight goods. |
 
-At The Landing's **Barge** tab, choose Balanced, Runner, Ironclad or Gunner trim. Switching is free and takes effect when you cast off; the HUD names your trim. Trims unlock on campaign Night 3 and are always available in Endless and live rooms.
+Endless nights and live rooms ask you to **keep the Row supplied**: two runs and twelve goods sold. A local save is automatic. **J** opens the journal, **H** the market history, and **Esc** pauses.
 
-The Barge tab also previews your upgrades and **paint, bow lantern and prow figure**. Upgrades add deck crates, iron bands and plating, larger cannons and twin barrels, extra stacks and a stern paddle wheel. Paid finishes fund harbor relief; once bought, they stay yours across nights and refit free. Finishes change appearance only.
+On the river, **WASD** or **arrows** steer, **Shift** boosts, **Space** fires at the nearest threat, and the **mouse** aims and fires manually. **E** trades, moors, salvages a wreck or visits a riverside stop, **Q** spends one oil on a flare, **M** opens the map, **J** opens the Harbor Bell, and **Esc** pauses outside shared rooms. On touchscreens, use the steering stick and the fire, boost and flare buttons. Each run has a 2:30 timer, shorter when you leave late in the night. Leaving during the night costs night time; shared rooms keep trading while you're away.
 
-Gold **skiffs** ram your barge and spill cargo: recover it within 20 seconds. Coral **raiders** patrol at medium range; purple **gunboats** fire twin shots from farther away. Bounties are 6, 8 and 14 coins respectively, while the harbor fund lasts.
+The **Harbor Bell** lists supply contracts, escorts and relief hauls: guaranteed pay for a delivery. Choose Balanced, Runner, Ironclad or Gunner **trim** on the Dock before you cast off; trims unlock on campaign Night 3 and are always available in Endless and live rooms.
 
-You can also **post a Bell order** at The Landing: name a village good, how many and what you'll pay per unit. Your coins wait at the Harbor Bell, and the rival haulers, each with their own purse, decide whether the job is worth the trip. They're paid per unit delivered to you; whatever is left comes back when the night ends.
+The Dock's drawer (**Barge, upriver prices, wrecks and orders**) holds the rest:
 
-On festival nights the final boat opens **Floodtide**. If you're upriver when it starts, the river rises and you have 60 seconds to sail through both lock gates and moor at The Landing. Make it and a supply contract pays its premium twice; miss it and the village you bought from takes the cargo back at its buyback price. The Landing shows when Floodtide opens, and no barge leaves once it has.
+- **Barge upgrades and finishes.** Upgrades add deck crates, iron bands and plating, larger cannons and twin barrels, extra stacks and a stern paddle wheel. Paint, bow lantern and prow figure change appearance only; paid finishes fund harbor relief.
+- **Upriver prices** at each village, with the trusted-hauler discount once you've earned it.
+- **The harbor almanac**, which warns of village events a night ahead: an oil glut or a pressing strike at Ember Falls, a mill flood at Millbrook, a dye bloom or reed blight at Reedmarsh. Merchants read it too and restock early.
+- **Wrecks.** Hauls that pirates sink keep their cargo in the water and open for salvage at the next dusk, for two nights.
+- **Bell orders** (live rooms and Endless): name a village good, how many and what you'll pay. Your coins wait at the bell, and rival haulers, each with their own purse, decide whether the job is worth the trip.
 
-The **harbor almanac** at The Landing warns of village events a night before they happen: an oil glut or a pressing strike at Ember Falls, a mill flood at Millbrook, a dye bloom or reed blight at Reedmarsh. Merchants read it too and restock early before a shortage.
+Gold **skiffs** ram your barge and spill cargo: recover it within 20 seconds. Coral **raiders** patrol at medium range; purple **gunboats** fire twin shots from farther away. Bounties are 6, 8 and 14 coins, while the harbor fund lasts. Two or three optional **riverside stops** appear on each run (a stranded fisher, a lock keeper's shed, an overturned punt), each offering one choice of hull, fuel or ammo.
 
-Hauls that pirates sink become **wrecks**: their cargo stays in the water and opens for salvage at the next dusk, for two nights, before the river takes it. The Landing lists every wreck. Two or three optional **riverside stops** appear on each run (a stranded fisher, a lock keeper's shed, an overturned punt), each offering one choice of hull, fuel or ammo.
+On festival nights the river rises in a **Floodtide**. If you're upriver when it starts, you have 60 seconds to sail through both lock gates and moor at The Landing. Make it and a supply contract pays its premium twice; miss it and the village you bought from takes the cargo back at its buyback price.
 
-| First Light | The Dark Wharf | Festival of Lights |
+| The Dock | Home with a haul | Campaign complete |
 | --- | --- | --- |
-| ![The title over the riverside market](docs/media/the-row.png) | ![The closed Oil Wharf and rescue offering](docs/media/dark-wharf.png) | ![The completed festival](docs/media/festival.png) |
+| ![The Dock on Night 1: tonight's goal, Cast off, jobs and merchants](docs/media/dock.png) | ![Back at the Dock with twelve lamp oil to sell](docs/media/dock-haul.png) | ![The campaign's ending](docs/media/festival.png) |
 
 ## Live market and tests
 

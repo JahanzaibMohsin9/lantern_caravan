@@ -98,7 +98,6 @@ export function NightReport({ snapshot, busy, advance, retry, title, live }: {
   const complete = snapshot.objective.complete;
   const finale = snapshot.mode === "campaign" && snapshot.night === 4 && complete;
   const dividends = Object.entries(snapshot.merchants).filter(([, merchant]) => Number(merchant.dividend));
-  const boats = snapshot.orders.filter(order => order.state === "filled").length;
   const canContinue = complete || snapshot.mode === "endless";
   return <div className={`result-shade ${finale ? "festival-finale" : ""}`}>
     <section className="results preparation" aria-label="Night results">
@@ -106,8 +105,8 @@ export function NightReport({ snapshot, busy, advance, retry, title, live }: {
       <div className="eyebrow">{finale ? "CAMPAIGN COMPLETE" : nightLabel(snapshot.night) + " · RESULTS"}</div>
       <h2>{finale ? "Master of the Row" : complete ? snapshot.nightName : "The Row is closing"}</h2>
       <div className="result-metrics">
-        <div><Ship size={19}/><b>{boats} / 6</b><small>Boats lit</small></div>
-        <div><LanternMark size={23}/><b>{finale ? snapshot.lifetimeCrafted : snapshot.delivered}</b><small>{finale ? "Crafted" : "Delivered"}</small></div>
+        {/* Tonight's river goals, as the Dock showed them. */}
+        {snapshot.objective.steps.slice(0, 2).map(step => <div key={step.label}><Ship size={19}/><b>{step.count} / {step.target}</b><small>{step.label}</small></div>)}
         <div><Coins size={19}/><b>{snapshot.coins}</b><small>Coins</small></div>
       </div>
       {dividends.length > 0 && <div className="prep-list">
@@ -117,7 +116,7 @@ export function NightReport({ snapshot, busy, advance, retry, title, live }: {
       </div>}
       <div className="result-details"><span>Earned <b>{snapshot.earned}</b></span><span>Spent <b>{snapshot.spent}</b></span>
         {finale && <span>Stalls saved <b>{snapshot.rescued}</b></span>}</div>
-      {finale && <p className="hint"><Sparkles size={14}/> {snapshot.orders.flatMap(order => order.wishes)[0] ?? "Your light will carry downriver."}</p>}
+      {finale && <p className="hint"><Sparkles size={14}/> Four nights on the river, and the Row is supplied.</p>}
       <div className="button-pair">
         {snapshot.mode === "live" ? <button className="subtle" onClick={title}>Leave the Row</button> : <>
           <button className="primary" onClick={canContinue ? advance : retry} disabled={busy}>

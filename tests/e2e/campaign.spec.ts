@@ -42,10 +42,11 @@ export async function playCampaign(page: Page) {
     await expect(river).toHaveCount(0);
   };
   /** Ember Falls is straight up the river from the Landing. */
-  const emberFalls = async (size: number) => {
+  const emberFalls = async (size: number, shot?: string) => {
     const trade = river.getByRole("button", { name: /Trade at Ember Falls/ });
     await hold(["w", "Shift", " "], () => trade.isVisible());
     await expect(trade).toBeVisible();
+    if (shot) await capture(shot);
     await page.keyboard.press("e");
     await expect(market.getByRole("heading", { name: "Ember Falls" })).toBeVisible();
     await buy("Lamp oil", size);
@@ -88,9 +89,10 @@ export async function playCampaign(page: Page) {
   await expect(dock.getByRole("status")).toContainText("Cast off");
   await capture("dock");
   await castOff();
-  await emberFalls(10);
+  await emberFalls(10, "river-run");
   await moor();
   await expect(dock.getByText("River run 1/1")).toBeVisible();
+  await capture("dock-haul");
   await sellHaul();
   await closeNight();
   await button("Next night").click();
