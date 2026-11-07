@@ -41,7 +41,8 @@ const orderer = "p:sim";
 if (values.orders) world = addTrader(world, orderer, "Sim");
 const orderGoods = ["oil", "paper", "dye", "reed", "cord"];
 let bellOrders = 0, bellRejected = 0;
-const report = { seed, nights, traders: count, closures: 0, rescues: 0, expansions: 0, buybacks: 0, boats: 0, stableNights: 0,
+let dangerSum = 0, boomSum = 0;
+const report = { seed, nights, traders: count, maxedRiverNights: 0, averageDanger: 0, averageBooms: 0, closures: 0, rescues: 0, expansions: 0, buybacks: 0, boats: 0, stableNights: 0,
   priceMin: Infinity, priceMax: 0, merchantCoinMin: Infinity, merchantCoinMax: 0, maxDarkStreak: 0, invariantErrors: 0,
   villageCoinMin: Infinity, villageCoinMax: 0, freightLosses: 0, supplierUnits: 0, invalidGoodsOps: 0,
   strategyWins: { steady: 0, bold: 0, bargain: 0, festival: 0 } };
@@ -88,6 +89,10 @@ for (let night = 1; night <= nights; night++) {
     }
   }
   const view = snapshotFor(world, "sim", "");
+  // River pressure at the close of each night: average danger, booms, and nights with every reach at 5.
+  dangerSum += view.river.reaches.reduce((sum, reach) => sum + reach.danger, 0) / view.river.reaches.length;
+  boomSum += view.river.reaches.filter(reach => reach.boom).length;
+  if (view.river.reaches.every(reach => reach.danger === 5)) report.maxedRiverNights++;
   const merchants = Object.entries(view.merchants);
   const strategies = new Map<keyof typeof report.strategyWins, number[]>();
   for (const [stall, merchant] of merchants) {
@@ -126,6 +131,8 @@ report.invalidGoodsOps = invalidGoodsOps;
 // Goods the simulated player holds at the end: everything haulers delivered for its orders, plus two dock provisions.
 Object.assign(report, { bellOrders, bellRejected, bellGoodsHeld: orderGoods.reduce((sum, item) => sum + (world.ledger[orderer]?.[item] ?? 0), 0) });
 report.invariantErrors += invalidGoodsOps;
+report.averageDanger = Math.round(dangerSum / nights * 100) / 100;
+report.averageBooms = Math.round(boomSum / nights * 100) / 100;
 const json = JSON.stringify(report, null, 2);
 await writeFile(`sim-output/${seed}.json`, json + "\n");
 console.log(json);

@@ -11,9 +11,9 @@ A river trading game. Run a barge upriver, buy cargo where it's cheap, fight off
 Each step says what to do and what you should see. Steps 1 to 6 use the hosted demo; nothing needs a wallet.
 
 1. **Open [lanterncaravan.duckdns.org](https://lanterncaravan.duckdns.org).** You see the Row at night. The footer reads **The Row settles on NEAR testnet · N transactions** and links to the latest one.
-2. **Press Verify on NEAR.** With no sign-in you see the contract and its queue, the latest player trades on the public Row ("Sold 2 lamp oil to Paper Mill for 14 coins") with both token legs, each holder's NEAR account and the transaction, and every agent's own account.
+2. **Press Verify on NEAR.** With no sign-in you see the contract and its queue, the latest player trades on the public Row ("Sold 2 lamp oil to Paper Mill for 14 coins") with both token legs, each holder's NEAR account and the transaction, **Agents at work** (the latest merchant jobs and hauler decisions), and every agent's own account.
 3. **Press Watch.** You see the live public Row, which runs around the clock. Click a stall's name in the bar along the bottom: you see its prices, stock and **Ownership** tab. The **Upriver** strip shows each reach's danger, booms, village cash and the rival haulers on the river.
-4. **Press H (or History).** You see 24-hour and 7-day charts for every stall, village and reach, and the **Chronicle** of the AI agents' decisions, such as "Pell: Hauling 4 oil from Ember Falls to Oil Wharf."
+4. **Press H (or History).** You see 24-hour and 7-day charts for every stall, village and reach, and the **Chronicle** of the AI agents' decisions with their reasons, such as "Juno: Hauling 3 lamp oil from Ember Falls to Paper Mill for its Harbor Bell job. The Harbor Bell pays 24, costs 8 upriver, danger 2."
 5. **Live market → type a display name → Sign in with Google or email → Join The Row.** Privy creates your own NEAR testnet account in the background (no wallet, no seed phrase), and **Your NEAR account** links to it. Plain **Sign in** plays as a guest instead. You arrive at the Dock with a small starting hold. Press a **Sell** button. You see "Confirming…", then the sale in plain words ("Sold 2 lamp oil to Paper Mill for 14 coins") with a **Settled on NEAR** link to that sale's transaction: one `game_settle` call with two NEP-245 `mt_transfer` events, your goods to the merchant's own account (for example `mira.lantern-caravan.testnet`) and coins back to your account.
 6. **Press J (Journal).** Every confirmed action is listed with a **Details** link to its transaction.
 7. **Read a balance from the chain** (NEAR CLI): `near view items.lantern-caravan.testnet mt_balance_of '{"account_id":"mira.lantern-caravan.testnet","token_id":"coin"}'`. You see the Paper Mill merchant's coin balance on chain. Agents' own trades settle before every player action and otherwise about once an hour, so between those it can trail the game by a few coins.
@@ -64,6 +64,18 @@ On festival nights the river rises in a **Floodtide**. If you're upriver when it
 | The Dock | Home with a haul | Campaign complete |
 | --- | --- | --- |
 | ![The Dock on Night 1: tonight's goal, Cast off, jobs and merchants](docs/media/dock.png) | ![Back at the Dock with twelve lamp oil to sell](docs/media/dock-haul.png) | ![The campaign's ending](docs/media/festival.png) |
+
+## The agents
+
+The Row's merchants, rival haulers and villages are agents with their own balances (and their own NEAR accounts on the public Row). They run the economy between players, and every decision goes in the public Chronicle with its reason. One shortage, from the live world:
+
+1. **A merchant posts a funded job.** "Paper Mill rang the Harbor Bell: 3 lamp oil from Ember Falls for 24 coins (stock 1 of 4, 12 extra for the trip and danger 2)." The coins go into the Bell's escrow.
+2. **A hauler decides it's worth it.** "Juno: Hauling 3 lamp oil from Ember Falls to Paper Mill for its Harbor Bell job. The Harbor Bell pays 24, costs 8 upriver, danger 2." Haulers score every job by margin against distance and route danger.
+3. **The others coordinate.** "Ren left Paper Mill's lamp oil job to Juno, who took it first, and is hauling paper for Paper Mill instead." A hauler counts the cargo already on other barges before it sizes a load, so two haulers don't fill the same shortage.
+4. **Delivery and pay.** "Juno delivered 3 lamp oil to Paper Mill and collected the Harbor Bell's 24 coins." The stall's stock rises and its price eases.
+5. **The river changes for everyone.** Safe hauls fend off pirates: "Ren's convoys drove pirates off Heron Reach (danger 2 → 1)." Calmer reaches change which routes the next hauler, or captain, finds worth taking.
+
+The rules live in `packages/game-core/src/river.ts` (`refreshContracts`, `startRivalHaul`, `supplyOptions`, `resolveHaul`, `fendOff`); `tests/agent-chain.test.ts` checks the whole chain on a seeded live world. **Verify on NEAR → Agents at work** shows the latest of these lines.
 
 ## On NEAR
 

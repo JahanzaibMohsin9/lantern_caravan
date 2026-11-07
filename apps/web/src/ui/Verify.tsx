@@ -3,7 +3,8 @@
  * token legs and their transactions, and the agents' own NEAR accounts. Everything links to the explorer.
  */
 import { useEffect, useState } from "react";
-import { ExternalLink, RefreshCw } from "lucide-react";
+import { Bell, ExternalLink, RefreshCw, Ship, Shuffle, Swords } from "lucide-react";
+import type { ChronicleEntry } from "@lantern/protocol";
 import { items, merchants, type ItemId } from "@lantern/content";
 import type { Intent } from "@lantern/protocol";
 import type { HttpBackend, PublicReceipts } from "../backend/http";
@@ -31,14 +32,27 @@ function Account({ party }: { party?: { name: string; account: string } }) {
     {onChain ? <a href={explorer(party.account)} target="_blank" rel="noreferrer">{short(party.account)}</a> : /^(sys|esc|pool):/.test(party.account) ? <small>harbor fund</small> : null}</span>;
 }
 
+/** The Chronicle lines that make up the agent economy: a merchant posts a job, haulers choose, deliver and get paid. */
+const agentKinds = [
+  { test: /rang the Harbor Bell/, icon: Bell, label: "Merchant posts a job" },
+  { test: / left .*’s /, icon: Shuffle, label: "Hauler gives way" },
+  { test: /: Hauling /, icon: Ship, label: "Hauler decides" },
+  { test: /collected the Harbor Bell/, icon: Bell, label: "Hauler paid" },
+  { test: /drove pirates off|abandoned the boom/, icon: Swords, label: "River calmed" },
+];
+
 export function VerifyPanel({ backend }: { backend: HttpBackend }) {
   const [data, setData] = useState<PublicReceipts>();
+  const [agents, setAgents] = useState<ChronicleEntry[]>([]);
   const [error, setError] = useState(false);
   const [refresh, setRefresh] = useState(0);
   useEffect(() => {
     let live = true;
     setError(false);
     void backend.receipts().then(result => { if (live) setData(result); }).catch(() => { if (live) setError(true); });
+    void backend.getChronicle("the-row").then(page => {
+      if (live) setAgents(page.entries.filter(entry => agentKinds.some(kind => kind.test.test(entry.line))).slice(0, 8));
+    }).catch(() => undefined);
     return () => { live = false; };
   }, [backend, refresh]);
   const chain = data?.chain;
@@ -63,6 +77,15 @@ export function VerifyPanel({ backend }: { backend: HttpBackend }) {
         <Account party={leg.from}/> <span aria-hidden="true">→</span> <Account party={leg.to}/>
       </li>)}</ul>
     </article>)}
+    {!!agents.length && <>
+      <span className="eyebrow">AGENTS AT WORK</span>
+      <p className="hint">The AI merchants and haulers trade from their own balances. Each decision is logged with its reason.</p>
+      <ul className="verify-decisions">{agents.map(entry => {
+        const kind = agentKinds.find(candidate => candidate.test.test(entry.line))!;
+        const Icon = kind.icon;
+        return <li key={entry.id}><Icon size={14}/><span><small>{kind.label} · Night {entry.night}</small>{entry.line}</span></li>;
+      })}</ul>
+    </>}
     {!!data?.agents.length && <>
       <span className="eyebrow">AGENT ACCOUNTS</span>
       <ul className="verify-agents">{data.agents.map(account => {

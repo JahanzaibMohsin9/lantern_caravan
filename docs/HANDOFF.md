@@ -1,5 +1,17 @@
 # Lantern Caravan handoff
 
+## The agent chain, with reasons · 8 November 2026
+
+- Merchants log each Harbor Bell job they fund ("Paper Mill rang the Harbor Bell: 3 lamp oil from Ember Falls for 24 coins (stock 1 of 4, …)"). A hauler's choice now states the pay, the cost upriver and the danger. Delivering a job logs the payout.
+- **Swarm coordination is visible.** `startRivalHaul` compares its route with `supplyOptions(..., ignoreTransit = true)`, the run it would have made if no other barge were out and no job taken. If that run is covered by another hauler's cargo or job, it logs who has it and what it hauls instead (about once a night on seed 42). The decisions themselves are unchanged; the soak numbers match.
+- **Verify on NEAR → Agents at work** shows the latest such Chronicle lines. README has a new "The agents" section for the Agent Economy and AI Swarms tracks. `tests/agent-chain.test.ts` checks the chain.
+
+## Rival hauls calm the river · 8 November 2026
+
+- **Problem.** In the live world, danger only rose (one random reach each night, plus freight losses) and only fell when a human sank pirates or broke a boom, so with few human runs every reach sat at 5/5 with a boom. The simulator showed all four reaches at 5 on 477 of 500 nights.
+- **Fix.** `fendOff` in `packages/game-core/src/river.ts`: a rival hauler's haul that arrives safely counts as a kill on the reach it crossed. Every third one lowers the reach's danger by one (the same rule as a captain's kills), and a reach that calms to 1 or less loses its boom. The Chronicle records both ("Pell's convoys drove pirates off Ember Cut (danger 2 → 1).").
+- **Result.** 2000-night soaks for seeds 17, 42, 93, 166 and 271: no night with every reach at 5, average danger 1.9 to 2.4, about 1.5 to 2 booms, max dark streak 1, no invariant errors. `npm run simulate` now reports `maxedRiverNights`, `averageDanger` and `averageBooms`. `tests/river-calm.test.ts` covers the rule.
+
 ## Proof one click away · 8 November 2026
 
 - **Named trades.** `describeTrade` (`apps/web/src/ui/describe.ts`) turns a quote into "Sold 2 lamp oil to Paper Mill for 14 coins". The confirmation toast uses it, and a trade that confirms later on the public Row keeps the label in its pending record, so the late toast says the same thing with its **Settled on NEAR** link.

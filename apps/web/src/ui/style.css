@@ -281,3 +281,7 @@ kbd { font: 750 10px/1 "Manrope Variable", sans-serif; border: 1px solid #574653
 .verify-party small, .verify-agents small { color: #a993a4; }
 .verify-agents li { display: flex; flex-wrap: wrap; align-items: baseline; gap: 6px; font-size: .86rem; }
 .verify-code { display: block; margin-top: 6px; padding: 8px; border-radius: 6px; background: #151420; font-size: .75rem; word-break: break-all; }
+.verify-decisions { list-style: none; margin: 0; padding: 0; display: grid; gap: 6px; }
+.verify-decisions li { display: grid; grid-template-columns: 16px 1fr; gap: 8px; align-items: start; font-size: .86rem; }
+.verify-decisions li > svg { margin-top: 3px; color: #f0b17f; }
+.verify-decisions small { display: block; color: #a993a4; font-weight: 700; letter-spacing: .04em; }

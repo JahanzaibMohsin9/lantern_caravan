@@ -14,6 +14,18 @@ Each checked run used three autonomous traders over 2,000 nights. Run `npm run s
 
 The longest dark streak was one night for every seed. During the review, two seeds exposed a stall that sold out while holding 10–15 coins: it couldn't pay a hauler above its 10-coin reserve, so it stayed closed for up to 11 nights. The harbor's relief contract now pays for that haul, priced so rivals will take it. The checks cover nonnegative integer balances, price bounds, outstanding shares, permitted goods mints and burns, village balances between 20 and 300, danger from 0 to 5, and empty run and contract escrows at close. Supplier units include stall-to-stall wholesale. A lost sailing with several cargo lines can produce several freight loss entries.
 
+### River danger (8 November 2026)
+
+Safe rival hauls now calm the reaches they cross (three per point of danger), so the live river no longer pins at 5/5. Before the change, seed 42 had every reach at danger 5 on 477 of 500 nights. After it, over 2,000 nights:
+
+| Seed | Nights with every reach at 5 | Average danger (0–5) | Average booms (of 4) | Longest dark streak |
+| --- | ---: | ---: | ---: | ---: |
+| 17 | 0 | 2.10 | 1.83 | 1 |
+| 42 | 0 | 2.36 | 2.14 | 1 |
+| 93 | 0 | 2.18 | 1.95 | 1 |
+| 166 | 0 | 1.94 | 1.60 | 1 |
+| 271 | 0 | 1.97 | 1.54 | 1 |
+
 ## Tuned values
 
 W8 trust: two paid supply contracts for the same village earn 10% off that village's purchases for the rest of the campaign/live season. The discount is rounded down to whole coins on the cumulative total for each good per run; incremental purchases pay differences between those totals. This avoids extra savings from splitting a batch. The discount replaces the existing one-coin discount on batches of four for trusted buyers, and reduces the real payment to the village. There is no mint, subsidy or changed harvest/contract payout. Failed deliveries and other players' contracts do not count. The rule tests complete and replay two voyages, then replay a discounted voyage and assert asset conservation. The soak's autonomous hauls do not use player contract trust; its bounds remain a regression check on the shared economy.

@@ -382,6 +382,9 @@ export function refreshContracts(world: World) {
       const payout = qty * normal(stall, item) + premium;
       if (cash - payout < Math.max(10, reserve)) continue;
       state = postContract(state, { village: id, item, qty, payout, payer, stall, deadline: plan(world).duration, kind: "supply" });
+      if (!ahead) state = addActivity(state, merchants[stall].name + " rang the Harbor Bell: " + qty + " " + items[item].name.toLowerCase() +
+        " from " + villages[id].name + " for " + payout + " coins (stock " + stock + " of " + target + ", " + premium +
+        " extra for the trip and danger " + dangerOnRoute(state, id) + ").", merchants[stall].name);
       if (ahead) {
         const line = merchants[stall].name + " is stocking up on " + items[item].name.toLowerCase() + ": the almanac warns of a " +
           short!.name.toLowerCase() + " at " + villages[short!.village].name + " tomorrow.";
@@ -421,17 +424,48 @@ function bellOrderOptions(world: World, actor: string, departs: number) {
     if (!qty) return [];
     const paid = cost(world, id, order.item, qty), sale = qty * order.unitPrice;
     const score = (sale - paid) / (1 + routeDistance(id) / 1800 + routeRisk(world, id));
-    return [{ item: order.item, id, qty, paid, duration, score, order: order.id, stall: undefined, contract: undefined }];
+    return [{ item: order.item, id, qty, paid, duration, score, order: order.id, stall: undefined, contract: undefined, sale }];
   });
 }
 
 export function startRivalHaul(world: World, actor: string, departs = world.elapsed) {
   if (get(world, actor, "coin") < 10 || Object.values(world.river.hauls).some(haul => haul.actor === actor)) return world;
+  const options = supplyOptions(world, actor, departs).concat(bellOrderOptions(world, actor, departs))
+    // A free hauler answers the harbor's relief bell for a dark stall before any other job.
+    .sort((a, b) => Number(!!b.contract?.relief) - Number(!!a.contract?.relief) || b.score - a.score);
+  const route = options[0];
+  if (!route) return world;
+  const name = world.traders[actor]!.name;
+  let world2 = world;
+  // Swarm coordination: if the best shortage is already covered by another hauler's barge, say so and go elsewhere.
+  const wanted = supplyOptions(world, actor, departs, true)[0];
+  if (wanted?.stall && (wanted.stall !== route.stall || wanted.item !== route.item) && wanted.score > route.score) {
+    const covering = Object.values(world.river.hauls).filter(haul => haul.actor !== actor && haul.cargo.some(leg => leg.stall === wanted.stall && leg.item === wanted.item));
+    const who = [...new Set(covering.map(haul => world.traders[haul.actor]?.name ?? (haul.actor === freight ? "the freight barge" : "a village boat")))];
+    const aboard = covering.reduce((sum, haul) => sum + haul.cargo.filter(leg => leg.stall === wanted.stall && leg.item === wanted.item)
+      .reduce((n, leg) => n + leg.qty, 0), 0);
+    const job = wanted.contract?.actor ? world.traders[wanted.contract.actor]?.name : undefined;
+    const instead = route.order ? "a Bell order" : items[route.item].name.toLowerCase() + " for " + merchants[route.stall!].name;
+    if (job) world2 = addActivity(world2, name + " left " + merchants[wanted.stall].name + "’s " + items[wanted.item].name.toLowerCase() +
+      " job to " + job + ", who took it first, and is hauling " + instead + " instead.", name);
+    else if (who.length) world2 = addActivity(world2, name + " left " + merchants[wanted.stall].name + "’s " + items[wanted.item].name.toLowerCase() +
+      " to " + who.join(" and ") + ", who already " + (who.length > 1 ? "have " : "has ") + aboard + " on the way, and is hauling " + instead + " instead.", name);
+  }
+  return haulRoute(world2, actor, route, departs);
+}
+
+type RouteOption = { stall: StallId | undefined; item: ItemId; id: VillageId; qty: number; paid: number; duration: number; score: number;
+  contract: Contract | undefined; order: string | undefined; sale: number };
+
+/** Every supply run a hauler could make for the Row's stalls. `ignoreTransit` imagines no other barge is on the river. */
+function supplyOptions(world: World, actor: string, departs: number, ignoreTransit = false): RouteOption[] {
   // The campaign's rivals don't run their own supply business, but they do take players' Bell orders.
-  const options = (world.mode === "campaign" ? [] : merchantIds).flatMap(stall => Object.keys(stockTargets(stall)).flatMap(key => {
+  return (world.mode === "campaign" ? [] : merchantIds).flatMap(stall => Object.keys(stockTargets(stall)).flatMap(key => {
     const item = key as ItemId, id = sourceFor(item)!, target = stockTargets(stall)[item]!;
-    const contract = Object.values(world.river.contracts).find(c => !c.actor && c.kind === "supply" && c.stall === stall && c.item === item);
-    const needed = shortage(world, stall, item) - inTransit(world, stall, item);
+    // Imagining an empty river also counts a Bell job another hauler has already taken.
+    const contract = Object.values(world.river.contracts).find(c => (!c.actor || (ignoreTransit && c.actor !== actor)) &&
+      c.kind === "supply" && c.stall === stall && c.item === item);
+    const needed = shortage(world, stall, item) - (ignoreTransit ? 0 : inTransit(world, stall, item));
     if (needed <= target / 4) return [];
     let qty = contract?.qty ?? Math.min(6, needed, stock(world, id, item));
     // Bring only what the stall can pay for, so a stall low on cash still gets a smaller load.
@@ -444,12 +478,11 @@ export function startRivalHaul(world: World, actor: string, departs = world.elap
     const sale = contract?.payout ?? tradePrice("sell", items[item].price, get(world, shop(stall), item), target, ratio(world, stall), qty);
     if (!contract && get(world, shop(stall), "coin") - sale < 10) return [];
     const score = (sale - paid) / (1 + routeDistance(id) / 1800 + routeRisk(world, id));
-    return score > 0 ? [{ stall: stall as StallId | undefined, item, id, qty, paid, duration, score, contract, order: undefined as string | undefined }] : [];
-  })).concat(bellOrderOptions(world, actor, departs))
-    // A free hauler answers the harbor's relief bell for a dark stall before any other job.
-    .sort((a, b) => Number(!!b.contract?.relief) - Number(!!a.contract?.relief) || b.score - a.score);
-  const route = options[0];
-  if (!route) return world;
+    return score > 0 ? [{ stall: stall as StallId | undefined, item, id, qty, paid, duration, score, contract, order: undefined as string | undefined, sale }] : [];
+  })).sort((a, b) => Number(!!b.contract?.relief) - Number(!!a.contract?.relief) || b.score - a.score);
+}
+
+function haulRoute(world: World, actor: string, route: RouteOption, departs: number) {
   const name = world.traders[actor]!.name;
   if (route.order) {
     const order = world.river.orders[route.order]!;
@@ -462,7 +495,9 @@ export function startRivalHaul(world: World, actor: string, departs = world.elap
   const stall = route.stall!;
   let state = schedule(world, actor, route.id, [{ ...route, stall }], departs, route.duration, undefined, route.contract);
   const danger = dangerOnRoute(world, route.id);
-  const line = name + ": Hauling " + route.qty + " " + route.item + " from " + villages[route.id].name + " to " + merchants[stall].name + ".";
+  const why = (route.contract ? "the Harbor Bell pays " : "sells for about ") + route.sale + ", costs " + route.paid + " upriver, danger " + danger;
+  const line = name + ": Hauling " + route.qty + " " + items[route.item].name.toLowerCase() + " from " + villages[route.id].name + " to " + merchants[stall].name +
+    (route.contract ? " for its Harbor Bell job" : "") + ". " + why[0]!.toUpperCase() + why.slice(1) + ".";
   state = addActivity({ ...state, market: { ...state.market, [stall]: { ...state.market[stall], thinking: line } } }, line, name);
   const cash = get(state, actor, "coin");
   if (danger >= 2 && cash >= 12) {
@@ -531,6 +566,8 @@ function resolveHaul(world: World, haul: Haul) {
         state = applyEffects(state, [move(haul.actor, account, item, qty, "Supply delivery"),
           ...(contract.relief ? reliefEffects(state, contract) : [])]);
         state = recordSupply(removeContract(state, contract, haul.actor), stall, item, haul.actor, qty, contract.payout);
+        if (haul.actor.startsWith("r:")) state = addActivity(state, owner + " delivered " + qty + " " + items[item].name.toLowerCase() + " to " +
+          merchants[stall].name + " and collected the Harbor Bell’s " + contract.payout + " coins.", owner);
         if (contract.relief) state = relightStall(state, stall, haul.actor);
       } else {
         const normalAsk = ask(items[item].price, stockTargets(stall)[item]!, stockTargets(stall)[item]!, ratio(state, stall)).price;
@@ -557,6 +594,23 @@ function resolveHaul(world: World, haul: Haul) {
     haul.actor === freight ? "the freight barge" : owner === "Village boat" ? "a village boat" : owner + "\u2019s barge");
   if (loss && haul.actor === freight) state = changeReach(state, reach, 1);
   if (loss && contract) state = removeContract(state, contract);
+  // A rival hauler that makes it through fends off the pirates on the way. Like a captain's kills, every third safe
+  // passage calms the reach, so the agents' hauls shape the river for everyone else.
+  if (!loss && haul.actor.startsWith("r:") && state.traders[haul.actor]) state = fendOff(state, reach, owner);
+  return state;
+}
+
+/** One safe passage through a reach: three of them lower its danger, and a calm reach's boom is abandoned. */
+export function fendOff(world: World, id: ReachId, owner: string) {
+  const current = world.river.reaches[id];
+  if (current.danger === 0 && !current.boom) return world;
+  const kills = current.kills + 1;
+  if (kills < 3) return changeReach(world, id, 0, current.boom, kills);
+  const calmer = Math.max(0, current.danger - 1);
+  const boom = current.boom && calmer > 1;
+  let state = changeReach(world, id, -1, boom, 0);
+  state = addActivity(state, owner + "’s convoys drove pirates off " + reaches[id].name + " (danger " + current.danger + " → " + calmer + ").", owner);
+  if (current.boom && !boom) state = addActivity(state, "Pirates abandoned the boom at " + reaches[id].name + ".", owner);
   return state;
 }
 
