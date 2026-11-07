@@ -29,9 +29,10 @@ function Meter({ label, icon, value, max, color, text }: { label: string; icon: 
   </div>;
 }
 
-export function RiverRun({ manifest, snapshot, finish, busy, reduced, live = false, low = false, volume = .8 }: { manifest: RunManifest;
-  snapshot: Snapshot; finish: (report: RunReport) => void; busy: boolean; reduced: boolean; live?: boolean; low?: boolean; volume?: number }) {
-  const [river] = useState(() => createRiver(manifest));
+export function RiverRun({ manifest, snapshot, finish, busy, reduced, live = false, low = false, volume = .8, aim: dockAim }: { manifest: RunManifest;
+  snapshot: Snapshot; finish: (report: RunReport) => void; busy: boolean; reduced: boolean; live?: boolean; low?: boolean; volume?: number;
+  /** The village the Dock recommended; the HUD points there first. */ aim?: string }) {
+  const [river] = useState(() => Object.assign(createRiver(manifest), { aim: dockAim }));
   const [scene] = useState(() => {
     const terrain = createTerrain();
     warmTerrain(terrain, landing, 1);

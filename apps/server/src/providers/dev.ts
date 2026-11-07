@@ -18,6 +18,13 @@ export class DevIdentityProvider implements IdentityProvider {
     const name = displayName.trim().replace(/\s+/g, " ");
     if (!name || name.length > 24 || /[<>\p{Cc}]/u.test(name)) throw new Error("Use a name from 1 to 24 characters.");
     const playerId = createHash("sha256").update(name.normalize("NFKC").toLowerCase()).digest("hex").slice(0, 24);
+    return this.issueFor(playerId, name);
+  }
+
+  /** A session credential for a player whose identity another provider (social login) has already verified. */
+  issueFor(playerId: string, displayName: string) {
+    const name = displayName.trim().replace(/\s+/g, " ");
+    if (!name || name.length > 24 || /[<>\p{Cc}]/u.test(name)) throw new Error("Use a name from 1 to 24 characters.");
     const payload = Buffer.from(JSON.stringify({ playerId, displayName: name })).toString("base64url");
     return { credential: payload + "." + this.sign(payload), player: { id: playerId, displayName: name } };
   }

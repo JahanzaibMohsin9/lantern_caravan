@@ -345,11 +345,11 @@ export function App() {
     return true;
   }
 
-  function castOff(intent: Extract<Intent, { type: "start_run" }>) {
+  function castOff(intent: Extract<Intent, { type: "start_run" }>, aim?: string) {
     void run(async () => {
       const start = Number(active.current.view().coins), night = snapshot.night_id;
       await settle(await active.current.getQuote(snapshot.session_id, snapshot.night_id, intent));
-      setVoyage({ night, start });
+      setVoyage({ night, start, aim });
       setPanel(undefined);
     });
   }
@@ -397,6 +397,7 @@ export function App() {
 
   return <main className="game-shell" data-reduced={reduced} data-large-panels={largePanels}>
     {riverRun && <RiverRun key={riverRun.id} manifest={riverRun.manifest} snapshot={snapshot} finish={finishRiver} busy={busy} reduced={reduced}
+      aim={voyage?.aim}
       live={online} low={lowGraphics} volume={volume * effectsLevel}/>}
     <div className="row-layer" inert={!!riverRun}>
     <header className="topbar">

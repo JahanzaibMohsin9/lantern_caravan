@@ -120,7 +120,7 @@ export function routeLeads(snapshot: Snapshot) {
       .reduce((sum, reach) => sum + reach.danger * .6 + Number(reach.boom) * 2, 0);
     return Object.entries(village.prices).flatMap(([item, quote]) => Object.entries(snapshot.merchants)
       .filter(([, stall]) => stall.band !== "dark" && stall.prices[item] && Number(stall.stock[item]) < Number(stall.prices[item]!.target))
-      .map(([stall, market]) => ({ item, stall, port: port.name, buy: Number(quote.buy), sell: Number(market.prices[item]!.sell),
+      .map(([stall, market]) => ({ item, stall, village: id, port: port.name, buy: Number(quote.buy), sell: Number(market.prices[item]!.sell),
         score: routeLead(Number(market.prices[item]!.sell), Number(quote.buy), routeDistance(id as VillageId), risk) })));
   }).sort((a, b) => b.score - a.score).slice(0, 5);
 }

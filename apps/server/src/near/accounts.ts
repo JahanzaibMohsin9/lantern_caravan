@@ -3,8 +3,8 @@
  *
  * Merchants, rival haulers, the freight barge and villages are real sub-accounts of the game's root account
  * ("NPCs with wallets"). Funds, escrows and dividend pools stay internal to the contract under their own
- * `sys:`, `esc:` and `pool:` keys. Players settle to an account derived from their player ID until social
- * login gives them a NEAR account of their own.
+ * `sys:`, `esc:` and `pool:` keys. A player who signs in with Privy settles to their own NEAR implicit account;
+ * a guest settles to an account derived from their player ID.
  */
 import { createHash } from "node:crypto";
 
@@ -23,9 +23,10 @@ export const agentAccounts = (config: AccountConfig) =>
 const accountPattern = /^(([a-z\d]+[-_])*[a-z\d]+\.)*([a-z\d]+[-_])*[a-z\d]+$/;
 export const isAccountId = (value: string) => value.length >= 2 && value.length <= 64 && accountPattern.test(value);
 
-/** A player ID that is already a NEAR account (from social login) is used as is. */
+/** A player ID that is already a NEAR account (a named account, or the implicit account from social login) is used as is. */
 function playerAccount(id: string, config: AccountConfig) {
   if (isAccountId(id) && id.includes(".")) return id;
+  if (/^[0-9a-f]{64}$/.test(id)) return id;
   const slug = id.toLowerCase().replace(/[^a-z0-9]/g, "");
   const name = slug.length >= 2 && slug.length <= 32 ? slug : createHash("sha256").update(id).digest("hex").slice(0, 24);
   return name + "." + config.players;

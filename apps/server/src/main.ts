@@ -2,9 +2,10 @@ import { createServer, type IncomingMessage, type ServerResponse } from "node:ht
 import { fileURLToPath } from "node:url";
 import { z } from "zod";
 import { maxRunLogBytes, haggleOfferSchema, type Intent, type HistoryRange, type IdentityProvider, type SettlementProvider } from "@lantern/protocol";
-import { contracts, loginSchema, requestEnvelope } from "@lantern/protocol/schemas";
+import { contracts, loginSchema, privyLoginSchema, requestEnvelope } from "@lantern/protocol/schemas";
 import { FileStateStore } from "./providers/file";
 import { DevIdentityProvider, DevSettlementProvider } from "./providers/dev";
+import { defaultPrivyAppId, PrivyVerifier } from "./providers/privy";
 import { catalog, LiveMarket, publicRoom } from "./live";
 import { NearChain, operatorKey } from "./near/chain";
 import { NearSettlementProvider, RoutedSettlement } from "./near/provider";
@@ -18,6 +19,9 @@ for (const [name, values] of [["IDENTITY", ["dev"]], ["SETTLEMENT", ["dev", "nea
 }
 const devAuth = await DevIdentityProvider.create(directory);
 const auth: IdentityProvider = devAuth;
+// Social login: Privy identity tokens are checked against the app's public keys. PRIVY_APP_ID="" turns it off.
+const privyAppId = process.env.PRIVY_APP_ID ?? defaultPrivyAppId;
+const privy = privyAppId ? new PrivyVerifier(privyAppId) : undefined;
 const dev = new DevSettlementProvider(directory);
 let near: NearSettlementProvider | undefined;
 let settlement: SettlementProvider = dev;
@@ -128,6 +132,14 @@ const server = createServer(async (req, res) => {
     if (req.method === "POST" && url.pathname === "/v1/auth/dev") {
       const body = loginSchema.parse(await payload(req));
       send(res, 200, devAuth.issue(body.displayName));
+      return;
+    }
+    if (req.method === "POST" && url.pathname === "/v1/auth/privy") {
+      if (!privy) { send(res, 404, { error: "Not found" }); return; }
+      const body = privyLoginSchema.parse(await payload(req));
+      const player = await privy.verify(body.identityToken);
+      const issued = devAuth.issueFor(player.playerId, body.displayName);
+      send(res, 200, { ...issued, player: { ...issued.player, nearAccount: player.nearAccount } });
       return;
     }
     if (req.method !== "POST" || url.pathname !== "/v1/rpc") { send(res, 404, { error: "Not found" }); return; }

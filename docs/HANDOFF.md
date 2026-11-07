@@ -1,5 +1,12 @@
 # Lantern Caravan handoff
 
+## Social login with Privy · 7 November 2026
+
+- **Sign in with Google or email** (Live market panel) loads `apps/web/src/auth/PrivySignIn.tsx` lazily, so Privy's SDK stays out of the main bundle. After Privy's login it creates a NEAR embedded wallet (`useCreateWallet({ chainType: "near" })`) if the user has none, waits for the identity token to list it, then posts the token and display name to `/v1/auth/privy`.
+- **The server** (`apps/server/src/providers/privy.ts`) verifies the token with `jose` against `https://auth.privy.io/api/v1/apps/<app>/jwks.json` (issuer `privy.io`, audience the app ID, ES256; no secret), takes the NEAR implicit account from `linked_accounts` as the player ID, and issues the usual signed session (`DevIdentityProvider.issueFor`). `chainHolder` settles a 64-hex player ID to that account as is. `PRIVY_APP_ID=""` turns it off; guest sign-in is unchanged and is what the e2e tests use.
+- **Needs in the Privy dashboard:** Google and email logins, the site's origins, embedded wallets, and identity tokens. Privy's own Solana peers (`@solana-program/system`, `memo`) are installed because its bundle imports them.
+- **Tests:** `tests/privy.test.ts` signs tokens with a local ES256 key: a NEAR wallet becomes the player ID, a token without one gets a stable fallback ID, and other audiences, issuers and keys are refused. A real Google or email sign-in has to be tried by a person.
+
 ## Contract storage and the live toast · 7 November 2026
 
 - **Agent batches every 12 nights.** Each settled ID stays in the items contract's storage for good (about 150 bytes, or 0.0015 NEAR of locked balance). Settling the agents at every five-minute night close was using about 0.44 NEAR a day, which would have exhausted the contract's free balance around 11 November. `live.ts` now keeps the agents' netted effects and settles them every 12th night close (`LANTERN_AGENT_BATCH_NIGHTS`) and, as before, before every player action. `tests/live-soak.test.ts` expects 41 batches over 500 nights.

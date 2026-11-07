@@ -14,13 +14,13 @@ const lateCutoff = 45;
 const bandLabel = { thriving: "Thriving", healthy: "Healthy", tight: "Tight", dark: "Closed" } as const;
 
 /** Coins at cast-off and on the way home, so the Dock can show what the last run made. */
-export type Voyage = { night: string; start: number; home?: number; units?: number; spent?: number };
+export type Voyage = { night: string; start: number; home?: number; units?: number; spent?: number; aim?: string };
 const signed = (value: number) => (value > 0 ? "+" : value < 0 ? "−" : "") + Math.abs(value);
 
 type Props = {
   snapshot: Snapshot; busy: boolean; online: boolean;
   submit: (intent: Intent) => Promise<void>;
-  castOff: (intent: Extract<Intent, { type: "start_run" }>) => void;
+  castOff: (intent: Extract<Intent, { type: "start_run" }>, aim?: string) => void;
   openStall: (stall: StallId) => void;
   closeNight?: () => void;
   voyage?: Voyage;
@@ -73,7 +73,7 @@ export function Dock({ snapshot, busy, online, submit, castOff, openStall, close
           <small>{trimsUnlocked ? bargeTrims[trim].description : "Trims unlock on Night 3."}</small>
         </label>
         <button className="primary wide dock-castoff" disabled={busy || !canCast || snapshot.spectator}
-          onClick={() => castOff({ type: "start_run", barge_plan: [], trim })}>
+          onClick={() => castOff({ type: "start_run", barge_plan: [], trim }, mine ? undefined : lead?.village)}>
           <Anchor size={18}/> Cast off {mine ? "for " + villages[mine.village as VillageId].name : ""}</button>
         {!canCast && <p className="hint">{floodClosed ? "Floodtide has closed the river until the next dusk."
           : snapshot.phase === "results" ? "The river is closed until the next evening." : "Too late to cast off tonight."}</p>}

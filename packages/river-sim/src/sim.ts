@@ -37,6 +37,8 @@ export { beginFloodtide, lockHalfWidth };
 type Recorded = { frame: number; input: Input };
 
 export type River = {
+  /** Display only: the village the Dock recommended, which the HUD and markers point to first. Never simulated. */
+  aim?: string;
   manifest: RunManifest; seed: number; frame: number; player: Player; bounty: number;
   bought: Record<string, RunReport["bought"][number]>; sold: Record<string, RunReport["soldBack"][number]>;
   lost: Cargo; flaresUsed: number; flareCooldown: number; kills: Partial<Record<ReachId, number>>;

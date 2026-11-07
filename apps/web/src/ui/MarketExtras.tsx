@@ -1,5 +1,5 @@
-import { useEffect, useRef, useState } from "react";
-import { ArrowRight, Eye, Globe2, Pause, Play, Plus } from "lucide-react";
+import { lazy, Suspense, useEffect, useRef, useState } from "react";
+import { ArrowRight, ExternalLink, Eye, Globe2, Pause, Play, Plus } from "lucide-react";
 import { items, merchants, type ItemId, type StallId } from "@lantern/content";
 import { reaches, villageGoods, villages, type VillageId } from "@lantern/content/river";
 import { strategies } from "@lantern/content/nights";
@@ -7,6 +7,10 @@ import { advanceClock, createWorld, newNight, openNight, snapshotFor, type World
 import type { ChronicleEntry, HistoryRange, HistoryRow, MarketBackend, StallHistoryRow } from "@lantern/protocol";
 import type { DevNameAuth } from "../auth/dev";
 import { formatTime } from "./Panels";
+import { privyAppId } from "../config";
+
+// Privy's SDK is large, so it loads only when someone opens the Live market panel.
+const PrivySignIn = lazy(() => import("../auth/PrivySignIn"));
 
 export function Rooms({ auth, enter, busy }: {
   auth: DevNameAuth; enter: (room: string, mode: "watch" | "join" | "create") => void; busy: boolean;
@@ -15,18 +19,29 @@ export function Rooms({ auth, enter, busy }: {
   const [name, setName] = useState("");
   const [code, setCode] = useState("");
   useEffect(() => auth.onChange(setState), [auth]);
+  const [socialError, setSocialError] = useState("");
   const signing = state.status === "signing_in";
+  const named = name.trim().length > 0;
   return <>
     {state.status !== "signed_in" ? <form className="prep-list room-form" onSubmit={event => {
       event.preventDefault();
+      setSocialError("");
       void auth.signIn(name);
     }}>
       <label htmlFor="display-name">Display name</label>
       <input id="display-name" autoComplete="nickname" value={name} onChange={event => setName(event.target.value)} maxLength={24} required/>
-      <button className="primary" disabled={signing}>{signing ? "Signing in…" : "Sign in"} <ArrowRight size={16}/></button>
-      {state.error && <small role="alert">{state.error}</small>}
+      {privyAppId && <Suspense fallback={<button type="button" className="primary" disabled>Loading sign-in…</button>}>
+        <PrivySignIn appId={privyAppId} disabled={signing || !named} signOutRequested={() => auth.signedOut}
+          onToken={async token => { setSocialError(""); await auth.signInWithPrivy(token, name); }} onError={setSocialError}/>
+      </Suspense>}
+      {privyAppId && <small className="hint">Google or email gives you your own NEAR testnet account. No wallet or seed phrase.</small>}
+      <button className={privyAppId ? "subtle" : "primary"} disabled={signing}>{signing ? "Signing in…" : "Sign in"} <ArrowRight size={16}/></button>
+      {privyAppId && <small className="hint">Sign in as a guest with just the name.</small>}
+      {(socialError || state.error) && <small role="alert">{socialError || state.error}</small>}
     </form> : <>
       <div className="split"><strong>{state.player?.displayName}</strong><button className="text-button" onClick={() => void auth.signOut()}>Sign out</button></div>
+      {state.detailsUrl && <a className="text-button near-account" href={state.detailsUrl} target="_blank" rel="noreferrer">
+        Your NEAR account <ExternalLink size={12}/></a>}
       <button className="primary" disabled={busy} onClick={() => enter("the-row", "join")}><Globe2 size={17}/> Join The Row</button>
       <button className="subtle" disabled={busy} onClick={() => enter("", "create")}><Plus size={17}/> Create private room</button>
       <form className="room-code" onSubmit={event => { event.preventDefault(); enter(code.toLowerCase(), "join"); }}>

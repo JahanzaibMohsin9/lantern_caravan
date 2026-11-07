@@ -81,7 +81,9 @@ export function objective(state: River): Point & { name: string } {
     const boat = state.boats.find(boat => boat.id === contract.haul);
     if (boat) return { ...boat, name: "Escort " + boat.name };
   }
-  const next = state.manifest.items.find(item => (state.bought[item.item]?.quantity ?? 0) < item.prices.length);
+  const open = (item: (typeof state.manifest.items)[number]) => (state.bought[item.item]?.quantity ?? 0) < item.prices.length;
+  // Point at the Dock's recommended village first, so the river agrees with the advice the player just read.
+  const next = state.manifest.items.find(item => item.village === state.aim && open(item)) ?? state.manifest.items.find(open);
   const village = contract?.kind === "supply"
     ? ((state.player.cargo[contract.item] ?? 0) < contract.quantity ? contract.village : undefined)
     : state.player.visited ? undefined : next?.village;

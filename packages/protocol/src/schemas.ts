@@ -74,6 +74,7 @@ export const historyRowSchema = z.union([
 export const chronicleEntrySchema = activity.extend({ id: text, time });
 export const healthSchema = z.object({ version: z.literal(1), content_version: text, rules_version: text, uptime: time });
 export const loginSchema = z.object({ displayName: z.string().trim().min(1).max(24) });
+export const privyLoginSchema = z.object({ identityToken: z.string().min(1).max(20000), displayName: z.string().trim().min(1).max(24) });
 export const loginResultSchema = z.object({ credential: z.string().min(1), player: z.object({ id: text, displayName: text }) });
 
 const session = z.object({ session_id: text });
