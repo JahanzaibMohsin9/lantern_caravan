@@ -26,7 +26,7 @@
             "item_id": "oil",
             "quantity": "2"
           },
-          "summary": "Buy 2 · 10 coins",
+          "summary": "Buy 2 · 18 coins",
           "effects": [
             {
               "op": "transfer",
@@ -34,15 +34,15 @@
               "to": "p:guest",
               "asset": "oil",
               "amount": "2",
-              "memo": "Buy 2 · 10 coins"
+              "memo": "Buy 2 · 18 coins"
             },
             {
               "op": "transfer",
               "from": "p:guest",
               "to": "m:oil_wharf",
               "asset": "coin",
-              "amount": "10",
-              "memo": "Buy 2 · 10 coins"
+              "amount": "18",
+              "memo": "Buy 2 · 18 coins"
             }
           ],
           "expires_at": 15000
@@ -50,7 +50,7 @@
       }
     ],
     "balances": {
-      "coins": "20",
+      "coins": "12",
       "cargo": {
         "paper": "2",
         "oil": "4",

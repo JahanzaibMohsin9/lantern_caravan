@@ -8,7 +8,7 @@ async function identify(page: Page, name: string) {
   await expect(page.getByRole("button", { name: "Join The Row", exact: true })).toBeVisible();
 }
 
-test("two browser sessions contest an order and see the same lit boat", async ({ browser }) => {
+test("two browser sessions share one Row: a sale at the Dock shows on the other captain's stall", async ({ browser }) => {
   test.setTimeout(100000);
   const first = await browser.newContext();
   const second = await browser.newContext();
@@ -23,23 +23,18 @@ test("two browser sessions contest an order and see the same lit boat", async ({
     await b.getByRole("textbox", { name: "Room code" }).fill(code!);
     await b.getByRole("button", { name: "Join", exact: true }).click();
     await expect(b.locator("[data-room-code]")).toHaveAttribute("data-room-code", code!);
-    for (const page of [a, b]) {
-      const workshop = page.getByRole("navigation").getByRole("button", { name: /Workshop/ });
-      await expect(workshop).toBeEnabled({ timeout: 37000 });
-      await workshop.click();
-      await page.getByRole("button", { name: "Craft one", exact: true }).click();
-      await expect(page.getByRole("status").filter({ hasText: /Craft / })).toBeVisible();
-      await page.getByRole("navigation").getByRole("button", { name: /Order Board/ }).click();
-      await expect(page.getByRole("heading", { name: "Order Board" })).toBeVisible();
-    }
-    const attempts = await Promise.allSettled([a, b].map(page => page.locator(".order-row").filter({ hasText: "The Heron" })
-      .getByRole("button", { name: "Deliver 1", exact: true }).click({ timeout: 3500 })));
-    expect(attempts.some(attempt => attempt.status === "fulfilled")).toBe(true);
-    for (const page of [a, b]) {
-      await expect(page.locator(".order-row").filter({ hasText: "The Heron" }).getByText("Lit", { exact: true })).toBeVisible();
-    }
-    const wallets = await Promise.all([a, b].map(page => page.locator(".meter.gold b").innerText()));
-    expect(wallets.sort()).toEqual(["30", "40"]);
+    // Ari sells the starter oil from the Dock once the market opens.
+    const oil = a.getByRole("region", { name: "The Dock" }).getByLabel("Sell your haul").locator(".dock-hold").filter({ hasText: "Lamp oil" });
+    const sell = oil.getByRole("button", { name: /^Sell \d/ });
+    await expect(sell).toBeEnabled({ timeout: 37000 });
+    const buyer = (await oil.locator("small").innerText()).match(/^(.+?) pays/)![1]!;
+    const coins = Number(await a.locator(".meter.gold b").innerText());
+    await sell.click();
+    await expect.poll(async () => Number(await a.locator(".meter.gold b").innerText())).toBeGreaterThan(coins);
+    // Bo opens the same stall from the Dock and sees who supplied it tonight.
+    await b.getByRole("region", { name: "The Dock" }).locator(".dock-merchant").filter({ hasText: buyer }).click();
+    await b.getByRole("button", { name: "Ownership", exact: true }).click();
+    await expect(b.getByText(new RegExp("Supplied tonight by .*Ari " + salt))).toBeVisible();
   } finally {
     await Promise.all([first.close(), second.close()]);
   }
@@ -63,9 +58,7 @@ test("an unsigned watcher sees a departing barge, village history and reach dang
     const name = "Hauler " + Math.random().toString(16).slice(2, 8);
     await identify(a, name);
     await a.getByRole("button", { name: "Join The Row", exact: true }).click();
-    await a.getByRole("navigation").getByRole("button", { name: /The Landing/ }).click();
-    await a.getByRole("button", { name: "Barge", exact: true }).click();
-    await a.getByRole("button", { name: /^Cast off/ }).click();
+    await a.getByRole("region", { name: "The Dock" }).getByRole("button", { name: /^Cast off/ }).click();
     await expect(a.getByRole("region", { name: "River Run" })).toBeVisible();
     await watch.goto("/"); await watch.getByRole("button", { name: "Watch", exact: true }).click();
     const strip = watch.getByRole("complementary", { name: "River watch" });

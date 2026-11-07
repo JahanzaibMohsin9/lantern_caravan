@@ -4,10 +4,10 @@
     "scenario": "first",
     "setup": [
       {
-        "op": "burn",
-        "from": "m:oil_wharf",
+        "op": "mint",
+        "to": "m:oil_wharf",
         "asset": "oil",
-        "amount": "3",
+        "amount": "7",
         "memo": "Fixture stock"
       }
     ],
@@ -35,7 +35,7 @@
             "item_id": "oil",
             "quantity": "1"
           },
-          "summary": "Sell 1 · 3 coins",
+          "summary": "Sell 1 · 5 coins",
           "effects": [
             {
               "op": "transfer",
@@ -43,15 +43,15 @@
               "to": "m:oil_wharf",
               "asset": "oil",
               "amount": "1",
-              "memo": "Sell 1 · 3 coins"
+              "memo": "Sell 1 · 5 coins"
             },
             {
               "op": "transfer",
               "from": "m:oil_wharf",
               "to": "p:guest",
               "asset": "coin",
-              "amount": "3",
-              "memo": "Sell 1 · 3 coins"
+              "amount": "5",
+              "memo": "Sell 1 · 5 coins"
             }
           ],
           "expires_at": 15000
@@ -59,7 +59,7 @@
       }
     ],
     "balances": {
-      "coins": "33",
+      "coins": "35",
       "cargo": {
         "paper": "2",
         "oil": "1",

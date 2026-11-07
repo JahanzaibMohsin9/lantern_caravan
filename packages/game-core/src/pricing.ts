@@ -8,13 +8,19 @@ export function ask(base: number, stock: number, target: number, strategy = 1000
   return { price, label };
 }
 
-export function tradePrice(side: "buy" | "sell", base: number, stock: number, target: number, strategy: number, quantity: number) {
+/**
+ * `haul` marks a merchant buying a river good it stocks. While the merchant is short of it (below its target
+ * stock) it pays a hauler its full asking price; once stocked it pays the usual 70%. That makes bringing a
+ * merchant what it lacks the way to profit, and a full stall a poor buyer.
+ */
+export function tradePrice(side: "buy" | "sell", base: number, stock: number, target: number, strategy: number, quantity: number, haul = false) {
   let total = 0;
   for (let unit = 0; unit < quantity; unit++) {
     // Sellers are priced against stock after their unit is added.
     const nextStock = side === "buy" ? stock - unit : stock + unit + 1;
     const price = ask(base, nextStock, target, strategy).price;
-    total += side === "buy" ? price : Math.max(1, Math.floor(price * 70 / 100));
+    const short = haul && stock + unit < target;
+    total += side === "buy" || short ? price : Math.max(1, Math.floor(price * 70 / 100));
   }
   return total;
 }

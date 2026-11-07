@@ -7,7 +7,7 @@
         "op": "mint",
         "to": "m:oil_wharf",
         "asset": "oil",
-        "amount": "3",
+        "amount": "13",
         "memo": "Fixture stock"
       }
     ],

@@ -43,7 +43,7 @@ export function Objective({ snapshot }: { snapshot: Snapshot }) {
             <i key={index} className={index < Number(snapshot.objective.steps[0]!.count) ? "filled" : ""}/>)}
           <small>{snapshot.objective.steps[0]!.count} / {snapshot.objective.steps[0]!.target} {snapshot.objective.steps[0]!.label}</small>
         </> : snapshot.objective.steps.map(step => <span className="objective-step" key={step.label} title={step.label}>
-          {step.icon === "wharf" || step.icon === "boom" ? <Anchor size={14}/> : step.icon === "bell" ? <Bell size={14}/> : <ItemIcon item={step.icon as ItemId} size={14}/>}
+          {["wharf", "boom", "run", "flood"].includes(step.icon) ? <Anchor size={14}/> : step.icon === "bell" ? <Bell size={14}/> : <ItemIcon item={step.icon as ItemId} size={14}/>}
           <small>{step.icon === "wharf" ? Number(step.count) ? "Relit" : "Dark" : step.count + "/" + step.target}</small>
         </span>)}
       </div>

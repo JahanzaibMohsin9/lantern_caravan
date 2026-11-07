@@ -18,7 +18,7 @@
     "statuses": [
       {
         "state": "rejected",
-        "error": "Your cart is full."
+        "error": "The stall is low on stock."
       }
     ],
     "balances": {

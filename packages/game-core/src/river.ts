@@ -136,8 +136,13 @@ function authoredFreight(world: World) {
     for (const [key, target] of Object.entries(stockTargets(stall))) {
       const item = key as ItemId, id = sourceFor(item)!;
       const storm = world.mode === "campaign" && world.night === 2 && stall === "oil_wharf" && item === "oil";
-      const qty = shortage(state, stall, item) - (storm ? target - 6 : 0);
-      if (qty < 0 && storm) state = applyEffects(state, [move(shop(stall), village(id), item, -qty, "Returned before the storm")]);
+      // The first night leaves two stalls short, so a new player's first haul has buyers who pay full price.
+      const firstHaul = world.mode === "campaign" && world.night === 1 ? ({ oil_wharf: { oil: 2 }, paper_mill: { paper: 3 } } as
+        Partial<Record<StallId, Partial<Record<ItemId, number>>>>)[stall]?.[item] : undefined;
+      const keep = storm ? 6 : firstHaul;
+      const qty = shortage(state, stall, item) - (keep === undefined ? 0 : target - keep);
+      if (qty < 0 && keep !== undefined) state = applyEffects(state, [move(shop(stall), village(id), item, -qty,
+        storm ? "Returned before the storm" : "Held back upriver")]);
       if (qty <= 0) continue;
       const missing = qty - stock(state, id, item);
       if (missing > 0) state = applyEffects(state, [harvestMint(village(id), item, missing)]);
@@ -298,7 +303,8 @@ export function refreshRelief(world: World) {
     // harbor pays for the haul, so the stall can't get stuck waiting for supply it can't afford.
     const coins = get(state, shop(stall), "coin");
     const dark = cashBand(coins) === "dark" || !!state.market[stall].stockClosed;
-    if (!dark || state.market[stall].rescued) continue;
+    // A cash rescue doesn't refill empty shelves, so a stall closed for stock still gets its relief bell.
+    if (!dark || (state.market[stall].rescued && !state.market[stall].stockClosed)) continue;
     // A relief bell nobody has taken is withdrawn once its village can no longer supply it, so the harbor can ring
     // for a good that is available instead; the escrow returns to the dock fund.
     const stale = Object.values(state.river.contracts).find(contract => contract.relief && contract.stall === stall &&
@@ -427,10 +433,14 @@ export function startRivalHaul(world: World, actor: string, departs = world.elap
     const contract = Object.values(world.river.contracts).find(c => !c.actor && c.kind === "supply" && c.stall === stall && c.item === item);
     const needed = shortage(world, stall, item) - inTransit(world, stall, item);
     if (needed <= target / 4) return [];
-    const qty = contract?.qty ?? Math.min(6, needed, stock(world, id, item));
+    let qty = contract?.qty ?? Math.min(6, needed, stock(world, id, item));
+    // Bring only what the stall can pay for, so a stall low on cash still gets a smaller load.
+    const sellFor = (n: number) => tradePrice("sell", items[item].price, get(world, shop(stall), item), target, ratio(world, stall), n, true);
+    if (!contract) while (qty > 0 && get(world, shop(stall), "coin") - sellFor(qty) < 10) qty--;
     const paid = cost(world, id, item, qty);
     const duration = Math.ceil(routeDistance(id) / 195) + Math.round(routeRisk(world, id) * 3);
     if (!qty || stock(world, id, item) < qty || paid > get(world, actor, "coin") || departs + duration >= plan(world).duration) return [];
+    // Rival freight is paid wholesale; the full hauler price is for captains selling at the Dock.
     const sale = contract?.payout ?? tradePrice("sell", items[item].price, get(world, shop(stall), item), target, ratio(world, stall), qty);
     if (!contract && get(world, shop(stall), "coin") - sale < 10) return [];
     const score = (sale - paid) / (1 + routeDistance(id) / 1800 + routeRisk(world, id));
@@ -864,8 +874,6 @@ function finishRun(world: World, actor: string, id: string, report: RunReport, n
 
 export function riverQuote(world: World, actor: string, intent: RiverIntent, id: string, now: number) {
   if (world.phase === "results" && intent.type !== "finish_run") throw new Error("The river is closed until the next evening.");
-  if (world.mode === "campaign" && world.night === 1 && intent.type !== "post_bell_order" && intent.type !== "cancel_bell_order")
-    throw new Error("The barge is under repair until Night 2.");
   if (intent.type === "start_run" && world.phase === "open" && plan(world).duration - world.elapsed < 45)
     throw new Error("RIVER_LATE · Too late to cast off tonight. Try again during preparation.");
   if (intent.type === "post_bell_order" || intent.type === "cancel_bell_order") return bellOrderQuote(world, actor, intent, id);
@@ -1007,7 +1015,8 @@ export function commitRiver(prior: World, world: World, actor: string, intent: R
     lifetimeDividends: trader.lifetimeDividends + bonus,
     wharfBonus: trader.wharfBonus + bonus,
     dividends: bonus ? { ...trader.dividends, oil_wharf: (trader.dividends.oil_wharf ?? 0) + bonus } : trader.dividends,
-    boomsTonight: trader.boomsTonight + broken, contractsTonight: trader.contractsTonight + Number(payout > 0) } } };
+    boomsTonight: trader.boomsTonight + broken, contractsTonight: trader.contractsTonight + Number(payout > 0),
+    runsTonight: trader.runsTonight + 1, floodTonight: trader.floodTonight + Number(!!report.floodtide?.completed) } } };
 }
 
 function orderView(world: World, actor: string) {

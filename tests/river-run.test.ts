@@ -124,8 +124,9 @@ test("Night 2's pledge plus oil haul pays its bonus from the dock fund without d
   world = submit(world, { type: "start_run", contract_id: contract.id, barge_plan: [] }, "both-paths");
   const manifest = snapshotFor(world, "test").river.myRun!.manifest;
   const lot = manifest.items.find(lot => lot.item === "oil")!;
-  const report = { ...empty(manifest), bought: [{ village_id: "ember_falls", item_id: "oil", quantity: 6,
-    paid: lot.prices.slice(0, 6).reduce((a, b) => a + b, 0) }], delivered: { oil: 6 } };
+  const units = contract.qty;
+  const report = { ...empty(manifest), bought: [{ village_id: "ember_falls", item_id: "oil", quantity: units,
+    paid: lot.prices.slice(0, units).reduce((a, b) => a + b, 0) }], delivered: { oil: units } };
   const deal = quote(world, { type: "finish_run", run_id: manifest.id, report }, "home", 40000);
   expect(deal.effects).toContainEqual(move("sys:rescue", player, "coin", 2, "Wharf pledge and haul bonus dividend"));
   expect(deal.effects.every(effect => effect.op === "transfer")).toBe(true);

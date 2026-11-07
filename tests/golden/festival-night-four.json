@@ -44,14 +44,20 @@
     "night": 4,
     "name": "Festival of Lights",
     "objective": {
-      "name": "Light all six boats",
+      "name": "Ride the Floodtide",
       "complete": false,
       "steps": [
         {
-          "label": "boats lit",
+          "label": "Home through Floodtide",
           "count": "0",
-          "target": "6",
-          "icon": "boat"
+          "target": "1",
+          "icon": "flood"
+        },
+        {
+          "label": "Goods sold to the Row",
+          "count": "0",
+          "target": "8",
+          "icon": "oil"
         }
       ]
     },

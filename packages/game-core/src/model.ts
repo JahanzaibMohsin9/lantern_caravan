@@ -29,6 +29,8 @@ export const move = (from: string, to: string, asset: string, amount: number, me
 export type Trader = {
   cosmetics: BargeCosmeticId[]; look?: BargeLook;
   boomsTonight: number; contractsTonight: number; wharfBonus: number;
+  /** River goods sold to the Row, river runs finished and Floodtide returns tonight; reset at dusk. */
+  soldTonight: number; runsTonight: number; floodTonight: number;
   trim?: BargeTrimId;
   name: string; upgrades: (UpgradeId | BargeUpgradeId)[]; delivered: Partial<Record<ItemId, number>>;
   crafted: number; crowdSold: number; earned: number; spent: number; jobsDone: number;
@@ -64,7 +66,7 @@ const defaults: Record<StallId, StrategyId> = {
 
 const freshTrader = (name: string): Trader => ({
   cosmetics: [],
-  boomsTonight: 0, contractsTonight: 0, wharfBonus: 0,
+  boomsTonight: 0, contractsTonight: 0, wharfBonus: 0, soldTonight: 0, runsTonight: 0, floodTonight: 0,
   name, upgrades: [], delivered: {}, crafted: 0, crowdSold: 0, earned: 0, spent: 0,
   jobsDone: 0, villageContracts: {}, relationship: {}, fair: {}, refused: [], cooldowns: {}, votes: {},
   lifetimeCrafted: 0, lifetimeDividends: 0, boatsHelped: 0, rescued: 0, rescuedTonight: [], dividends: {},
@@ -204,24 +206,30 @@ export function newNight(previous: World, mode: Mode = previous.mode): World {
 
 export function objective(state: World, actor: string): Snapshot["objective"] {
   const trader = state.traders[actor];
-  const got = trader?.delivered ?? {};
   const lit = plan(state).orders.filter(order => state.orderContributors[order.id]?.length && remaining(state, order) === 0).length;
   const step = (label: string, count: number, target: number, icon: string) =>
     ({ label, count: String(Math.min(count, target)), target: String(target), icon });
+  const sold = trader?.soldTonight ?? 0, runs = trader?.runsTonight ?? 0;
+  // The campaign is four river nights: every objective is something the barge does.
   if (state.mode === "campaign" && state.night === 1) {
-    return { name: "Light the river", complete: (got.lantern_paper ?? 0) >= 3, steps: [step("delivered", got.lantern_paper ?? 0, 3, "lantern_paper")] };
+    return { name: "Your first haul", complete: runs >= 1 && sold >= 6,
+      steps: [step("River run", runs, 1, "run"), step("Goods sold to the Row", sold, 6, "oil")] };
   }
   if (state.mode === "campaign" && state.night === 2) {
     const relit = trader?.rescuedTonight.includes("oil_wharf") ?? false;
-    return { name: "Relight the wharf", complete: relit && (got.lantern_float ?? 0) >= 2 && (got.lantern_paper ?? 0) >= 2,
-      steps: [step("Wharf relit", Number(relit), 1, "wharf"), step("Floating", got.lantern_float ?? 0, 2, "lantern_float"),
-        step("Paper", got.lantern_paper ?? 0, 2, "lantern_paper")] };
+    return { name: "Relight the wharf", complete: relit, steps: [step("Wharf relit", Number(relit), 1, "wharf")] };
   }
   if (state.mode === "campaign" && state.night === 3) {
     const booms = trader?.boomsTonight ?? 0, contracts = trader?.contractsTonight ?? 0;
-    return { name: "Clear the reach and carry its light", complete: booms >= 1 && contracts >= 1 && (got.lantern_color ?? 0) >= 2,
-      steps: [step("Boom broken", booms, 1, "boom"), step("Contract or escort", contracts, 1, "bell"),
-        step("Colored", got.lantern_color ?? 0, 2, "lantern_color")] };
+    return { name: "Clear the reach", complete: booms >= 1 && contracts >= 1,
+      steps: [step("Boom broken", booms, 1, "boom"), step("Contract or escort", contracts, 1, "bell")] };
   }
-  return { name: "Light all six boats", complete: lit >= 6, steps: [step("boats lit", lit, 6, "boat")] };
+  if (state.mode === "campaign" && state.night === 4) {
+    const flood = trader?.floodTonight ?? 0;
+    return { name: "Ride the Floodtide", complete: flood >= 1 && sold >= 8,
+      steps: [step("Home through Floodtide", flood, 1, "flood"), step("Goods sold to the Row", sold, 8, "oil")] };
+  }
+  // Endless nights and live rooms: keep the Row supplied from upriver.
+  return { name: "Keep the Row supplied", complete: runs >= 2 && sold >= 12,
+    steps: [step("River runs", runs, 2, "run"), step("Goods sold to the Row", sold, 12, "oil")] };
 }

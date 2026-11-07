@@ -19,43 +19,14 @@
   "expected": {
     "statuses": [
       {
-        "state": "confirmed",
-        "quote": {
-          "quote_id": "quote-0",
-          "intent": {
-            "type": "buy",
-            "stall_id": "oil_wharf",
-            "item_id": "oil",
-            "quantity": "1"
-          },
-          "summary": "Buy 1 · 5 coins",
-          "effects": [
-            {
-              "op": "transfer",
-              "from": "m:oil_wharf",
-              "to": "p:guest",
-              "asset": "oil",
-              "amount": "1",
-              "memo": "Buy 1 · 5 coins"
-            },
-            {
-              "op": "transfer",
-              "from": "p:guest",
-              "to": "m:oil_wharf",
-              "asset": "coin",
-              "amount": "5",
-              "memo": "Buy 1 · 5 coins"
-            }
-          ],
-          "expires_at": 15000
-        }
+        "state": "refuse"
       }
     ],
     "balances": {
-      "coins": "25",
+      "coins": "30",
       "cargo": {
         "paper": "2",
-        "oil": "3",
+        "oil": "2",
         "reed": "0",
         "cord": "0",
         "dye": "0",

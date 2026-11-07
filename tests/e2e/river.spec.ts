@@ -1,107 +1,81 @@
 import { execFileSync } from "node:child_process";
 import { join } from "node:path";
-import { expect, test } from "@playwright/test";
+import { expect, test, type Page } from "@playwright/test";
 
-test("relights the dark wharf with a relief haul from upriver, then sells spare oil on the Row", async ({ page }) => {
+/** The header's Pause (or Settings) button, then Settings. */
+async function openSettings(page: Page) {
+  await page.locator(".header-actions").getByRole("button", { name: /^(Pause|Settings)$/ }).click();
+  const settings = page.getByRole("heading", { name: "Settings", exact: true });
+  if (!(await settings.isVisible())) await page.locator(".panel").getByRole("button", { name: /^Settings/ }).click();
+  await expect(settings).toBeVisible();
+}
+
+/** The barge's details (almanac, upriver prices, wrecks, upgrades, Bell orders) sit in a drawer on the Dock. */
+async function openDrawer(page: Page) {
+  const drawer = page.getByRole("region", { name: "The Dock" }).locator("details.dock-more");
+  if (!(await drawer.evaluate(node => (node as HTMLDetailsElement).open))) await drawer.locator(":scope > summary").click();
+  const barge = drawer.getByRole("button", { name: "Barge", exact: true });
+  if (await barge.count()) await barge.click();
+}
+
+test("Night 1: casts off from the Dock, hauls oil from Ember Falls and sells it to the Row", async ({ page }) => {
   test.setTimeout(100_000);
   const errors: string[] = [];
   page.on("pageerror", error => errors.push(error.message));
   const button = (name: string) => page.getByRole("button", { name, exact: true });
-  const visit = async (name: string) => {
-    await page.getByRole("navigation").getByRole("button", { name: new RegExp(name, "i") }).click();
-    await expect(page.getByRole("heading", { name, exact: true })).toBeVisible();
-  };
-  const buy = async (stall: string, item: string) => {
-    await visit(stall);
-    await page.locator(".panel").getByRole("button", { name: new RegExp("^" + item, "i") }).click();
-    await button("Review buy").click();
-    await button("Confirm buy").click();
-    await expect(button("Review buy")).toBeVisible();
-  };
+  const dock = page.getByRole("region", { name: "The Dock" });
   await page.goto("/");
   await expect(page).toHaveTitle("Lantern Caravan");
   await expect(page.getByRole("heading", { name: "Lantern Caravan", exact: true })).toBeVisible();
   await expect(page.locator('meta[name="description"]')).toHaveAttribute("content", /Lantern Caravan.*Lantern Row/);
   await expect(page.locator(".brand")).toContainText("LANTERN ROW");
-  await expect(button("Enter the Row")).toBeEnabled();
+  await expect(button("Start")).toBeEnabled();
   await page.evaluate(() => document.fonts.ready);
   await page.context().setOffline(true);
-  await button("Enter the Row").click();
-  await visit("Workshop");
-  await button("Craft 2").click();
-  await expect(page.getByRole("status")).toContainText("Craft 2");
-  await buy("Paper Mill", "Paper");
-  await buy("Oil Wharf", "Lamp oil");
-  await visit("Workshop");
-  await button("Craft one").click();
-  await visit("Order Board");
-  await page.locator(".order-row").filter({ hasText: "The Heron" }).getByRole("button", { name: "Deliver 1" }).click();
-  await page.locator(".order-row").filter({ hasText: "The Kingfisher" }).getByRole("button", { name: "Deliver 2" }).click();
-  await page.keyboard.press("Escape");
-  await button("Close the night").click();
-  await button("Next night").click();
-  await expect(page.getByRole("heading", { name: "The Dark Wharf" })).toBeVisible();
-
   await page.clock.install();
-  await button("The Landing").click();
-  await button("Barge").click();
-  await expect(page.getByRole("combobox", { name: "Barge trim" })).toBeDisabled();
-  await expect(page.getByLabel("Harbor almanac")).toContainText("Tomorrow · Pressing strike at Ember Falls.");
-  await page.getByRole("button", { name: /^Harbor Bell/ }).click();
-  // The dark wharf rings the Harbor Bell for a relief haul of oil.
-  const relief = page.locator(".relief-row").filter({ hasText: "Relight Oil Wharf" });
-  await expect(relief).toBeVisible();
-  await relief.getByRole("button", { name: "Accept" }).click();
-  await page.getByRole("button", { name: /^Cast off for Ember Falls/ }).click();
+  await button("Start").click();
+  // No walking, crafting or locked barge: the Dock is the first screen and the barge is ready.
+  await expect(page.getByRole("navigation", { name: "Market locations" })).toHaveCount(0);
+  await expect(dock.getByText("River run 0/1")).toBeVisible();
+  await dock.getByRole("button", { name: /^Cast off/ }).click();
   const river = page.getByRole("region", { name: "River Run" });
   await expect(river).toBeVisible();
   await page.keyboard.press("m");
   await expect(page.getByRole("dialog", { name: "River map" })).toBeVisible();
   await page.keyboard.press("Escape");
-  await page.keyboard.down("Shift");
-  await page.keyboard.down("w");
-  await page.keyboard.down(" ");
-  await page.clock.runFor(19_700);
-  await page.keyboard.up(" ");
-  await page.keyboard.up("w");
-  await page.keyboard.up("Shift");
-  await expect(river.getByRole("button", { name: /Trade at Ember Falls/ })).toBeVisible();
+  const trade = river.getByRole("button", { name: /Trade at Ember Falls/ });
+  for (const key of ["Shift", "w", " "]) await page.keyboard.down(key);
+  for (let i = 0; i < 160 && !(await trade.isVisible()); i++) await page.clock.runFor(200);
+  for (const key of ["Shift", "w", " "]) await page.keyboard.up(key);
   await page.keyboard.press("e");
   const market = page.getByRole("dialog", { name: "Village market" });
   await expect(market.getByRole("heading", { name: "Ember Falls" })).toBeVisible();
-  await expect(market.getByText(/Your contract needs 6 lamp oil/)).toBeVisible();
-  await market.getByRole("button", { name: "10", exact: true }).click();
-  await market.getByRole("button", { name: /Buy 10/ }).click();
+  await market.getByLabel("Order size").getByRole("button", { name: "10", exact: true }).click();
+  await market.locator(".river-trade").filter({ hasText: "Lamp oil" }).getByRole("button", { name: /^Buy \d/ }).click();
   await page.clock.runFor(150);
-  await expect(river.getByText("Lamp oil × 10")).toBeVisible();
+  await expect(river.getByText(/Lamp oil × \d/)).toBeVisible();
   await button("Back to the barge").click();
-  await page.keyboard.down("Shift");
-  await page.keyboard.down("s");
-  await page.keyboard.down(" ");
-  await page.clock.runFor(19_700);
-  await page.keyboard.up(" ");
-  await page.keyboard.up("s");
-  await page.keyboard.up("Shift");
-  await expect(river.getByRole("button", { name: /Moor at The Landing/ })).toBeVisible();
-  await expect(river.getByLabel("Skiffs sunk")).toHaveText(/Skiffs sunk: [1-9]/);
+  const moor = river.getByRole("button", { name: /Moor at The Landing/ });
+  for (const key of ["Shift", "s", " "]) await page.keyboard.down(key);
+  for (let i = 0; i < 160 && !(await moor.isVisible()); i++) await page.clock.runFor(200);
+  for (const key of ["Shift", "s", " "]) await page.keyboard.up(key);
   await page.keyboard.press("e");
   await page.clock.runFor(400);
   await expect(river).toHaveCount(0);
-  await expect(page.getByText("Oil Wharf relit!")).toBeVisible();
-  await expect(page.getByRole("button", { name: "Cart 4 of 6 items" })).toBeVisible();
-  await page.keyboard.press("Escape");
-  await button("Open the market").click();
-  await visit("Paper Mill");
-  await button("Sell").click();
-  await page.locator(".panel").getByRole("button", { name: /^Lamp oil/i }).click();
-  await button("Review sell").click();
-  await button("Confirm sell").click();
-  await expect(page.getByRole("button", { name: "Cart 3 of 6 items" })).toBeVisible();
-  await expect(page.getByRole("button", { name: /Oil Wharf/ }).first()).not.toContainText("Closed");
+  await expect(dock.getByText("River run 1/1")).toBeVisible();
+  // The Row pays a hauler the full price for goods a stall is short of.
+  const oil = dock.getByLabel("Sell your haul").locator(".dock-hold").filter({ hasText: "Lamp oil" });
+  await expect(oil).toContainText("short of it");
+  const coins = Number(await page.locator(".meter.gold b").innerText());
+  await oil.getByRole("button", { name: /^Sell \d/ }).click();
+  await expect.poll(async () => Number(await page.locator(".meter.gold b").innerText())).toBeGreaterThan(coins);
+  // A merchant card opens the full trade panel.
+  await dock.locator(".dock-merchant").filter({ hasText: "Oil Wharf" }).click();
+  await expect(page.getByRole("heading", { name: "Oil Wharf", exact: true })).toBeVisible();
   expect(errors).toEqual([]);
 });
 
-test("fits each free trim at the Landing and sees it on the live barge HUD", async ({ page }) => {
+test("fits each free trim at the Dock and sees it on the live barge HUD", async ({ page }) => {
   test.setTimeout(90_000);
   await page.goto("/");
   await page.getByRole("button", { name: "Live market", exact: true }).click();
@@ -110,21 +84,15 @@ test("fits each free trim at the Landing and sees it on the live barge HUD", asy
   await page.getByRole("button", { name: "Create private room" }).click();
   await expect(page.locator("[data-room-code]")).toBeVisible();
   for (const trim of ["runner", "ironclad", "gunner", "balanced"]) {
-    const landing = page.getByRole("navigation").getByRole("button", { name: /The Landing/ });
-    await expect(landing).toBeEnabled();
-    await landing.click();
-    await page.getByRole("button", { name: "Barge", exact: true }).click();
+    const dock = page.getByRole("region", { name: "The Dock" });
+    await expect(dock).toBeVisible();
     await page.getByRole("combobox", { name: "Barge trim" }).selectOption(trim);
-    await page.getByRole("button", { name: /^Cast off/ }).click();
+    await dock.getByRole("button", { name: /^Cast off/ }).click();
     const river = page.getByRole("region", { name: "River Run" });
     await expect(river.getByText("BARGE / " + trim.toUpperCase(), { exact: true })).toBeVisible();
     await river.getByRole("button", { name: /Moor at The Landing/ }).click();
     await expect(river).toHaveCount(0);
-    await page.keyboard.press("Escape");
-    await landing.click();
-    await page.getByRole("button", { name: "Barge", exact: true }).click();
-    await expect(page.getByRole("combobox", { name: "Barge trim" })).toHaveValue(trim);
-    await page.keyboard.press("Escape");
+    await expect(dock.getByRole("combobox", { name: "Barge trim" })).toHaveValue(trim);
   }
 });
 
@@ -134,18 +102,16 @@ test("salvages the oil the Night 2 storm sank at Heron Reach", async ({ page }) 
   page.on("pageerror", error => errors.push(error.message));
   const button = (name: string) => page.getByRole("button", { name, exact: true });
   await page.goto("/");
-  await button("Enter the Row").click();
+  await button("Start").click();
   // A save at the start of Night 3, built by the game code, goes in through the real Import save control.
   const save = execFileSync(process.execPath, [join("node_modules", "tsx", "dist", "cli.mjs"), join("tests", "e2e", "fixtures", "night3-save.ts")]);
   page.on("dialog", dialog => void dialog.accept());
-  await button("Pause").click();
-  await button("Settings").click();
+  await openSettings(page);
   await page.locator('input[type="file"]').setInputFiles({ name: "night3.json", mimeType: "application/json", buffer: save });
   await expect(page.getByText("NIGHT 03")).toBeVisible();
   await page.clock.install();
   await page.keyboard.press("Escape");
-  await button("The Landing").click();
-  await button("Barge").click();
+  await openDrawer(page);
   await expect(page.getByLabel("Harbor almanac")).toContainText("Tonight · Pressing strike at Ember Falls.");
   const wrecks = page.getByLabel("Wrecks on the river");
   await expect(wrecks).toContainText("Wreck of the freight barge on Heron Reach");
@@ -188,8 +154,7 @@ test("salvages the oil the Night 2 storm sank at Heron Reach", async ({ page }) 
   await expect(river).toHaveCount(0);
   await page.clock.resume();
   await page.keyboard.press("Escape");
-  await button("The Landing").click();
-  await button("Barge").click();
+  await openDrawer(page);
   await expect(page.getByLabel("Wrecks on the river")).toHaveCount(0);
   await page.keyboard.press("Escape");
   await button("Journal").click();
@@ -207,9 +172,7 @@ test("posts a Bell order in a live room and a rival hauler delivers it", async (
   await page.getByRole("button", { name: "Sign in", exact: true }).click();
   await page.getByRole("button", { name: "Create private room" }).click();
   await expect(page.locator("[data-room-code]")).toBeVisible();
-  const landing = page.getByRole("navigation").getByRole("button", { name: /The Landing/ });
-  await expect(landing).toBeEnabled();
-  await landing.click();
+  await openDrawer(page);
   await page.getByRole("button", { name: "Post an order" }).click();
   await page.getByLabel("Order item").selectOption("oil");
   await page.getByLabel("Order quantity").fill("2");
@@ -232,14 +195,14 @@ test("buys visible barge tiers and finishes, refits free, reloads and casts off 
   page.on("pageerror", error => errors.push(error.message));
   const button = (name: string) => page.getByRole("button", { name, exact: true });
   await page.goto("/");
-  await button("Enter the Row").click();
+  await button("Start").click();
   const save = execFileSync(process.execPath, [join("node_modules", "tsx", "dist", "cli.mjs"), join("tests", "e2e", "fixtures", "barge-looks-save.ts")]);
   page.on("dialog", dialog => void dialog.accept());
-  await button("Pause").click(); await button("Settings").click();
+  await openSettings(page);
   await page.locator('input[type="file"]').setInputFiles({ name: "looks.json", mimeType: "application/json", buffer: save });
   await expect(page.getByText("NIGHT 04")).toBeVisible();
   await page.keyboard.press("Escape");
-  await button("The Landing").click(); await button("Barge").click();
+  await openDrawer(page);
   const preview = page.getByRole("img", { name: "Barge preview" });
   const pixels = () => preview.evaluate(canvas => (canvas as HTMLCanvasElement).toDataURL());
   let previous = await pixels();
@@ -269,7 +232,7 @@ test("buys visible barge tiers and finishes, refits free, reloads and casts off 
   await page.getByLabel("Bow lantern", { exact: true }).selectOption("violet");
   await button("Fit Violet").click();
   await page.reload(); await button("Continue").click();
-  await button("The Landing").click(); await button("Barge").click();
+  await openDrawer(page);
   await expect(preview).toBeVisible();
   expect(await pixels()).toBe(fitted);
   await page.getByText("Paint, lantern & prow", { exact: true }).click();
@@ -289,14 +252,14 @@ test("buys visible barge tiers and finishes, refits free, reloads and casts off 
 test("a trusted hauler sees the village stamp and pays the discounted quote", async ({ page }) => {
   test.setTimeout(100000);
   const button = (name: string) => page.getByRole("button", { name, exact: true });
-  await page.goto("/"); await button("Enter the Row").click();
+  await page.goto("/"); await button("Start").click();
   const save = execFileSync(process.execPath, [join("node_modules", "tsx", "dist", "cli.mjs"), join("tests", "e2e", "fixtures", "trusted-save.ts")]);
   page.on("dialog", dialog => void dialog.accept());
-  await button("Pause").click(); await button("Settings").click();
+  await openSettings(page);
   await page.locator('input[type="file"]').setInputFiles({ name: "trusted.json", mimeType: "application/json", buffer: save });
   await expect(page.getByText("NIGHT 03")).toBeVisible();
   await page.clock.install(); await page.keyboard.press("Escape");
-  await button("The Landing").click(); await button("Barge").click();
+  await openDrawer(page);
   await expect(page.getByLabel("Upriver prices")).toContainText("Trusted: 10% off");
   await page.getByRole("button", { name: /^Cast off/ }).click();
   const river = page.getByRole("region", { name: "River Run" });
@@ -325,17 +288,16 @@ test("a trusted hauler sees the village stamp and pays the discounted quote", as
 test("Night 4 schedules Floodtide with the Firefly and returns through both lock gates", async ({ page }) => {
   test.setTimeout(150000);
   const button = (name: string) => page.getByRole("button", { name, exact: true });
-  await page.goto("/"); await button("Enter the Row").click();
+  await page.goto("/"); await button("Start").click();
   const save = execFileSync(process.execPath, [join("node_modules", "tsx", "dist", "cli.mjs"), join("tests", "e2e", "fixtures", "floodtide-save.ts")]);
   page.on("dialog", dialog => void dialog.accept());
-  await button("Pause").click(); await button("Settings").click();
+  await openSettings(page);
   await page.locator('input[type="file"]').setInputFiles({ name: "floodtide.json", mimeType: "application/json", buffer: save });
   await expect(page.getByText("NIGHT 04")).toBeVisible();
   await page.clock.install(); await page.keyboard.press("Escape");
-  await page.getByRole("navigation").getByRole("button", { name: /The Landing/ }).click();
+  await openDrawer(page);
   await expect(page.getByLabel("Floodtide forecast")).toContainText("1:10");
-  await page.getByRole("button", { name: /^Harbor Bell/ }).click();
-  await page.locator(".order-row").filter({ hasText: "3 Dye for Indigo Atelier" }).getByRole("button", { name: "Accept", exact: true }).click();
+  await page.locator(".dock-job").filter({ hasText: "3 dye from Reedmarsh" }).getByRole("button", { name: "Accept", exact: true }).click();
   await page.getByRole("button", { name: /^Cast off for Reedmarsh/ }).click();
   const river = page.getByRole("region", { name: "River Run" });
   await expect(river).toBeVisible();

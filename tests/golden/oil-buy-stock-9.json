@@ -4,10 +4,10 @@
     "scenario": "first",
     "setup": [
       {
-        "op": "burn",
-        "from": "m:oil_wharf",
+        "op": "mint",
+        "to": "m:oil_wharf",
         "asset": "oil",
-        "amount": "3",
+        "amount": "7",
         "memo": "Fixture stock"
       }
     ],

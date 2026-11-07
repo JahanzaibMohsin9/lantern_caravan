@@ -17,6 +17,7 @@ import { guideFor, Journal, NightReport, nightLabel, Objective, Preparation, Pro
 import { RiverStrip } from "../river/RiverStrip";
 import { MarketHistoryPanel, Rooms, Simulator } from "./MarketExtras";
 import { Landing } from "../river/Landing";
+import { Dock } from "../river/Dock";
 import { RiverRun } from "../river/RiverRun";
 
 const tell = (error: unknown) => error instanceof Error ? error.message : "Please try again.";
@@ -108,7 +109,8 @@ export function App() {
   }, [entered]);
 
   useEffect(() => { bridge.send("snapshot", snapshot); }, [snapshot]);
-  useEffect(() => { bridge.send("active", roaming); }, [roaming]);
+  // Players work from the Dock; only watchers walk the Row.
+  useEffect(() => { bridge.send("active", roaming && snapshot.spectator); }, [roaming, snapshot.spectator]);
   useEffect(() => { bridge.send("river", !!riverRun); }, [riverRun]);
   useEffect(() => { bridge.send("blocked", !!panel); }, [panel]);
   useEffect(() => { bridge.send("reduced", reduced); }, [reduced]);
@@ -228,8 +230,8 @@ export function App() {
         (event.target.matches("input, select, textarea") || event.target.isContentEditable))) return;
       if (key === "j") setPanel(panel === "journal" ? undefined : "journal");
       if (key === "h") setPanel(panel === "history" ? undefined : "history");
-      if (landingOpen && key === "1") { setPanel("shed"); return; }
-      if (!roaming) return;
+      // Walking the Row is only for watchers now; players work from the Dock.
+      if (!roaming || !snapshot.spectator) return;
       const stop = /^[1-8]$/.test(key) ? stops[Number(key) - 1] : undefined;
       if (stop) visit(stop.id);
       else if (key === "e" && !panel) visit(current);
@@ -237,7 +239,7 @@ export function App() {
     }
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
-  }, [entered, roaming, paused, panel, current, landingOpen, riverRun]);
+  }, [entered, roaming, paused, panel, current, riverRun, snapshot.spectator]);
 
   async function run<T>(task: () => Promise<T>): Promise<T | undefined> {
     if (locked.current) return;
@@ -259,7 +261,8 @@ export function App() {
     await run(async () => {
       const profile = profiles.find(profile => profile.slot === slot && profile.updated);
       const session = profile ? await backend.joinRoom(slot) : await backend.createSession({ slot });
-      if (backend.view().phase === "preparation" && backend.view().night === 1) await backend.advancePhase(session.sessionId, id());
+      // River-first: the market opens as soon as you arrive at the Dock.
+      if (backend.view().phase === "preparation") await backend.advancePhase(session.sessionId, id());
       try { localStorage.setItem("lantern-slot", slot); } catch { /* preferences are optional */ }
       setProfiles(await backend.listProfiles().catch(() => profiles));
       active.current = backend;
@@ -283,7 +286,9 @@ export function App() {
 
   function advance() {
     void run(async () => {
-      const updated = await active.current.advancePhase(snapshot.session_id, id());
+      let updated = await active.current.advancePhase(snapshot.session_id, id());
+      // A new night opens straight away offline: there is nothing to prepare before casting off.
+      if (!online && updated.phase === "preparation") updated = await active.current.advancePhase(snapshot.session_id, id());
       setPanel(undefined);
       if (updated.mode === "campaign" && updated.phase === "results" && updated.night === 4 && updated.objective.complete) {
         feedback("finale");
@@ -337,7 +342,7 @@ export function App() {
       const intent = { type: "finish_run", run_id: report.run_id, report } as const;
       await settle(await active.current.getQuote(snapshot.session_id, snapshot.night_id, intent));
       setCurrent("shed");
-      setPanel("shed");
+      setPanel(undefined);
     });
   }
 
@@ -379,9 +384,7 @@ export function App() {
       <div className="hud">
         {snapshot.spectator ? <span className="meter" title="Spectator"><Eye size={18}/><b>Watch</b></span>
           : <span className="meter gold" title="Coins in your purse"><Coins size={18}/><b>{snapshot.coins}</b></span>}
-        <button className="meter" disabled={!entered} onClick={() => setPanel("inventory")} aria-label={`Cart ${cargo} of ${snapshot.capacity} items`} title="Cart (I)">
-          <Package size={17}/><b>{cargo}<span className="muted"> / {snapshot.capacity}</span></b>
-        </button>
+        <span className="meter" aria-label={`Cargo ${cargo}`} title="Cargo in your hold"><Package size={17}/><b>{cargo}</b></span>
         <span className={`meter clock ${lowTime ? "low-time" : ""}`} title="Time until closing"><Clock3 size={17}/><b>{formatTime(snapshot.duration - snapshot.elapsed)}</b></span>
       </div>
       <div className="header-actions">
@@ -401,10 +404,10 @@ export function App() {
       {!entered && !panel && <div className="hero">
         <div className="eyebrow hero-kicker"><span/> A RIVERSIDE TRADING GAME</div>
         <h1>Lantern <em>Caravan</em></h1>
-        <p>Trade by lanternlight.</p>
+        <p>Run cargo upriver. Sell it to the Row's merchants.</p>
         <div className="hero-actions">
           <button className="primary enter" disabled={!ready || busy} onClick={() => void openMarket()}>
-            <Play size={17} fill="currentColor"/>{ready ? currentSlot ? "Continue" : "Enter the Row" : "Opening the Row"}<ArrowRight size={19}/>
+            <Play size={17} fill="currentColor"/>{ready ? currentSlot ? "Continue" : "Start" : "Opening the Row"}<ArrowRight size={19}/>
           </button>
           <button className="subtle enter" disabled={!ready} onClick={() => setPanel("profiles")}><Users size={17}/> Profiles</button>
         </div>
@@ -416,7 +419,7 @@ export function App() {
         </div>
       </div>}
 
-      {nightOpen && <>
+      {nightOpen && (online || snapshot.spectator) && <>
         <Objective snapshot={snapshot}/>
         {!panel && guide && next && <div className="guide">
           <button className="guide-next" onClick={() => visit(next.stop, next.item)}><Sparkles size={15}/>{next.line}<ChevronRight size={16}/></button>
@@ -427,15 +430,17 @@ export function App() {
       </>}
 
       {entered && online && !panel && <RiverStrip snapshot={snapshot}/>}
-      <div className="stage-footer">
+      {entered && !snapshot.spectator && !riverRun && !panel && snapshot.phase !== "results" && <Dock snapshot={snapshot} busy={actions.busy} online={online}
+        submit={actions.submit} castOff={castOff} openStall={stall => setPanel(stall)}
+        closeNight={!online && snapshot.phase === "open" ? advance : undefined}/>}
+      {!(entered && !snapshot.spectator) && <div className="stage-footer">
         <div className="key-hints"><span><kbd>A</kbd><kbd>D</kbd> Walk</span><span><kbd>E</kbd> Interact</span><span><kbd>I</kbd> Cart</span></div>
         <div className="river-meter" title={`${boats} of 6 boats lit`} aria-label={`${boats} of 6 boats lit`}>
           <Waves size={16}/><span aria-hidden="true">{Array.from({ length: 6 }, (_, index) =>
             <i key={index} className={snapshot.orders.some(order => order.boat === index && order.state === "filled") ? "filled" : ""}/>)}</span><b>{boats} / 6</b>
         </div>
-      </div>
+      </div>}
 
-      {entered && !panel && !snapshot.spectator && snapshot.phase === "preparation" && <Preparation snapshot={snapshot} actions={actions} advance={advance} landing={landingOpen ? () => setPanel("shed") : undefined}/>}
       {entered && !panel && !snapshot.spectator && snapshot.phase === "results" && <NightReport snapshot={snapshot} busy={busy} advance={advance} title={title}
         live={() => setPanel("rooms")}
         retry={() => void run(async () => { await backend.retry(); setPanel(undefined); })}/>}
@@ -515,7 +520,7 @@ export function App() {
       </div>}
     </div>
 
-    <nav className="route" aria-label="Market locations">
+    {!(entered && !snapshot.spectator) && <nav className="route" aria-label="Market locations">
       <div className="route-heading"><Compass size={19}/><span>THE ROW</span></div>
       <div className="route-stops">
         {stops.map((stop, index) => {
@@ -527,7 +532,7 @@ export function App() {
           </button>;
         })}
       </div>
-    </nav>
+    </nav>}
     <footer className="game-footer">
       <span><i className={snapshot.saveStatus === "unsaved" || (online && live.connection !== "Connected") ? "unsaved" : ""}/>
         {online ? live.environmentLabel + " · " + (live.confirming ? "Confirming…" : live.connection) : backend.environmentLabel}

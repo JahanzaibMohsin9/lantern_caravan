@@ -7,7 +7,7 @@
         "op": "burn",
         "from": "m:oil_wharf",
         "asset": "oil",
-        "amount": "11",
+        "amount": "1",
         "memo": "Fixture stock"
       }
     ],

@@ -1,5 +1,6 @@
 import { items, merchants, recipes, wishes, type ItemId, type RecipeId, type StallId } from "@lantern/content";
 import { strategies, type FestivalOrder, type StrategyId, type UpgradeId } from "@lantern/content/nights";
+import { sourceFor } from "@lantern/content/river";
 import { intentSchema, type Intent, type LedgerOp, type Quote, type Snapshot } from "@lantern/protocol";
 import { apply } from "./ledger";
 import { ask, tradePrice } from "./pricing";
@@ -36,7 +37,8 @@ export function quoteFor(state: World, actor: string, raw: Intent, id: string, n
   }
   if (Object.values(state.river.runs).some(run => run.actor === actor)) throw new Error("Moor the barge first.");
   const quantity = "quantity" in intent ? Number(intent.quantity) : 0;
-  if (quantity > cartCapacity(trader)) throw new Error(`Your cart holds ${cartCapacity(trader)} items.`);
+  // Selling empties the hold, so only buying and crafting are limited by it.
+  if (intent.type !== "sell" && quantity > cartCapacity(trader)) throw new Error(`Your cart holds ${cartCapacity(trader)} items.`);
   let effects: LedgerOp[];
   let summary: string;
 
@@ -53,7 +55,7 @@ export function quoteFor(state: World, actor: string, raw: Intent, id: string, n
       const buying = intent.type === "buy";
       const from = buying ? account : actor;
       const to = buying ? actor : account;
-      const total = agreedTotal ?? tradePrice(intent.type, items[item].price, stock, stockTargets(stall)[item]!, ratio(state, stall), quantity);
+      const total = agreedTotal ?? tradePrice(intent.type, items[item].price, stock, stockTargets(stall)[item]!, ratio(state, stall), quantity, !!sourceFor(item));
       if (get(state, from, item) < quantity) throw new Error(buying ? "The stall is low on stock." : "You don’t have enough to sell.");
       if (get(state, to, "coin") < total) throw new Error(buying ? "You’re short on coins." : "The stall is short on coins.");
       summary = `${buying ? "Buy" : "Sell"} ${quantity} · ${total} coins`;
@@ -159,7 +161,7 @@ export function commitFor(state: World, actor: string, deal: Quote, now: number)
       const stock = get(state, shop(stall), item);
       const target = stockTargets(stall)[item]!;
       const price = ask(items[item].price, buying ? stock : stock + quantity, target, ratio(state, stall));
-      const fair = price.label === "Normal" && total === tradePrice(intent.type, items[item].price, stock, target, ratio(state, stall), quantity) &&
+      const fair = price.label === "Normal" && total === tradePrice(intent.type, items[item].price, stock, target, ratio(state, stall), quantity, !!sourceFor(item)) &&
         (trader.fair[stall] ?? 0) < 2;
       const change = !buying && price.label === "Flooded" ? -1 : fair ? 1 : 0;
       if (fair) trader.fair = { ...trader.fair, [stall]: (trader.fair[stall] ?? 0) + 1 };
@@ -171,6 +173,7 @@ export function commitFor(state: World, actor: string, deal: Quote, now: number)
         thinking: empty ? "Out of goods. The stall is waiting for a haul." : prior.thinking } };
       if (empty) next = addActivity(next, merchants[stall].name + " ran out of goods.");
       if (!buying) next = recordSupply(next, stall, item, actor, quantity, total);
+      if (!buying && sourceFor(item)) trader.soldTonight += quantity;
       break;
     }
     case "craft":
@@ -279,7 +282,7 @@ export function snapshotFor(state: World, session_id: string, actor = player, se
           const item = key as ItemId;
           const stock = get(state, account, item);
           const { price, label } = ask(items[item].price, stock, target, ratio(state, stall));
-          return [item, { buy: String(price), sell: String(tradePrice("sell", items[item].price, stock, target, ratio(state, stall), 1)), label, target: String(target) }];
+          return [item, { buy: String(price), sell: String(tradePrice("sell", items[item].price, stock, target, ratio(state, stall), 1, !!sourceFor(item))), label, target: String(target) }];
         })),
       }];
     })),

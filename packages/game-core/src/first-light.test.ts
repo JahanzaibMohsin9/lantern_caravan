@@ -2,6 +2,7 @@ import { describe, expect, test } from "vitest";
 import type { Intent } from "@lantern/protocol";
 import { advanceClock, commit, createWorld, quote, snapshotFor, type World } from "./index";
 import { apply } from "./ledger";
+import { mint } from "./model";
 import { haggle } from "./haggle";
 import { ask, tradePrice } from "./pricing";
 
@@ -63,7 +64,8 @@ describe("first light", () => {
     expect(snapshot.delivered).toBe("3");
     expect(snapshot.orders.filter(order => order.state === "filled").map(order => order.name)).toEqual(["The Heron", "The Kingfisher"]);
     expect(snapshot.orders[0]!.wishes).toEqual(["May the river be kind"]);
-    expect(snapshot.coins).toBe("53");
+    // Night 1 opens with the Oil Wharf short of oil, so its oil costs 9 instead of the old 4.
+    expect(snapshot.coins).toBe("48");
     expect(totals(state, "coin")).toBe(startingCoins);
   });
 
@@ -101,7 +103,9 @@ describe("first light", () => {
   });
 
   test("haggles at a whole-unit price and enforces the cooldown", () => {
-    const state = begin();
+    // Restock the wharf to its normal 12 oil: Night 1 opens it short, which would make 5 coins a lowball.
+    const opened = begin();
+    const state = { ...opened, ledger: apply(opened.ledger, [mint("m:oil_wharf", "oil", 10, "Test restock")]) };
     const offer = { stall_id: "oil_wharf", item_id: "oil", side: "buy", quantity: "1" } as const;
     const refused = haggle(state, { ...offer, price_per_unit: "1" }, "no", 0);
     expect(refused.result.outcome).toBe("refuse");

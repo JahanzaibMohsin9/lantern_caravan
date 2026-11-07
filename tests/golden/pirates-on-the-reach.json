@@ -47,7 +47,7 @@
               "from": "v:ember_falls",
               "to": "esc:run:quote-0",
               "asset": "oil",
-              "amount": "12",
+              "amount": "8",
               "memo": "Run reservation"
             },
             {
@@ -74,7 +74,7 @@
     "night": 3,
     "name": "Pirates on the Reach",
     "objective": {
-      "name": "Clear the reach and carry its light",
+      "name": "Clear the reach",
       "complete": false,
       "steps": [
         {
@@ -88,12 +88,6 @@
           "count": "0",
           "target": "1",
           "icon": "bell"
-        },
-        {
-          "label": "Colored",
-          "count": "0",
-          "target": "2",
-          "icon": "lantern_color"
         }
       ]
     },

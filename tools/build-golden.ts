@@ -5,20 +5,23 @@ import { runFixture, type Fixture } from "../tests/golden-runner";
 const dir = "tests/golden";
 await mkdir(dir, { recursive: true });
 const cases = new Map<string, Fixture>();
+const firstNightOil = 2;
 const oil = (type: "buy" | "sell", quantity = "1") => ({ type, stall_id: "oil_wharf", item_id: "oil", quantity } as const);
 const craft = (quantity = "1") => ({ type: "craft", recipe_id: "paper_lantern", quantity } as const);
 const order = (order_id: string, quantity = "1", wish_id?: string) => ({ type: "fill_order", order_id, quantity, wish_id } as const);
 const add = (name: string, intents: Intent[], setup?: LedgerOp[], scenario: Fixture["scenario"] = "first") =>
   cases.set(name, { seed: 42, scenario, setup, steps: intents.map(intent => ({ at: 0, intent })) });
 for (const stock of [1, 2, 3, 8, 9, 15, 16, 22]) {
-  const amount = String(Math.abs(stock - 12));
-  const setup: LedgerOp = stock < 12 ? { op: "burn", from: "m:oil_wharf", asset: "oil", amount, memo: "Fixture stock" }
+  // Night 1 leaves the Oil Wharf with 2 oil so a first haul pays; fixtures set stock relative to that.
+  const amount = String(Math.abs(stock - firstNightOil));
+  const setup: LedgerOp = stock < firstNightOil ? { op: "burn", from: "m:oil_wharf", asset: "oil", amount, memo: "Fixture stock" }
     : { op: "mint", to: "m:oil_wharf", asset: "oil", amount, memo: "Fixture stock" };
-  add("oil-buy-stock-" + stock, [oil("buy")], [setup]);
-  add("oil-sell-stock-" + stock, [oil("sell")], [setup]);
+  const setups = stock === firstNightOil ? [] : [setup];
+  add("oil-buy-stock-" + stock, [oil("buy")], setups);
+  add("oil-sell-stock-" + stock, [oil("sell")], setups);
 }
 add("bulk-purchase", [oil("buy", "2")]);
-add("out-of-stock", [oil("buy")], [{ op: "burn", from: "m:oil_wharf", asset: "oil", amount: "12", memo: "Fixture stock" }]);
+add("out-of-stock", [oil("buy")], [{ op: "burn", from: "m:oil_wharf", asset: "oil", amount: String(firstNightOil), memo: "Fixture stock" }]);
 add("insufficient-funds", [oil("buy")], [{ op: "burn", from: "p:guest", asset: "coin", amount: "30", memo: "Fixture money" }]);
 add("cargo-full", [oil("buy", "3")]);
 add("wrong-phase", [oil("buy")], undefined, "prepared");

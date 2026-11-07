@@ -3,7 +3,7 @@ import type { ItemId } from "./index";
 export const villages = {
   millbrook: { name: "Millbrook", keeper: "Oda", color: "#ffcf8a", goods: { paper: 24, cord: 16 }, x: 900, y: 1400, reach: "mill_race" },
   ember_falls: { name: "Ember Falls", keeper: "Bram", color: "#f0a050", goods: { oil: 24 }, x: 4900, y: 950, reach: "ember_cut" },
-  reedmarsh: { name: "Reedmarsh", keeper: "Lio", color: "#8fcf9a", goods: { reed: 20, dye: 14 }, x: 8850, y: 1500, reach: "marsh_bend" },
+  reedmarsh: { name: "Reedmarsh", keeper: "Lio", color: "#8fcf9a", goods: { reed: 20, dye: 16 }, x: 8850, y: 1500, reach: "marsh_bend" },
 } as const;
 export type VillageId = keyof typeof villages;
 export const villageIds = Object.keys(villages) as VillageId[];

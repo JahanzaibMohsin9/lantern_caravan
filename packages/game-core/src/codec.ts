@@ -38,6 +38,7 @@ const receipt = z.object({ id: z.string(), label: z.string(), url: z.string().op
 const trader = z.object({
   look: bargeLookSchema.optional(), cosmetics: z.array(z.enum(Object.keys(bargeCosmetics) as (keyof typeof bargeCosmetics)[])).default([]),
   boomsTonight: num.optional(), contractsTonight: num.default(0), wharfBonus: num.default(0),
+  soldTonight: num.default(0), runsTonight: num.default(0), floodTonight: num.default(0),
   trim: bargeTrimSchema.optional(),
   name: z.string(), upgrades: z.array(z.enum(["cart_i", "cart_ii", "lantern_strings", ...(Object.keys(bargeUpgrades) as (keyof typeof bargeUpgrades)[])])),
   delivered: numbers, crafted: num, crowdSold: num, earned: num, spent: num, jobsDone: num,

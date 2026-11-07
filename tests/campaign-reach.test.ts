@@ -43,8 +43,9 @@ test("the reach night funds real cargo and rewards, replays both stops and persi
   expect(world.traders[player]).toMatchObject({ boomsTonight: 1, contractsTonight: 1 });
   expect(world.traders["r:juno"]).toMatchObject({ boomsTonight: 0, contractsTonight: 0 });
   world = decodeWorld(encodeWorld(world));
-  expect(snapshotFor(world, "test").objective.steps.map(s => s.count)).toEqual(["1", "1", "0"]);
-  expect(snapshotFor(world, "test").objective.complete).toBe(false);
+  // River-first: breaking the boom and filling a contract clears the reach.
+  expect(snapshotFor(world, "test").objective.steps.map(s => s.count)).toEqual(["1", "1"]);
+  expect(snapshotFor(world, "test").objective.complete).toBe(true);
   expect(() => quote(world, { type: "finish_run", run_id: manifest.id, report }, "twice", report.durationMs)).toThrow("RIVER_RUN_UNKNOWN");
   const next = newNight(closeNight(openNight(world)));
   expect(next.traders[player]).toMatchObject({ boomsTonight: 0, contractsTonight: 0 });
