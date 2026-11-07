@@ -4,6 +4,8 @@ A river trading game. Run a barge upriver, buy cargo where it's cheap, fight off
 
 ![The barge on Ember Cut, about to trade at Ember Falls](docs/media/river-run.png)
 
+**Play it now: [lanterncaravan.duckdns.org](https://lanterncaravan.duckdns.org).** **Start** plays the four-night campaign in your browser. **Live market → Join The Row** puts you in the shared public market, which settles on NEAR testnet. **Watch** and **History** need no sign-in.
+
 ## Play
 
 Use Node.js 24.
@@ -23,10 +25,10 @@ The campaign is four river nights:
 
 | Night | Goal |
 | --- | --- |
-| 1 · First Light | **Your first haul**: one run and six goods sold to the Row. |
+| 1 · First Haul | **Your first haul**: one run and six goods sold to the Row. |
 | 2 · The Dark Wharf | **Relight the wharf**: accept the Harbor Bell's relief job and haul oil from Ember Falls. |
 | 3 · Pirates on the Reach | **Clear the reach**: break the Marsh Bend boom and deliver a contract. |
-| 4 · Festival of Lights | **Ride the Floodtide**: get home through both lock gates when the river rises, and sell eight goods. |
+| 4 · The Floodtide | **Ride the Floodtide**: get home through both lock gates when the river rises, and sell eight goods. |
 
 Endless nights and live rooms ask you to **keep the Row supplied**: two runs and twelve goods sold. A local save is automatic. **J** opens the journal, **H** the market history, and **Esc** pauses.
 
@@ -49,6 +51,17 @@ On festival nights the river rises in a **Floodtide**. If you're upriver when it
 | The Dock | Home with a haul | Campaign complete |
 | --- | --- | --- |
 | ![The Dock on Night 1: tonight's goal, Cast off, jobs and merchants](docs/media/dock.png) | ![Back at the Dock with twelve lamp oil to sell](docs/media/dock-haul.png) | ![The campaign's ending](docs/media/festival.png) |
+
+## On NEAR
+
+The public Row's economy lives on NEAR testnet. Every coin, good and stall share is a token on one NEP-245 multi-token contract, [`items.lantern-caravan.testnet`](https://testnet.nearblocks.io/address/items.lantern-caravan.testnet) (source in [`contracts/items/`](contracts/items/)).
+
+- **Players.** Each confirmed action in the public Row (a sale at the Dock, a purchase, a haul settled at the Landing) is its own `game_settle` transaction, keyed by the action's id so a retry can't settle twice. The game shows **Settled on NEAR** with a link to the transaction, and the Journal keeps a link for every action.
+- **AI merchants, rival haulers and villages** are registered agent accounts with their own balances. Their trading between player actions is settled in `game_settle_batch` transactions.
+- **Conservation.** Goods enter the economy only through village harvests and leave only when they're used up; every trade is a transfer between holders. `npm run near:verify -- --data <data folder>` reads every holder's balance from the contract and checks it against the live Row.
+- **What's local.** Private rooms and the offline campaign use a local ledger. Players currently settle to derived `*.players.lantern-caravan.testnet` holders, and the operator signs the agents' transfers; NEAR social login and agent-signed transactions (NEP-366) are next.
+
+The footer links the contract and counts settled transactions, and `GET /v1/chain/status` reports the queue and the latest transaction. [Running](docs/RUNNING.md#near-testnet-settlement) covers settlement setup and checks.
 
 ## Live market and tests
 

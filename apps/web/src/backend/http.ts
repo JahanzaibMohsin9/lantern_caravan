@@ -1,6 +1,9 @@
 import type { ActionStatus, AuthClient, Catalog, ChroniclePage, CreateSessionReq, HaggleOffer, HaggleResult, HistoryRange, Intent,
   MarketBackend, MarketHistory, ProfileSummary, Quote, SaveStatus, SessionInfo, Snapshot } from "@lantern/protocol";
 
+export type ChainStatus = { enabled: boolean; network?: string; contract?: string; contractUrl?: string; queued?: number;
+  settled?: number; last?: { id: string; url: string; at: number } };
+
 class RpcError extends Error {
   constructor(readonly code: string, message: string) { super(message); }
 }
@@ -41,6 +44,14 @@ export class HttpBackend implements MarketBackend {
       if (!response.ok) throw new Error();
       return await response.json() as T;
     } catch { throw new Error("The live server is unavailable."); }
+  }
+
+  /** The public Row's NEAR settlement: contract, settled transactions and the latest one. */
+  async chainStatus(): Promise<ChainStatus> {
+    try {
+      const response = await fetch(this.url + "/v1/chain/status", { signal: AbortSignal.timeout(7000) });
+      return response.ok ? await response.json() as ChainStatus : { enabled: false };
+    } catch { return { enabled: false }; }
   }
 
   private key(room: string) { return "lantern-pending/" + (this.auth.getState().player?.id ?? "watch") + "/" + room; }

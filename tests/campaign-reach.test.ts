@@ -17,7 +17,7 @@ test("a pre-W6 festival save migrates from Night 3 to 4 without changing its led
   const restored = decodeWorld(old);
   expect(restored.night).toBe(4);
   expect(restored.ledger).toEqual(festival.ledger);
-  expect(snapshotFor(restored, "test").nightName).toBe("Festival of Lights");
+  expect(snapshotFor(restored, "test").nightName).toBe("The Floodtide");
 });
 
 test("the reach night funds real cargo and rewards, replays both stops and persists only the actor's nightly credit", () => {

@@ -36,6 +36,8 @@ test("Night 1: casts off from the Dock, hauls oil from Ember Falls and sells it 
   await button("Start").click();
   // No walking, crafting or locked barge: the Dock is the first screen and the barge is ready.
   await expect(page.getByRole("navigation", { name: "Market locations" })).toHaveCount(0);
+  await expect(page.getByText("NIGHT 01")).toBeVisible();
+  await expect(page.getByText("First Haul", { exact: true })).toBeVisible();
   await expect(dock.getByText("River run 0/1")).toBeVisible();
   await dock.getByRole("button", { name: /^Cast off/ }).click();
   const river = page.getByRole("region", { name: "River Run" });
@@ -69,6 +71,11 @@ test("Night 1: casts off from the Dock, hauls oil from Ember Falls and sells it 
   const coins = Number(await page.locator(".meter.gold b").innerText());
   await oil.getByRole("button", { name: /^Sell \d/ }).click();
   await expect.poll(async () => Number(await page.locator(".meter.gold b").innerText())).toBeGreaterThan(coins);
+  // The Last run card adds up the trip: spent upriver, earned at the Dock, and the net.
+  const lastRun = dock.getByLabel("Last run");
+  await expect(lastRun).toContainText("on the river");
+  await expect(lastRun).toContainText(/goods brought home for \d+ coins upriver/);
+  await expect(lastRun.locator(".dock-voyage-row span").nth(1)).toContainText("+");
   // A merchant card opens the full trade panel.
   await dock.locator(".dock-merchant").filter({ hasText: "Oil Wharf" }).click();
   await expect(page.getByRole("heading", { name: "Oil Wharf", exact: true })).toBeVisible();

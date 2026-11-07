@@ -8,7 +8,7 @@ Playtesting found the barge hard to find (locked on Night 1, behind one of eight
 - **Objectives** (`objective()` in `packages/game-core/src/model.ts`) count `runsTonight`, `soldTonight` (river goods sold to stalls) and `floodTonight` on the trader, reset each night. Night 1: 1 run + 6 sold. Night 2: relight the wharf. Night 3: boom + contract. Night 4: Floodtide return + 8 sold. Endless and live: 2 runs + 12 sold. Night 1's barge is no longer under repair, and its freight keeps 2 oil and 3 paper on the Row so the first haul has buyers.
 - **Pricing** (`tradePrice(..., haul)` in `pricing.ts`): a stall short of a river good (stock + unit < target) pays a seller the full ask instead of 70%. Rival freight stays wholesale. Reedmarsh harvests 16 dye (was 14). A stall closed for stock gets its relief bell even after a cash rescue (`refreshRelief`).
 - **Checks:** `npm test` 185 passed; `npm run build` passed; e2e 11 passed in Chrome and Firefox (the campaign spec plays all four nights from the Dock); 2000-night soak passed for seeds 17, 42, 93, 166 and 271 (max dark streak 1, no invariant errors).
-- **Not done yet:** a profit summary after each run; night names still say First Light and Festival of Lights; the ambient village boats pile thousands of units of goods a village doesn't make in its account (harmless to prices, predates this work).
+- **Not done yet:** the ambient village boats pile thousands of units of goods a village doesn't make in its account (harmless to prices, predates this work).
 
 ## Work packages · 5–6 November 2026
 

@@ -13,16 +13,21 @@ import { cargoColor } from "./render";
 const lateCutoff = 45;
 const bandLabel = { thriving: "Thriving", healthy: "Healthy", tight: "Tight", dark: "Closed" } as const;
 
+/** Coins at cast-off and on the way home, so the Dock can show what the last run made. */
+export type Voyage = { night: string; start: number; home?: number; units?: number; spent?: number };
+const signed = (value: number) => (value > 0 ? "+" : value < 0 ? "−" : "") + Math.abs(value);
+
 type Props = {
   snapshot: Snapshot; busy: boolean; online: boolean;
   submit: (intent: Intent) => Promise<void>;
   castOff: (intent: Extract<Intent, { type: "start_run" }>) => void;
   openStall: (stall: StallId) => void;
   closeNight?: () => void;
+  voyage?: Voyage;
 };
 
 /** The hub of the game: what to do next, one Cast off button, jobs, and selling your haul to the Row's merchants. */
-export function Dock({ snapshot, busy, online, submit, castOff, openStall, closeNight }: Props) {
+export function Dock({ snapshot, busy, online, submit, castOff, openStall, closeNight, voyage }: Props) {
   const [trim, setTrim] = useState<BargeTrimId>(snapshot.barge.trim);
   const trimsUnlocked = snapshot.mode !== "campaign" || snapshot.night >= 3;
   const left = snapshot.duration - snapshot.elapsed;
@@ -59,7 +64,8 @@ export function Dock({ snapshot, busy, online, submit, castOff, openStall, close
           items[mine.item as ItemId].name.toLowerCase() + " from " + villages[mine.village as VillageId].name} · {mine.payout} coins</p>
           : lead ? <p className="dock-lead"><i style={{ background: cargoColor[lead.item] }}/> Best run: <b>{items[lead.item as ItemId].name}</b> from {lead.port} at {lead.buy}
             <ArrowRight size={13}/> {merchants[lead.stall as StallId].name} pays {lead.sell}</p>
-          : <p className="dock-lead">Every stall is stocked. Take a Harbor Bell job, or hunt pirates for bounties.</p>}
+          : <p className="dock-lead">{contracts.length ? "Every stall is stocked. Take a Harbor Bell job, or hunt pirates for bounties."
+            : "Every stall is stocked for now. Hunt pirates for bounties, or wait for a merchant to run short."}</p>}
         <label className="dock-trim"><span>Trim</span>
           <select aria-label="Barge trim" value={trim} disabled={busy || !canCast || !trimsUnlocked} onChange={event => setTrim(event.target.value as BargeTrimId)}>
             {Object.entries(bargeTrims).map(([id, value]) => <option key={id} value={id}>{value.name}</option>)}
@@ -90,6 +96,7 @@ export function Dock({ snapshot, busy, online, submit, castOff, openStall, close
     </div>
 
     <div className="dock-column">
+      {voyage?.home !== undefined && (voyage.units || voyage.home !== voyage.start) && <LastRun voyage={voyage} coins={Number(snapshot.coins)} hold={hold} snapshot={snapshot}/>}
       <div className="dock-card dock-sell" aria-label="Sell your haul">
         <span className="eyebrow"><ShoppingBasket size={13}/> YOUR HOLD</span>
         {!hold.length && <p className="hint">Your hold is empty. Cast off, buy cargo upriver, and bring it back to sell here.</p>}
@@ -133,6 +140,23 @@ export function Dock({ snapshot, busy, online, submit, castOff, openStall, close
       <Landing snapshot={snapshot} busy={busy} submit={submit} castOff={castOff} inDock/>
     </details>
   </section>;
+}
+
+/** What the last run made: coins on the river (purchases, bounties, jobs), coins since at the Dock, and the net. */
+function LastRun({ voyage, coins, hold, snapshot }: { voyage: Voyage; coins: number; hold: { item: ItemId; count: number }[]; snapshot: Snapshot }) {
+  const river = voyage.home! - voyage.start, dock = coins - voyage.home!, net = coins - voyage.start;
+  const worth = hold.reduce((sum, { item, count }) => sum + count * Math.max(0, ...Object.values(snapshot.merchants)
+    .filter(market => market.band !== "dark" && market.prices[item]).map(market => Number(market.prices[item]!.sell))), 0);
+  return <div className="dock-card dock-voyage" aria-label="Last run">
+    <span className="eyebrow">LAST RUN</span>
+    <div className="dock-voyage-row">
+      <span><b>{signed(river)}</b><small>on the river</small></span>
+      <span><b>{signed(dock)}</b><small>at the Dock</small></span>
+      <span className={net >= 0 ? "gain" : "loss"}><b>{signed(net)}</b><small>net so far</small></span>
+    </div>
+    <p className="hint">{voyage.units} goods brought home for {voyage.spent} coins upriver.
+      {worth > 0 ? " Your hold is worth about " + worth + " more at today's prices." : ""}</p>
+  </div>;
 }
 
 /** One plain sentence: the most useful thing to do right now. */

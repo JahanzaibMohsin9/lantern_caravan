@@ -41,7 +41,7 @@ const festivalOrders = [
 
 export function nightPlan(night: number, mode: "campaign" | "endless" | "live", seed: number) {
   if (mode === "campaign") {
-    if (night === 1) return { name: "First Light", duration: 300, orders: orders.map(order => ({ ...order, item: "lantern_paper" as const })), events: [] };
+    if (night === 1) return { name: "First Haul", duration: 300, orders: orders.map(order => ({ ...order, item: "lantern_paper" as const })), events: [] };
     if (night === 2) return { name: "The Dark Wharf", duration: 300,
       orders: [festival(0, "lantern_float", 2, 0, 15, true), festival(1, "lantern_paper", 2, 0, 10),
         festival(2, "lantern_paper", 1, 50, 10), festival(3, "lantern_float", 1, 100, 15),
@@ -50,7 +50,7 @@ export function nightPlan(night: number, mode: "campaign" | "endless" | "live", 
       orders: [festival(0, "lantern_color", 2, 0, 18, true), festival(1, "lantern_paper", 2, 0, 10),
         festival(2, "lantern_paper", 1, 50, 10), festival(3, "lantern_float", 1, 100, 15),
         festival(4, "lantern_color", 1, 140, 18), festival(5, "lantern_float", 1, 180, 15)], events: [] };
-    return { name: "Festival of Lights", duration: 300, orders: festivalOrders, events };
+    return { name: "The Floodtide", duration: 300, orders: festivalOrders, events };
   }
   const shift = Math.abs((seed ^ Math.imul(night, 113)) % 4);
   const traffic: NightEvent[] = [

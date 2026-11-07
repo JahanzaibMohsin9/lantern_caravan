@@ -1,12 +1,13 @@
 import { useEffect, useRef, useState } from "react";
 import {
+  ExternalLink,
   Anchor, ArrowRight, BookOpen, Check, ChevronRight, CircleAlert, Clock3, Coins, Compass, MoonStar,
   Activity, ChartNoAxesCombined, Eye, Globe2, Package, Pause, Play, Settings2, Sparkles, Users, Volume2, VolumeX, Waves,
 } from "lucide-react";
 import { merchants, type ItemId, type StallId } from "@lantern/content";
 import type { HaggleOffer, Intent, ProfileSummary, Quote, RunReport, Snapshot } from "@lantern/protocol";
 import { backend, devAuth, guest, live, liveDefault, publicView } from "../config";
-import type { HttpBackend } from "../backend/http";
+import type { ChainStatus, HttpBackend } from "../backend/http";
 import { slots } from "../backend/saves";
 import { bridge, stops, type Effect, type Panel, type Stop } from "../world/bridge";
 import { mountRow } from "../world/Row";
@@ -17,7 +18,7 @@ import { guideFor, Journal, NightReport, nightLabel, Objective, Preparation, Pro
 import { RiverStrip } from "../river/RiverStrip";
 import { MarketHistoryPanel, Rooms, Simulator } from "./MarketExtras";
 import { Landing } from "../river/Landing";
-import { Dock } from "../river/Dock";
+import { Dock, type Voyage } from "../river/Dock";
 import { RiverRun } from "../river/RiverRun";
 
 const tell = (error: unknown) => error instanceof Error ? error.message : "Please try again.";
@@ -48,7 +49,10 @@ export function App() {
   const [current, setCurrent] = useState<Stop>("workshop");
   const [preferred, setPreferred] = useState<ItemId>();
   const [busy, setBusy] = useState(false);
-  const [toast, setToast] = useState<{ line: string; error: boolean }>();
+  const [toast, setToast] = useState<{ line: string; error: boolean; url?: string }>();
+  const [chain, setChain] = useState<ChainStatus>({ enabled: false });
+  // Coins when the barge last cast off and when it came home, for the Dock's Last run card. Cleared each night.
+  const [voyage, setVoyage] = useState<Voyage>();
   const [volume, setVolume] = useState(() => Number(localPreference("lantern-volume", "0.5")));
   const [music, setMusic] = useState(() => Number(localPreference("lantern-music", "0.65")));
   const [effectsLevel, setEffectsLevel] = useState(() => Number(localPreference("lantern-effects", "0.85")));
@@ -62,6 +66,7 @@ export function App() {
   const riverRun = entered && !snapshot.spectator ? snapshot.river.myRun : undefined;
   const landingOpen = entered && !snapshot.spectator && snapshot.phase === "preparation";
   const nightOpen = entered && snapshot.phase === "open";
+  const showChain = chain.enabled && (!entered || (online && snapshot.session_id === "the-row"));
   const roaming = nightOpen || (entered && online && snapshot.spectator);
   const paused = panel === "pause" || panel === "settings";
   const cargo = Object.values(snapshot.cargo).reduce((sum, count) => sum + Number(count), 0);
@@ -70,10 +75,10 @@ export function App() {
   const currentSlot = profiles.find(profile => profile.slot === snapshot.session_id && profile.updated);
   const event = snapshot.events.find(entry => snapshot.elapsed >= entry.at - 12 && snapshot.elapsed < entry.at + 8);
 
-  function notify(line: string, error = false) {
-    setToast({ line, error });
+  function notify(line: string, error = false, url?: string) {
+    setToast({ line, error, url });
     clearTimeout(notificationTimer.current);
-    notificationTimer.current = window.setTimeout(() => setToast(undefined), 3400);
+    notificationTimer.current = window.setTimeout(() => setToast(undefined), url ? 6000 : 3400);
   }
 
   useEffect(() => {
@@ -108,7 +113,16 @@ export function App() {
     return () => { cancelled = true; window.clearInterval(timer); };
   }, [entered]);
 
+  // The public Row's NEAR settlement, shown on the title and in the Row; private rooms and local play don't settle.
+  useEffect(() => {
+    let cancelled = false;
+    const read = () => void publicView.chainStatus().then(next => { if (!cancelled) setChain(next); });
+    read();
+    const timer = window.setInterval(read, 20000);
+    return () => { cancelled = true; window.clearInterval(timer); };
+  }, []);
   useEffect(() => { bridge.send("snapshot", snapshot); }, [snapshot]);
+  useEffect(() => setVoyage(previous => previous?.night === snapshot.night_id ? previous : undefined), [snapshot.night_id]);
   // Players work from the Dock; only watchers walk the Row.
   useEffect(() => { bridge.send("active", roaming && snapshot.spectator); }, [roaming, snapshot.spectator]);
   useEffect(() => { bridge.send("river", !!riverRun); }, [riverRun]);
@@ -326,13 +340,16 @@ export function App() {
       merchant.band !== "dark" && before.merchants[stall]?.band === "dark");
     const effect = relit || lit ? undefined : effects[quote.intent.type];
     if (effect) feedback(effect);
-    notify(relit ? merchants[relit[0] as StallId].name + " relit!" : lit ? "A boat is lit!" : quote.summary);
+    // On the public Row every confirmed action is a NEAR testnet transaction; link it.
+    notify(relit ? merchants[relit[0] as StallId].name + " relit!" : lit ? "A boat is lit!" : quote.summary, false, status.receipt?.url);
     return true;
   }
 
   function castOff(intent: Extract<Intent, { type: "start_run" }>) {
     void run(async () => {
+      const start = Number(active.current.view().coins), night = snapshot.night_id;
       await settle(await active.current.getQuote(snapshot.session_id, snapshot.night_id, intent));
+      setVoyage({ night, start });
       setPanel(undefined);
     });
   }
@@ -341,6 +358,10 @@ export function App() {
     void run(async () => {
       const intent = { type: "finish_run", run_id: report.run_id, report } as const;
       await settle(await active.current.getQuote(snapshot.session_id, snapshot.night_id, intent));
+      const home = Number(active.current.view().coins);
+      const units = Object.values(report.delivered).reduce((sum, count) => sum + (count ?? 0), 0);
+      const spent = report.bought.reduce((sum, lot) => sum + lot.paid, 0);
+      setVoyage(previous => previous && { ...previous, home, units, spent });
       setCurrent("shed");
       setPanel(undefined);
     });
@@ -431,9 +452,9 @@ export function App() {
 
       {entered && online && !panel && <RiverStrip snapshot={snapshot}/>}
       {entered && !snapshot.spectator && !riverRun && !panel && snapshot.phase !== "results" && <Dock snapshot={snapshot} busy={actions.busy} online={online}
-        submit={actions.submit} castOff={castOff} openStall={stall => setPanel(stall)}
+        submit={actions.submit} castOff={castOff} openStall={stall => setPanel(stall)} voyage={voyage}
         closeNight={!online && snapshot.phase === "open" ? advance : undefined}/>}
-      {!(entered && !snapshot.spectator) && <div className="stage-footer">
+      {entered && snapshot.spectator && <div className="stage-footer">
         <div className="key-hints"><span><kbd>A</kbd><kbd>D</kbd> Walk</span><span><kbd>E</kbd> Interact</span><span><kbd>I</kbd> Cart</span></div>
         <div className="river-meter" title={`${boats} of 6 boats lit`} aria-label={`${boats} of 6 boats lit`}>
           <Waves size={16}/><span aria-hidden="true">{Array.from({ length: 6 }, (_, index) =>
@@ -509,6 +530,7 @@ export function App() {
 
       {toast && <div className={`toast ${toast.error ? "error" : ""}`} role={toast.error ? "alert" : "status"}>
         {toast.error ? <CircleAlert size={18}/> : <Check size={18}/>} {toast.line}
+        {toast.url && <a className="toast-link" href={toast.url} target="_blank" rel="noreferrer">Settled on NEAR <ExternalLink size={12}/></a>}
       </div>}
       {debug && <div className="debug-panel">
         <span>Seed {snapshot.seed} · r{snapshot.revision} · {snapshot.phase} · {fps} FPS</span>
@@ -520,7 +542,7 @@ export function App() {
       </div>}
     </div>
 
-    {!(entered && !snapshot.spectator) && <nav className="route" aria-label="Market locations">
+    {entered && snapshot.spectator && <nav className="route" aria-label="Market locations">
       <div className="route-heading"><Compass size={19}/><span>THE ROW</span></div>
       <div className="route-stops">
         {stops.map((stop, index) => {
@@ -538,7 +560,9 @@ export function App() {
         {online ? live.environmentLabel + " · " + (live.confirming ? "Confirming…" : live.connection) : backend.environmentLabel}
         {online && <span data-room-code={snapshot.session_id}> · {snapshot.session_id === "the-row" ? "The Row" : "Room " + snapshot.session_id}</span>}
         {snapshot.saveStatus === "unsaved" && " · Unsaved"}</span>
-      <span>LANTERN ROW <span className="divider"/> v1.0</span>
+      <span>{showChain && <a className="chain-link" href={chain.last?.url ?? chain.contractUrl} target="_blank" rel="noreferrer"
+        title={"Contract " + chain.contract}>THE ROW SETTLES ON NEAR TESTNET · {chain.settled} TRANSACTIONS <ExternalLink size={11}/></a>}
+        {showChain && <span className="divider"/>}LANTERN ROW <span className="divider"/> v1.0</span>
     </footer>
     </div>
   </main>;

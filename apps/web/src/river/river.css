@@ -197,3 +197,9 @@
   .dock { grid-template-columns: 1fr; overflow-y: auto; }
   .dock-column { max-height: none; overflow: visible; }
 }
+.dock-voyage-row { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; margin: 6px 0 2px; }
+.dock-voyage-row span { display: grid; justify-items: start; gap: 1px; }
+.dock-voyage-row b { font-size: 20px; color: #ffe0ad; }
+.dock-voyage-row small { font-size: 11px; color: #b9a7b4; }
+.dock-voyage-row .gain b { color: #9fe0b0; }
+.dock-voyage-row .loss b { color: #ffb3a8; }
