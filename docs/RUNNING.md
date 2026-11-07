@@ -42,6 +42,8 @@ SETTLEMENT=near npm run dev:server
 
 On start the server registers the merchant, rival and village accounts as agents (once), then reconciles: it reads every holder's balances from the contract and settles whatever differs from the game's ledger. On an empty contract that is the market's genesis. `GET /v1/chain/status` shows the contract, the queue, the last settled transaction and any error. Settings and their defaults are in `.env.example` (the RPC defaults to FastNEAR, since `rpc.testnet.near.org` is deprecated and rate-limited); the operator key comes from `NEAR_OPERATOR_KEY` (for hosting) or the operator's legacy-keychain file.
 
+Agent-only activity (merchants, rivals, villages) settles in one `game_settle_batch` every 12 nights, about once an hour, because every batch ID stays in the contract's storage; set `LANTERN_AGENT_BATCH_NIGHTS` to change it. Before each player action the server settles the agents' activity first, so a player's trade always lands on a matching ledger.
+
 `npm run near:verify -- --data <data folder>` is a read-only check that every on-chain balance matches the room's ledger, at any point in the night.
 
 `npm run near:smoke` runs the whole flow against the real testnet contract in a throwaway data folder: agents, genesis, a player purchase, a full balance check, then a clean-up reconcile that leaves the contract empty (`-- --keep` skips the clean-up).

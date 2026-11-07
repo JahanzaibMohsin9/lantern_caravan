@@ -48,6 +48,12 @@ export class LiveMarket {
   private queue = Promise.resolve();
   private speed = Math.max(1, Math.min(300, Number(process.env.LANTERN_TIME_SCALE) || 1));
   private prep = Math.max(1, Number(process.env.LANTERN_PREP_SECONDS) || 30);
+  /**
+   * Agent-only activity settles in one batch every this many nights. Each batch ID stays in the contract's
+   * storage for good, so settling every five-minute night would slowly use up the contract's balance. A
+   * player's action still flushes the agents' activity first, so every player trade lands on a matching ledger.
+   */
+  private batchNights = Math.max(1, Math.floor(Number(process.env.LANTERN_AGENT_BATCH_NIGHTS) || 12));
 
   constructor(private readonly store: StateStore<RoomData>, private readonly settlement: SettlementProvider) {}
 
@@ -243,9 +249,11 @@ export class LiveMarket {
     }
     if (before === room.world || (before.revision === room.world.revision && before.tickAt === room.world.tickAt)) return;
     const delta = netEffects(before.ledger, room.world.ledger);
-    room.agentEffects.push(...delta);
-    if (room.world.phase === "results" && before.phase !== "results") {
-      const batch = { roomId: room.id, nightId: nightId(room.world), batchId: room.id + "-" + nightId(room.world), effects: coalesce(room.agentEffects) };
+    // Keep the unsettled agent activity netted, so it stays small while it waits for its batch.
+    room.agentEffects = coalesce([...room.agentEffects, ...delta]);
+    if (room.world.phase === "results" && before.phase !== "results" && room.world.night % this.batchNights === 0
+      && room.agentEffects.length) {
+      const batch = { roomId: room.id, nightId: nightId(room.world), batchId: room.id + "-" + nightId(room.world), effects: room.agentEffects };
       await this.settlement.settleBatch?.(batch);
       room.agentEffects = [];
     }

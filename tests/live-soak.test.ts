@@ -83,7 +83,8 @@ test("the authoritative loop runs 500 nights and accepts a 20-night player", asy
   expect(consecutiveDark).toBeLessThanOrEqual(5);
   expect(min).toBeGreaterThanOrEqual(50);
   expect(max).toBeLessThanOrEqual(500);
-  expect(batches).toBe(500);
+  // Agent-only activity settles every 12th night by default.
+  expect(batches).toBe(Math.floor(500 / 12));
   // At most one flush per player action, and only when agents had changed something.
   expect(flushes).toBeGreaterThan(0);
   expect(flushes).toBeLessThanOrEqual(serial);

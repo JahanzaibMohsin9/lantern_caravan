@@ -6,6 +6,18 @@ A river trading game. Run a barge upriver, buy cargo where it's cheap, fight off
 
 **Play it now: [lanterncaravan.duckdns.org](https://lanterncaravan.duckdns.org).** **Start** plays the four-night campaign in your browser. **Live market → Join The Row** puts you in the shared public market, which settles on NEAR testnet. **Watch** and **History** need no sign-in.
 
+## Check it in 5 minutes
+
+Each step says what to do and what you should see. Steps 1 to 5 use the hosted demo; nothing needs a wallet.
+
+1. **Open [lanterncaravan.duckdns.org](https://lanterncaravan.duckdns.org).** You see the Row at night. The footer reads **The Row settles on NEAR testnet · N transactions** and links to the latest one.
+2. **Press Watch.** You see the live public Row, which runs around the clock. Click a stall's name in the bar along the bottom: you see its prices, stock and **Ownership** tab. The **Upriver** strip shows each reach's danger, booms, village cash and the rival haulers on the river.
+3. **Press H (or History).** You see 24-hour and 7-day charts for every stall, village and reach, and the **Chronicle** of the AI agents' decisions, such as "Pell: Hauling 4 oil from Ember Falls to Oil Wharf."
+4. **Live market → type a display name → Sign in → Join The Row.** You arrive at the Dock with a small starting hold. Press a **Sell** button. You see "Confirming…", then **Trade confirmed** with a **Settled on NEAR** link to that sale's transaction: one `game_settle` call with two NEP-245 `mt_transfer` events, your goods to the merchant's own account (for example `mira.lantern-caravan.testnet`) and coins back.
+5. **Press J (Journal).** Every confirmed action is listed with a **Details** link to its transaction.
+6. **Read a balance from the chain** (NEAR CLI): `near view items.lantern-caravan.testnet mt_balance_of '{"account_id":"mira.lantern-caravan.testnet","token_id":"coin"}'`. You see the Paper Mill merchant's coin balance on chain. Agents' own trades settle before every player action and otherwise about once an hour, so between those it can trail the game by a few coins.
+7. **Run it locally** with no keys: `npm ci && npm run dev`, then **Start** for the four-night campaign. `npm test` passes, and `npm run simulate -- --nights 200 --seed 42 --check` prints the economy summary in a few seconds.
+
 ## Play
 
 Use Node.js 24.
@@ -57,7 +69,7 @@ On festival nights the river rises in a **Floodtide**. If you're upriver when it
 The public Row's economy lives on NEAR testnet. Every coin, good and stall share is a token on one NEP-245 multi-token contract, [`items.lantern-caravan.testnet`](https://testnet.nearblocks.io/address/items.lantern-caravan.testnet) (source in [`contracts/items/`](contracts/items/)).
 
 - **Players.** Each confirmed action in the public Row (a sale at the Dock, a purchase, a haul settled at the Landing) is its own `game_settle` transaction, keyed by the action's id so a retry can't settle twice. The game shows **Settled on NEAR** with a link to the transaction, and the Journal keeps a link for every action.
-- **AI merchants, rival haulers and villages** are registered agent accounts with their own balances. Their trading between player actions is settled in `game_settle_batch` transactions.
+- **AI merchants, rival haulers and villages** are registered agent accounts with their own balances. Their trading is settled in `game_settle_batch` transactions: before every player action, and otherwise about once an hour.
 - **Conservation.** Goods enter the economy only through village harvests and leave only when they're used up; every trade is a transfer between holders. `npm run near:verify -- --data <data folder>` reads every holder's balance from the contract and checks it against the live Row.
 - **What's local.** Private rooms and the offline campaign use a local ledger. Players currently settle to derived `*.players.lantern-caravan.testnet` holders, and the operator signs the agents' transfers; NEAR social login and agent-signed transactions (NEP-366) are next.
 
@@ -77,6 +89,11 @@ npm run simulate -- --nights 2000 --seed 42 --check
 
 **Live market** opens the shared public Row or a private room. **Watch** and **History** are public. The river strip shows reach danger, booms, village cash bands and who is upriver. History includes village cash, source prices and available stock, plus reach danger and booms. Deliver two supply contracts for the same village to earn its trusted-hauler stamp and 10% off future village purchases. The development server uses local providers and saves to `apps/server/data/`. See [Running](docs/RUNNING.md) for deployment and test options.
 
-Built with TypeScript, Phaser, React, Vite, Zod, Vitest, Playwright, Lucide, Fontsource, and original procedural art and synthesized audio. OpenAI Codex assisted implementation and verification. [Asset credits](docs/ASSETS.md)
+## How it was made
+
+- **Built during the hackathon.** Development started in November 2026; the first commit is dated 5 November 2026.
+- **Built with** TypeScript, Phaser, React, Vite, Zod, Vitest, Playwright, Lucide, Fontsource and near-sdk (Rust), with original procedural art and synthesized audio. [Asset credits](docs/ASSETS.md)
+- **AI tools.** OpenAI Codex and Claude Code assisted implementation, testing and documentation. The demo video's narration was generated with Gemini TTS and its music with Lyria.
+- **Testnet only.** Every token lives on NEAR testnet; nothing in the game has real-world value.
 
 [Handoff](docs/HANDOFF.md) · [Architecture](docs/ARCHITECTURE.md) · [API](docs/API.md) · [Balance](docs/BALANCE_REPORT.md) · [Known issues](docs/KNOWN_ISSUES.md)
