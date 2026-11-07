@@ -12,7 +12,7 @@ type Reply<T> = { ok: true; result: T } | { ok: false; error: { code: string; me
 
 export class HttpBackend implements MarketBackend {
   readonly kind = "server";
-  readonly environmentLabel = "Dev server";
+  readonly environmentLabel = "Live";
   private current!: Snapshot;
   private observed = 0;
   private watch = false;
@@ -20,6 +20,8 @@ export class HttpBackend implements MarketBackend {
   private reading?: Promise<Snapshot>;
   connection = "Connected";
   notice = "";
+  /** The NEAR transaction behind `notice`, once a queued action settles. */
+  noticeUrl?: string;
 
   constructor(private readonly url: string, private readonly auth: AuthClient) {}
 
@@ -165,6 +167,7 @@ export class HttpBackend implements MarketBackend {
       }
       if (status.state === "confirmed" || status.state === "rejected") {
         this.notice = status.state === "confirmed" ? "Trade confirmed" : status.reason ?? "Trade declined";
+        this.noticeUrl = status.state === "confirmed" ? status.receipt?.url : undefined;
         this.remember(sessionId);
       }
     } catch (error) {

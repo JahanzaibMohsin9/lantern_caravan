@@ -209,7 +209,7 @@ export function App() {
         const view = await live.getSnapshot(snapshot.session_id);
         if (cancelled) return;
         setSnapshot(view);
-        if (live.notice) { notify(live.notice); live.notice = ""; }
+        if (live.notice) { notify(live.notice, false, live.noticeUrl); live.notice = ""; live.noticeUrl = undefined; }
       } catch { if (!cancelled) setSnapshot(live.view()); }
     };
     const refresh = window.setInterval(() => void poll(), 2000);
