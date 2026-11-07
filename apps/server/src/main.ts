@@ -38,10 +38,21 @@ for (const room of await store.roomIds()) {
   if (room !== publicRoom) await market.load(room);
 }
 if (near) {
-  const missing = await near.ensureAgents();
-  if (missing.length) console.log("NEAR · registering " + missing.length + " agent accounts");
-  const synced = await market.serialized(() => market.reconcileChain(publicRoom));
-  console.log("NEAR · " + JSON.stringify(synced) + " · " + near.info().contractUrl);
+  const chainSync = near;
+  // The chain check must not keep the Row offline: if the RPC is unavailable or rate-limited, log it and retry.
+  const syncChain = async (attempt = 0): Promise<void> => {
+    try {
+      const missing = await chainSync.ensureAgents();
+      if (missing.length) console.log("NEAR · registering " + missing.length + " agent accounts");
+      const synced = await market.serialized(() => market.reconcileChain(publicRoom));
+      console.log("NEAR · " + JSON.stringify(synced) + " · " + chainSync.info().contractUrl);
+    } catch (error) {
+      const wait = Math.min(600, 30 * 2 ** attempt);
+      console.error("NEAR · chain sync failed, retrying in " + wait + "s: " + (error instanceof Error ? error.message : String(error)));
+      setTimeout(() => void syncChain(attempt + 1), wait * 1000).unref();
+    }
+  };
+  await syncChain();
 }
 let updating = false;
 const ticker = setInterval(() => {

@@ -57,8 +57,16 @@ export class NearChain implements Chain {
 
   explorer = (hash: string) => "https://testnet.nearblocks.io/txns/" + hash;
 
+  /** A read-only call. Public RPCs rate-limit bursts of reads, so a 429 waits and retries with backoff. */
   async view<T>(method: string, args: Record<string, unknown>) {
-    return await this.provider.callFunction({ contractId: this.contractId, method, args }) as T;
+    for (let attempt = 0; ; attempt++) {
+      try {
+        return await this.provider.callFunction({ contractId: this.contractId, method, args }) as T;
+      } catch (error) {
+        if (attempt >= 6 || !rateLimited(error)) throw error;
+        await new Promise(resolve => setTimeout(resolve, 1000 * 2 ** attempt));
+      }
+    }
   }
 
   async call(method: string, args: Record<string, unknown>, gasTera = 300): Promise<CallOutcome> {
@@ -77,4 +85,9 @@ export class NearChain implements Chain {
       ? Buffer.from(String((response.status as { SuccessValue: string }).SuccessValue ?? ""), "base64").toString("utf8") : "";
     return { kind: "ok", hash, applied: value.trim() !== "false" };
   }
+}
+
+function rateLimited(error: unknown) {
+  const cause = (error as { cause?: unknown })?.cause;
+  return cause === 429 || /rate limit|429/i.test(String((error as Error)?.message ?? error));
 }
