@@ -12,7 +12,8 @@ cd "$APP"
 as_app git fetch --quiet origin main
 as_app git reset --quiet --hard origin/main
 as_app npm ci --no-audit --no-fund --loglevel=error
-# The browser talks to the API on the same address, through Caddy.
-as_app env VITE_SERVER_URL="https://$DOMAIN" npm run build -w @lantern/web
+# The browser talks to the API on the same address, through Caddy. The build bundles Privy's SDK, which needs
+# more than Node's default heap on a 2 GB VM; the swap file covers the rest.
+as_app env VITE_SERVER_URL="https://$DOMAIN" NODE_OPTIONS="--max-old-space-size=2560" npm run build -w @lantern/web
 systemctl restart lantern-caravan 2>/dev/null || true
 echo "Deployed $(as_app git rev-parse --short HEAD)"
