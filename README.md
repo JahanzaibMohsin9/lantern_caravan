@@ -105,7 +105,9 @@ npm run simulate -- --nights 2000 --seed 42 --check
 
 ## How it was made
 
+- **Author.** Built by Jahanzeb Mohsin, solo developer.
 - **Built during the hackathon.** Development started in November 2026; the first commit is dated 5 November 2026.
+- **Other project.** Jahanzeb Mohsin's other, independent hackathon project is [Kinwarden](https://github.com/JahanzaibMohsin9/kinwarden).
 - **Built with** TypeScript, Phaser, React, Vite, Zod, Vitest, Playwright, Lucide, Fontsource, Privy (social login), jose and near-sdk (Rust), with original procedural art and synthesized audio. [Asset credits](docs/ASSETS.md)
 - **AI tools.** OpenAI Codex and Claude Code assisted implementation, testing and documentation. The demo video's narration was generated with Gemini TTS and its music with Lyria.
 - **Testnet only.** Every token lives on NEAR testnet; nothing in the game has real-world value.
