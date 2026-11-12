@@ -1,9 +1,9 @@
 import { lazy, Suspense, useEffect, useRef, useState } from "react";
-import { ArrowRight, ExternalLink, Eye, Globe2, Pause, Play, Plus } from "lucide-react";
+import { ArrowRight, Droplets, ExternalLink, Eye, FastForward, Globe2, Pause, Play, Plus } from "lucide-react";
 import { items, merchants, type ItemId, type StallId } from "@lantern/content";
 import { reaches, villageGoods, villages, type VillageId } from "@lantern/content/river";
 import { strategies } from "@lantern/content/nights";
-import { advanceClock, createWorld, newNight, openNight, snapshotFor, type World } from "@lantern/game-core";
+import { advanceClock, createWorld, floodMarket, newNight, openNight, snapshotFor, type World } from "@lantern/game-core";
 import type { ChronicleEntry, HistoryRange, HistoryRow, MarketBackend, StallHistoryRow } from "@lantern/protocol";
 import type { DevNameAuth } from "../auth/dev";
 import { formatTime } from "./Panels";
@@ -171,43 +171,79 @@ function RiverHistory({ rows, category }: { rows: HistoryRow[]; category: string
   </>;
 }
 
+/** A week on the Row is seven market nights. At 60× a night takes five seconds, so a week plays in about 35. */
+const weekNights = 7;
+
 export function Simulator() {
   const model = useRef<World | undefined>(undefined);
   const [seed, setSeed] = useState(42);
   const [speed, setSpeed] = useState(60);
   const [running, setRunning] = useState(false);
+  const [weekEnds, setWeekEnds] = useState<number>();
   const [view, setView] = useState(() => snapshotFor(createWorld("live"), "simulator", ""));
   const [points, setPoints] = useState<number[]>([]);
-  function reset() {
-    const world = openNight(createWorld("live", seed));
+  const fresh = () => openNight(createWorld("live", seed));
+  const show = (world: World) => {
     model.current = world;
-    setView(snapshotFor(world, "simulator", ""));
+    const next = snapshotFor(world, "simulator", "");
+    setView(next);
+    setPoints(old => [...old, Number(next.merchants.oil_wharf?.prices.oil?.buy ?? 0)].slice(-90));
+  };
+  function reset() {
+    model.current = fresh();
+    setView(snapshotFor(model.current, "simulator", ""));
     setPoints([]);
+    setRunning(false);
+    setWeekEnds(undefined);
+  }
+  function runWeek() {
+    const world = model.current ?? fresh();
+    model.current = world;
+    setSpeed(60);
+    setWeekEnds(world.night + weekNights);
+    setRunning(true);
+  }
+  function flood() {
+    let world = model.current ?? fresh();
+    if (world.phase !== "open") world = openNight(newNight(world));
+    const before = Number(snapshotFor(world, "simulator", "").merchants.oil_wharf?.prices.oil?.buy ?? 0);
+    setPoints(old => old.length ? old : [before]);
+    show(floodMarket(world, "oil_wharf", "oil", 12).world);
   }
   useEffect(() => {
     if (!running) return;
     const timer = window.setInterval(() => {
-      let world = model.current ?? openNight(createWorld("live", seed));
-      if (world.phase === "results") world = openNight(newNight(world));
-      world = advanceClock(world, world.elapsed + speed / 5);
-      model.current = world;
-      const view = snapshotFor(world, "simulator", "");
-      setView(view);
-      setPoints(old => [...old, Number(view.merchants.oil_wharf?.prices.oil?.buy ?? 0)].slice(-90));
+      let world = model.current ?? fresh();
+      if (world.phase === "results") {
+        if (weekEnds !== undefined && world.night + 1 >= weekEnds) {
+          setRunning(false);
+          setWeekEnds(undefined);
+          return;
+        }
+        world = openNight(newNight(world));
+      }
+      show(advanceClock(world, world.elapsed + speed / 5));
     }, 200);
     return () => clearInterval(timer);
-  }, [running, seed, speed]);
+  }, [running, seed, speed, weekEnds]);
+  const oil = view.merchants.oil_wharf?.prices.oil;
   return <>
-    <div className="split"><strong>Night {view.night}</strong><span>{formatTime(view.elapsed)} · {view.orders.filter(order => order.state === "filled").length}/6 lit</span></div>
+    <div className="split"><strong>Night {view.night}{weekEnds !== undefined ? ` · week ends after night ${weekEnds - 1}` : ""}</strong>
+      <span>{formatTime(view.elapsed)} · {view.orders.filter(order => order.state === "filled").length}/6 lit</span></div>
     <div className="tabs">
       {[10, 60, 300].map(rate => <button className={rate === speed ? "selected" : ""} key={rate} onClick={() => setSpeed(rate)}>{rate}×</button>)}
     </div>
     <div className="room-code">
       <label>Seed <input type="number" min="0" value={seed} onChange={event => setSeed(Math.min(2147483647, Math.max(0, Math.floor(Number(event.target.value)))))} /></label>
       <button className="subtle" onClick={reset}>Reset</button>
-      <button className="primary" onClick={() => setRunning(!running)}>{running ? <Pause size={16}/> : <Play size={16}/>} {running ? "Pause" : "Run"}</button>
+      <button className="primary" onClick={() => { setWeekEnds(undefined); setRunning(!running); }}>{running ? <Pause size={16}/> : <Play size={16}/>} {running ? "Pause" : "Run"}</button>
     </div>
-    <Chart values={points} label="Oil Wharf price"/>
+    <div className="room-code">
+      <button className="primary" disabled={running} onClick={runWeek}><FastForward size={16}/> Run a week</button>
+      <button className="subtle" onClick={flood}><Droplets size={16}/> Flood Oil Wharf with oil</button>
+    </div>
+    <Chart values={points} label="Oil Wharf oil price"/>
+    {oil?.why && <p className="hint price-why"><strong>Sami's reasoning:</strong> {oil.why}</p>}
     <div className="eyebrow">Latest activity</div>
     {view.activity.slice(-5).reverse().map((entry, index) => <small key={index}>Night {entry.night} · {entry.line}</small>)}
   </>;

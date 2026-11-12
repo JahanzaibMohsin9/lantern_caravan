@@ -67,7 +67,7 @@ export function Trade({ stall, snapshot, actions, preferred }: { stall: StallId;
           const id = key as ItemId;
           const count = side === "buy" ? data.stock[id] : snapshot.cargo[id];
           return <button className={id === item ? "stock-row selected" : "stock-row"} key={key} aria-pressed={id === item}
-            onClick={() => { setItem(id); setQuantity(1); reset(); }}>
+            title={price.why} onClick={() => { setItem(id); setQuantity(1); reset(); }}>
             <span className="tile-icon"><ItemIcon item={id}/></span>
             <span className="row-main"><strong>{items[id].name}</strong><small>{side === "buy" ? `${count}/${price.target} · ${price.label}` : `${count} in cart`}</small></span>
             <span className="gold">{price[side]} <Coins size={14}/></span>
@@ -75,6 +75,7 @@ export function Trade({ stall, snapshot, actions, preferred }: { stall: StallId;
         })}
       </div>
       {hint && <div className="trade-controls">
+        {hint.why && <p className="hint price-why" aria-label="Why this price"><strong>{merchant.keeper}'s reasoning:</strong> {hint.why}</p>}
         <div className="split"><span>Quantity</span><div className="stepper">
           <button aria-label="Decrease quantity" onClick={() => { setQuantity(quantity - 1); reset(); }} disabled={quantity === 1}><Minus size={15}/></button>
           <b aria-live="polite">{quantity}</b>

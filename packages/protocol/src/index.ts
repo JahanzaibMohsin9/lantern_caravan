@@ -111,7 +111,7 @@ export type MerchantSnapshot = {
   stockClosed?: boolean;
   coins: string;
   stock: Record<string, string>;
-  prices: Record<string, { buy: string; sell: string; label: string; target: string }>;
+  prices: Record<string, { buy: string; sell: string; label: string; target: string; why?: string }>;
   strategy: StrategyId; vote?: StrategyId; thinking: string; relationship: number;
   suppliedBy?: { name: string; quantity: string }[];
   owned: string; shareholders: { name: string; count: string }[];

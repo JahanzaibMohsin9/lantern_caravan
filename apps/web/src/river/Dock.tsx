@@ -115,14 +115,14 @@ export function Dock({ snapshot, busy, online, submit, castOff, openStall, close
           const buyers = Object.entries(snapshot.merchants)
             .filter(([, market]) => market.band !== "dark" && market.prices[item])
             .map(([stall, market]) => ({ stall: stall as StallId, price: Number(market.prices[item]!.sell), coins: Number(market.coins),
-              short: Number(market.stock[item]) < Number(market.prices[item]!.target) }))
+              short: Number(market.stock[item]) < Number(market.prices[item]!.target), why: market.prices[item]!.why }))
             .sort((a, b) => b.price - a.price);
           const best = buyers[0];
           const quantity = best ? Math.max(1, Math.min(count, Math.floor(best.coins / Math.max(1, best.price)))) : 0;
           return <div className="dock-hold" key={item}>
             <ItemIcon item={item}/>
             <span><strong>{items[item].name} × {count}</strong>
-              <small>{best ? merchants[best.stall].name + " pays " + best.price + (best.short ? " · short of it" : "") : "No open stall buys this"}
+              <small title={best?.why}>{best ? merchants[best.stall].name + " pays " + best.price + (best.short ? " · short of it" : "") : "No open stall buys this"}
                 {sourceFor(item) ? "" : " · crafted"}</small></span>
             {best && <button className="primary" disabled={busy || !marketOpen || snapshot.spectator}
               onClick={() => void submit({ type: "sell", stall_id: best.stall, item_id: item, quantity: String(quantity) })}>

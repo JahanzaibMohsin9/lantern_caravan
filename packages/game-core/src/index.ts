@@ -3,12 +3,13 @@ import { strategies, type FestivalOrder, type StrategyId, type UpgradeId } from 
 import { sourceFor } from "@lantern/content/river";
 import { intentSchema, type Intent, type LedgerOp, type Quote, type Snapshot } from "@lantern/protocol";
 import { apply } from "./ledger";
-import { ask, tradePrice } from "./pricing";
+import { ask, explainPrice, tradePrice } from "./pricing";
 import {
   addActivity, burn, canTakeJob, cart, cartCapacity, cashBand, crowd, escrow, get, getTrader, itemIds, merchantIds,
   mint, move, nightId, nowAt, objective, orderPayout, plan, player, ratio, remaining, rescue, share, shop,
   stockTargets, supply, unlock, type Trader, type World,
 } from "./model";
+import { addTrader } from "./model";
 import { afterOwnership, bookValue, buybackPrice, closeOwnership, owners, ownershipQuote, pledged, refreshOfferings } from "./ownership";
 
 export { createWorld, newNight, addTrader, addActivity, capacity, duration, player, crowd, nightId, nowAt, objective, plan, type World } from "./model";
@@ -230,6 +231,29 @@ export function commitFor(state: World, actor: string, deal: Quote, now: number)
 
 export const commit = (state: World, deal: Quote, now: number) => commitFor(state, player, deal, now);
 
+/**
+ * Simulator only: a trader dumps `quantity` of a good on one stall, one unit at a time, through the normal quote and
+ * commit path, so every price it gets comes from the pricing rules. It stops when the stall runs out of coins.
+ */
+export function floodMarket(world: World, stall: StallId, item: ItemId, quantity: number) {
+  const actor = "sim:flood";
+  let state = addTrader(world, actor, "Flood trader");
+  state = { ...state, ledger: apply(state.ledger, [mint(actor, item, quantity, "Simulated flood")]) };
+  let sold = 0, coins = 0;
+  for (; sold < quantity; sold++) {
+    const now = nowAt(state);
+    try {
+      const deal = quoteFor(state, actor, { type: "sell", stall_id: stall, item_id: item, quantity: "1" }, `flood-${state.revision}`, now);
+      state = commitFor(state, actor, deal, now);
+      coins += Number(deal.effects[1]!.amount);
+    } catch {
+      break;
+    }
+  }
+  const line = `Flood: ${sold} ${items[item].name.toLowerCase()} dumped on ${merchants[stall].name} for ${coins} coins.`;
+  return { world: addActivity(state, line), sold, coins };
+}
+
 export function recordAction(state: World, actor: string, line: string, receipt: NonNullable<Snapshot["activity"][number]["receipt"]>) {
   const next = addActivity(state, line, state.traders[actor]?.name);
   const entry = next.activity.at(-1)!;
@@ -282,7 +306,8 @@ export function snapshotFor(state: World, session_id: string, actor = player, se
           const item = key as ItemId;
           const stock = get(state, account, item);
           const { price, label } = ask(items[item].price, stock, target, ratio(state, stall));
-          return [item, { buy: String(price), sell: String(tradePrice("sell", items[item].price, stock, target, ratio(state, stall), 1, !!sourceFor(item))), label, target: String(target) }];
+          return [item, { buy: String(price), sell: String(tradePrice("sell", items[item].price, stock, target, ratio(state, stall), 1, !!sourceFor(item))), label, target: String(target),
+            why: explainPrice(items[item].price, stock, target, ratio(state, stall), !!sourceFor(item)) }];
         })),
       }];
     })),

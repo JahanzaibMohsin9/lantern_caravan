@@ -2235,6 +2235,10 @@
                     },
                     "target": {
                       "$ref": "#/$defs/__schema3"
+                    },
+                    "why": {
+                      "type": "string",
+                      "maxLength": 240
                     }
                   },
                   "required": [
@@ -4268,6 +4272,10 @@
                       },
                       "target": {
                         "$ref": "#/$defs/__schema3"
+                      },
+                      "why": {
+                        "type": "string",
+                        "maxLength": 240
                       }
                     },
                     "required": [
@@ -8889,6 +8897,10 @@
                       },
                       "target": {
                         "$ref": "#/$defs/__schema3"
+                      },
+                      "why": {
+                        "type": "string",
+                        "maxLength": 240
                       }
                     },
                     "required": [

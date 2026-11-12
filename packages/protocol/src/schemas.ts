@@ -17,7 +17,7 @@ export const actionStatusSchema = z.discriminatedUnion("state", [
 const activity = z.object({ at: seconds, night: time, line: z.string(), actor: z.string().optional(), receipt: receipt.optional() });
 const merchant = z.object({
   band: z.enum(["thriving", "healthy", "tight", "dark"]), stockClosed: z.boolean().optional(), coins: amount, stock: amounts,
-  prices: z.record(z.string(), z.object({ buy: amount, sell: amount, label: text, target: amount })),
+  prices: z.record(z.string(), z.object({ buy: amount, sell: amount, label: text, target: amount, why: z.string().max(240).optional() })),
   suppliedBy: z.array(z.object({ name: text, quantity: amount })).optional(),
   strategy, vote: strategy.optional(), thinking: z.string(), relationship: z.int().min(-5).max(10),
   owned: amount, shareholders: z.array(z.object({ name: text, count: amount })),

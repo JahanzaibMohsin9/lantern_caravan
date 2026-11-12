@@ -6,18 +6,32 @@ A river trading game. Run a barge upriver, buy cargo where it's cheap, fight off
 
 **Play it now: [lanterncaravan.duckdns.org](https://lanterncaravan.duckdns.org).** **Start** plays the four-night campaign in your browser. **Live market → Join The Row** puts you in the shared public market, which settles on NEAR testnet. **Watch** and **History** need no sign-in.
 
+**Demo post on X:** [x.com/JahanzebM9/status/2119389585843327045](https://x.com/JahanzebM9/status/2119389585843327045) · **Demo video (2 min):** [`docs/media/lantern-caravan-demo.mp4`](docs/media/lantern-caravan-demo.mp4). Built at NEAR HACKATHON (November 2026), track **Games With Real Economies** (`games`).
+
+## The track brief, requirement by requirement
+
+| Requirement | Where it lives | How to see it |
+| --- | --- | --- |
+| NPC merchants with their own wallets and inventory, pricing from stock and demand | Each merchant, rival hauler and village is an agent with its own balance and its own NEAR account on the public Row | **Verify on NEAR → Agents at work**; step 7 below reads a merchant's balance from the contract |
+| Flood a good and it gets cheap; a broke merchant closes until someone invests | Prices fall as stock passes its target ([`pricing.ts`](packages/game-core/src/pricing.ts)). A stall under 5 coins goes dark and opens a rescue offering that players buy shares in ([`ownership.ts`](packages/game-core/src/ownership.ts)) | **Simulator → Flood Oil Wharf with oil**; campaign Night 2, *The Dark Wharf* |
+| Items are NEP-245 multi tokens in one contract | Every coin, good and stall share is a token on [`items.lantern-caravan.testnet`](https://testnet.nearblocks.io/address/items.lantern-caravan.testnet) ([`contracts/items/`](contracts/items/)) | Step 5: each sale is one `game_settle` with two `mt_transfer` events |
+| Social or email login; no seed phrases, wallet pop-ups or gas prompts | **Sign in with Google or email** through Privy; the operator settles every action, so players never sign or pay gas | Step 5 |
+| Merchant pricing rules in one readable file, with the reasoning in a tooltip | [`packages/game-core/src/pricing.ts`](packages/game-core/src/pricing.ts): the band table, `ask`, `tradePrice` and `explainPrice`. Every list price the game shows, and its explanation, comes from that file | Open any merchant: hover a price, or read the merchant's reasoning under the list (step 3) |
+| Fast-forward mode: a week of trading in about a minute | **Simulator → Run a week** plays seven market nights at 60× in about 35 seconds | Step 9 |
+
 ## Check it in 5 minutes
 
 Each step says what to do and what you should see. Steps 1 to 6 use the hosted demo; nothing needs a wallet.
 
 1. **Open [lanterncaravan.duckdns.org](https://lanterncaravan.duckdns.org).** You see the Row at night. The footer reads **The Row settles on NEAR testnet · N transactions** and links to the latest one.
 2. **Press Verify on NEAR.** With no sign-in you see the contract and its queue, the latest player trades on the public Row ("Sold 2 lamp oil to Paper Mill for 14 coins") with both token legs, each holder's NEAR account and the transaction, **Agents at work** (the latest merchant jobs and hauler decisions), and every agent's own account.
-3. **Press Watch.** You see the live public Row, which runs around the clock. Click a stall's name in the bar along the bottom: you see its prices, stock and **Ownership** tab. The **Upriver** strip shows each reach's danger, booms, village cash and the rival haulers on the river.
+3. **Press Watch.** You see the live public Row, which runs around the clock. Click a stall's name in the bar along the bottom: you see its prices, stock and **Ownership** tab. Under the price list is the merchant's reasoning for the selected good, for example "Sami's reasoning: Scarce: 2 of 12 in stock, ×2.0. Strategy ×1.05. Base 4 → asks 9. Pays 6 for your next unit (full price while short, priced at stock 3)." Hover any price for the same line. The **Upriver** strip shows each reach's danger, booms, village cash and the rival haulers on the river.
 4. **Press H (or History).** You see 24-hour and 7-day charts for every stall, village and reach, and the **Chronicle** of the AI agents' decisions with their reasons, such as "Juno: Hauling 3 lamp oil from Ember Falls to Paper Mill for its Harbor Bell job. The Harbor Bell pays 24, costs 8 upriver, danger 2."
 5. **Live market → type a display name → Sign in with Google or email → Join The Row.** Privy creates your own NEAR testnet account in the background (no wallet, no seed phrase), and **Your NEAR account** links to it. Plain **Sign in** plays as a guest instead. You arrive at the Dock with a small starting hold. Press a **Sell** button. You see "Confirming…", then the sale in plain words ("Sold 2 lamp oil to Paper Mill for 14 coins") with a **Settled on NEAR** link to that sale's transaction: one `game_settle` call with two NEP-245 `mt_transfer` events, your goods to the merchant's own account (for example `mira.lantern-caravan.testnet`) and coins back to your account.
 6. **Press J (Journal).** Every confirmed action is listed with a **Details** link to its transaction.
 7. **Read a balance from the chain** (NEAR CLI): `near view items.lantern-caravan.testnet mt_balance_of '{"account_id":"mira.lantern-caravan.testnet","token_id":"coin"}'`. You see the Paper Mill merchant's coin balance on chain. Agents' own trades settle before every player action and otherwise about once an hour, so between those it can trail the game by a few coins.
 8. **Run it locally** with no keys: `npm ci && npm run dev`, then **Start** for the four-night campaign. `npm test` passes, and `npm run simulate -- --nights 200 --seed 42 --check` prints the economy summary in a few seconds.
+9. **Fast-forward a week.** From the title screen press **Simulator**, then **Run a week**. Seven market nights of rival haulers and merchants play at 60× in about 35 seconds and stop on their own; the chart tracks the Oil Wharf's oil price. Press **Flood Oil Wharf with oil** at any point: a trader sells 12 oil through the normal trade path, the price drops to *Flooded* (×0.6), Sami's reasoning says why, and over the next nights the haulers' buying brings it back. The simulator runs in your browser and sends no transactions.
 
 ## Play
 
@@ -33,6 +47,25 @@ Open the URL Vite prints and press **Start**. You arrive at **the Dock**: tonigh
 1. **Cast off.** The Dock suggests the best run: which village sells a good cheap and which merchant is short of it.
 2. **Upriver**, buy cargo at a village, fight off pirates, and race the clock home.
 3. **Sell your haul** from the Dock. A merchant short of a good pays you its full asking price, up to three times the base price when it's scarce. Click a merchant's card for the full trade panel and shares.
+
+### The game loop
+
+| Every 30 seconds | Every 5 minutes (one market night) | Every session |
+| --- | --- | --- |
+| Steer the barge, dodge skiffs, fire at raiders, buy cargo at a village, sell a good to the stall that is shortest of it | Read the Dock for the best run, take a Harbor Bell job, make one or two runs and sell before the night closes. Prices, rival hauls and the river's danger all move in that time | Finish the night's goal, upgrade and repaint the barge, buy shares in stalls (or rescue one that went dark) and collect dividends, earn a village's trusted-hauler stamp |
+
+### Merchant pricing
+
+Every merchant and village list price comes from one file, [`packages/game-core/src/pricing.ts`](packages/game-core/src/pricing.ts); a haggled deal starts from that price. A stall's stock against its target picks a band, the band and the stall's strategy scale the good's base price, and the result is clamped between 2 and three times base:
+
+| Stock vs target | Band | Multiplier |
+| --- | --- | --- |
+| under 25% | Scarce | ×2.0 |
+| 25% to 74% | Low stock | ×1.2 |
+| 75% to 125% | Normal | ×1.0 |
+| over 125% | Flooded | ×0.6 |
+
+Merchants buy at 70% of their ask, except a river good they are short of, which they buy at the full ask. `explainPrice` in the same file writes the merchant's reasoning shown in the trade panel, so the explanation can't drift from the price. `packages/game-core/src/pricing.test.ts` checks both.
 
 The campaign is four river nights:
 
@@ -107,7 +140,7 @@ npm run simulate -- --nights 2000 --seed 42 --check
 
 - **Author.** Built by Jahanzeb Mohsin, solo developer.
 - **Built during the hackathon.** Development started in November 2026; the first commit is dated 5 November 2026.
-- **Other project.** Jahanzeb Mohsin's other, independent hackathon project is [Kinwarden](https://github.com/JahanzaibMohsin9/kinwarden).
+- **Other project.** Jahanzeb Mohsin's other, independent hackathon project is [Kinwarden](https://github.com/JahanzaibMohsin9/kinwarden). The two share no code or contracts.
 - **Built with** TypeScript, Phaser, React, Vite, Zod, Vitest, Playwright, Lucide, Fontsource, Privy (social login), jose and near-sdk (Rust), with original procedural art and synthesized audio. [Asset credits](docs/ASSETS.md)
 - **AI tools.** OpenAI Codex and Claude Code assisted implementation, testing and documentation. The demo video's narration was generated with Gemini TTS and its music with Lyria.
 - **Testnet only.** Every token lives on NEAR testnet; nothing in the game has real-world value.
