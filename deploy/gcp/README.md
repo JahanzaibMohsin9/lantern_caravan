@@ -31,6 +31,8 @@ The server starts with the local dev ledger. To settle the public Row on testnet
 2. Change `SETTLEMENT=dev` to `SETTLEMENT=near`, and add a line `NEAR_OPERATOR_KEY=ed25519:...` with the `private_key` value from `operator.lantern-caravan.testnet.json` in your `.near-credentials\testnet` folder.
 3. `sudo systemctl restart lantern-caravan`, then check `https://lanterncaravan.duckdns.org/v1/chain/status`.
 
+Merchants sign their own legs with their own function-call keys. On your machine, `npm run near:agent-keys -- --env agent-keys.env --check` adds a key to each merchant (only once) and writes a `NEAR_AGENT_KEYS=...` line; append that line to `/etc/lantern-caravan.env` and restart. Without it the operator signs for the merchants, as before. `/v1/chain/status` lists the `signers`.
+
 On its first start with NEAR the server registers any missing agents and mints the market's genesis on the contract. Use FastNEAR's RPC (`NEAR_RPC_URL=https://test.rpc.fastnear.com`, the default): NEAR's old `rpc.testnet.near.org` endpoint is deprecated and rate-limits requests.
 
 ## Checking the chain against the Row

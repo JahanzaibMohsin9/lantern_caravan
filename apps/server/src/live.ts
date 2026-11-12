@@ -283,6 +283,7 @@ export class LiveMarket {
       .slice(0, limit).map(entry => ({
         actionId: entry.actionId, night: entry.nightId, at: entry.at, actor: name(entry.actorId), intent: entry.intent,
         url: entry.status.state === "confirmed" ? entry.status.receipt.url : undefined,
+        signed: entry.status.state === "confirmed" ? entry.status.receipt.signed : undefined,
         legs: entry.effects.map(effect => ({ op: effect.op, asset: effect.asset, amount: effect.amount,
           from: effect.op === "mint" ? undefined : { name: name(effect.from), account: holder(effect.from) },
           to: effect.op === "burn" ? undefined : { name: name(effect.to), account: holder(effect.to) } })),

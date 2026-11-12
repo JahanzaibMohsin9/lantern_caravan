@@ -20,23 +20,38 @@ export const opsPerCall = 40;
 export const tokenIds = ["coin", ...Object.keys(items), ...Object.keys(merchants).map(stall => "share:" + stall)];
 
 type ChainOp = LedgerOp;
+type Signed = { account: string; hash: string };
+/**
+ * `agent` jobs are an agent's own outgoing transfers, signed with that agent's key (`agent_settle`, relayed by the
+ * operator). `ref` is the ID the contract records under `agent/<signer>/`. A job with `actionId` is one part of a
+ * player action; the action is confirmed when its last part lands.
+ */
 type Job =
   | { id: string; kind: "action"; actionId: string; ops: ChainOp[] }
   | { id: string; kind: "batch"; ops: ChainOp[] }
-  | { id: string; kind: "agents"; accounts: string[] };
-type Outcome = { state: "confirmed"; hash: string; at: number; applied: boolean } | { state: "rejected"; hash: string; reason: string; at: number };
+  | { id: string; kind: "agents"; accounts: string[] }
+  | { id: string; kind: "agent"; signer: string; ref: string; ops: ChainOp[]; actionId?: string };
+type Outcome = { state: "confirmed"; hash: string; at: number; applied: boolean; signed?: Signed[] }
+  | { state: "rejected"; hash: string; reason: string; at: number };
 type State = {
   queue: Job[]; outcomes: Record<string, Outcome>; prepared: Record<string, string>; holders: string[];
   settled: number; last?: { id: string; hash: string; at: number }; error?: string; diverged?: string;
+  /** Agent-signed parts of actions still in the queue. */
+  signing: Record<string, Signed[]>;
+  agentSigned: number; lastAgent?: { signer: string; hash: string; at: number };
 };
 
 export type ChainStatus = {
   enabled: true; network: "testnet"; contract: string; operator: string; contractUrl: string;
   queued: number; settled: number; last?: { id: string; url: string; at: number }; error?: string; diverged?: string;
+  /** Agent accounts that sign their own transfers, how many agent-signed transactions have landed, and the latest. */
+  signers: string[]; agentSigned: number; lastAgent?: { signer: string; url: string; at: number };
 };
 
+const actionOf = (job: Job) => job.kind === "action" || job.kind === "agent" ? job.actionId : undefined;
+
 export class NearSettlementProvider implements SettlementProvider {
-  private state: State = { queue: [], outcomes: {}, prepared: {}, holders: [], settled: 0 };
+  private state: State = { queue: [], outcomes: {}, prepared: {}, holders: [], settled: 0, signing: {}, agentSigned: 0 };
   private running = false;
   private closed = false;
   private retry?: ReturnType<typeof setTimeout>;
@@ -72,6 +87,21 @@ export class NearSettlementProvider implements SettlementProvider {
     }).filter(op => op.op !== "transfer" || op.from !== op.to);
   }
 
+  /**
+   * Separates each signing agent's own outgoing transfers from the rest. The game nets every batch per account and
+   * asset, so an agent sending a good never receives that good in the same batch: its transfers only spend what it
+   * already holds on chain, and can land before or after the operator's part.
+   */
+  private split(ops: readonly ChainOp[]) {
+    const own = new Map<string, ChainOp[]>();
+    const rest: ChainOp[] = [];
+    for (const op of ops) {
+      if (op.op === "transfer" && this.chain.signers.has(op.from)) own.set(op.from, [...own.get(op.from) ?? [], op]);
+      else rest.push(op);
+    }
+    return { own: [...own].sort(([a], [b]) => a < b ? -1 : 1), rest };
+  }
+
   private async enqueue(jobs: Job[]) {
     if (!jobs.length) return;
     const holders = new Set(this.state.holders);
@@ -100,7 +130,7 @@ export class NearSettlementProvider implements SettlementProvider {
   async submit(actionId: string) {
     const fingerprint = this.state.prepared[actionId];
     if (!fingerprint) throw new Error("Action was not prepared.");
-    if (this.state.outcomes[actionId] || this.state.queue.some(job => job.kind === "action" && job.actionId === actionId)) return;
+    if (this.state.outcomes[actionId] || this.state.queue.some(job => actionOf(job) === actionId)) return;
     const action = JSON.parse(fingerprint) as PreparedAction;
     const ops = this.mapOps(action.effects);
     // An action with no ledger effects (accepting a contract, a free refit) has nothing to put on chain.
@@ -109,23 +139,34 @@ export class NearSettlementProvider implements SettlementProvider {
       await this.save();
       return;
     }
-    await this.enqueue([{ id: actionId, kind: "action", actionId, ops }]);
+    // A merchant signs its own leg of the trade (its goods or coins going out) first; the operator settles the rest.
+    const { own, rest } = this.split(ops);
+    const jobs: Job[] = own.map(([signer, part]) => ({ id: "agent/" + signer + "/" + actionId, kind: "agent", signer, ref: actionId, ops: part, actionId }));
+    if (rest.length) jobs.push({ id: actionId, kind: "action", actionId, ops: rest });
+    await this.enqueue(jobs);
   }
 
   async status(actionId: string): Promise<SettlementStatus> {
     const outcome = this.state.outcomes[actionId];
     if (outcome?.state === "confirmed") return { state: "confirmed", receipt: outcome.hash
-      ? { id: outcome.hash, label: "NEAR testnet transaction", url: this.chain.explorer(outcome.hash) }
+      ? { id: outcome.hash, label: "NEAR testnet transaction", url: this.chain.explorer(outcome.hash),
+        ...outcome.signed?.length ? { signed: outcome.signed.map(part => ({ account: part.account, url: this.chain.explorer(part.hash) })) } : {} }
       : { id: actionId, label: "No ledger change" } };
     if (outcome?.state === "rejected") return { state: "rejected", reason: "The items contract refused this action: " + outcome.reason };
-    if (this.state.queue.some(job => job.kind === "action" && job.actionId === actionId)) return { state: "pending" };
+    if (this.state.queue.some(job => actionOf(job) === actionId)) return { state: "pending" };
     return { state: "unknown" };
   }
 
   async settleBatch(batch: { batchId: string; roomId: string; nightId: string; effects: LedgerOp[] }): Promise<SettlementStatus> {
-    const ops = this.mapOps(custodyOps(batch.effects));
-    const parts = chunk(ops, opsPerCall);
-    await this.enqueue(parts.map((part, i) => ({ id: "batch/" + batch.batchId + "#" + (i + 1), kind: "batch", ops: part })));
+    const { own, rest } = this.split(this.mapOps(custodyOps(batch.effects)));
+    const jobs: Job[] = chunk(rest, opsPerCall).map((part, i) => ({ id: "batch/" + batch.batchId + "#" + (i + 1), kind: "batch", ops: part }));
+    for (const [signer, ops] of own) {
+      jobs.push(...chunk(ops, opsPerCall).map((part, i): Job => {
+        const ref = batch.batchId + "#" + (i + 1);
+        return { id: "agent/" + signer + "/" + ref, kind: "agent", signer, ref, ops: part };
+      }));
+    }
+    await this.enqueue(jobs);
     return { state: "pending" };
   }
 
@@ -179,10 +220,13 @@ export class NearSettlementProvider implements SettlementProvider {
 
   info(): ChainStatus {
     const last = this.state.last;
+    const agent = this.state.lastAgent;
     return { enabled: true, network: "testnet", contract: this.chain.contractId, operator: this.chain.operatorId,
       contractUrl: "https://testnet.nearblocks.io/address/" + this.chain.contractId,
       queued: this.state.queue.length, settled: this.state.settled,
-      last: last && { id: last.id, url: this.chain.explorer(last.hash), at: last.at }, error: this.state.error, diverged: this.state.diverged };
+      last: last && { id: last.id, url: this.chain.explorer(last.hash), at: last.at }, error: this.state.error, diverged: this.state.diverged,
+      signers: [...this.chain.signers].sort(), agentSigned: this.state.agentSigned,
+      lastAgent: agent && { signer: agent.signer, url: this.chain.explorer(agent.hash), at: agent.at } };
   }
 
   async idle(timeoutMs = 180000) {
@@ -216,8 +260,10 @@ export class NearSettlementProvider implements SettlementProvider {
       try {
         outcome = job.kind === "agents"
           ? await this.chain.call("register_agents", { accounts: job.accounts }, 100)
-          : await this.chain.call(job.kind === "action" ? "game_settle" : "game_settle_batch",
-            job.kind === "action" ? { action_id: job.actionId, ops: job.ops } : { batch_id: job.id.replace(/^batch\//, ""), ops: job.ops });
+          : job.kind === "agent"
+            ? await this.chain.relay(job.signer, "agent_settle", { action_id: job.ref, ops: job.ops })
+            : await this.chain.call(job.kind === "action" ? "game_settle" : "game_settle_batch",
+              job.kind === "action" ? { action_id: job.actionId, ops: job.ops } : { batch_id: job.id.replace(/^batch\//, ""), ops: job.ops });
       } catch (error) {
         // The outcome is unknown: try the same job again later. A repeat is harmless.
         this.state.error = "Waiting to retry: " + (error instanceof Error ? error.message : String(error)).slice(0, 200);
@@ -232,12 +278,27 @@ export class NearSettlementProvider implements SettlementProvider {
       this.state.error = undefined;
       this.state.queue.shift();
       const at = Date.now();
+      const actionId = actionOf(job);
       if (outcome.kind === "ok") {
-        if (job.kind === "action") this.state.outcomes[job.actionId] = { state: "confirmed", hash: outcome.hash, at, applied: outcome.applied };
+        if (job.kind === "agent") {
+          this.state.agentSigned++;
+          this.state.lastAgent = { signer: job.signer, hash: outcome.hash, at };
+          if (actionId) (this.state.signing[actionId] ??= []).push({ account: job.signer, hash: outcome.hash });
+        }
+        // The action is confirmed by its last part; its receipt is that transaction, plus the agents' own.
+        if (actionId && !this.state.queue.some(next => actionOf(next) === actionId)) {
+          const signed = this.state.signing[actionId];
+          delete this.state.signing[actionId];
+          this.state.outcomes[actionId] = { state: "confirmed", hash: outcome.hash, at, applied: outcome.applied, ...signed ? { signed } : {} };
+        }
         this.state.settled++;
         this.state.last = { id: job.id, hash: outcome.hash, at };
-      } else if (job.kind === "action") {
-        this.state.outcomes[job.actionId] = { state: "rejected", hash: outcome.hash, reason: outcome.reason, at };
+      } else if (actionId) {
+        this.state.outcomes[actionId] = { state: "rejected", hash: outcome.hash, reason: outcome.reason, at };
+        // An agent already signed part of it: the chain now differs from the game until the next reconcile.
+        if (this.state.signing[actionId]) this.state.diverged = job.id + ": " + outcome.reason;
+        delete this.state.signing[actionId];
+        this.state.queue = this.state.queue.filter(next => actionOf(next) !== actionId);
       } else {
         this.state.diverged = job.id + ": " + outcome.reason;
       }

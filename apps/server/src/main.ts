@@ -7,7 +7,8 @@ import { FileStateStore } from "./providers/file";
 import { DevIdentityProvider, DevSettlementProvider } from "./providers/dev";
 import { defaultPrivyAppId, PrivyVerifier } from "./providers/privy";
 import { catalog, LiveMarket, publicRoom } from "./live";
-import { NearChain, operatorKey } from "./near/chain";
+import { agentKeys, NearChain, operatorKey } from "./near/chain";
+import { merchantAccounts } from "./near/accounts";
 import { NearSettlementProvider, RoutedSettlement } from "./near/provider";
 
 const started = Date.now();
@@ -30,9 +31,12 @@ if (process.env.SETTLEMENT === "near") {
   if ((process.env.NEAR_NETWORK ?? "testnet") !== "testnet") throw new Error("NEAR_NETWORK · Only testnet is supported.");
   const root = process.env.NEAR_ACCOUNT_ROOT ?? "lantern-caravan.testnet";
   const operatorId = process.env.NEAR_OPERATOR_ID ?? "operator." + root;
+  const accounts = { root, players: process.env.NEAR_PLAYER_SUFFIX ?? "players." + root };
   const chain = new NearChain({ network: "testnet", rpcUrl: process.env.NEAR_RPC_URL ?? "https://test.rpc.fastnear.com",
-    contractId: process.env.NEAR_CONTRACT_ID ?? "items." + root, operatorId, key: await operatorKey(operatorId) });
-  near = new NearSettlementProvider(chain, { root, players: process.env.NEAR_PLAYER_SUFFIX ?? "players." + root }, directory);
+    contractId: process.env.NEAR_CONTRACT_ID ?? "items." + root, operatorId, key: await operatorKey(operatorId),
+    agentKeys: await agentKeys(merchantAccounts(accounts)) });
+  console.log("NEAR · merchants signing their own trades: " + ([...chain.signers].join(", ") || "none (the operator signs for them)"));
+  near = new NearSettlementProvider(chain, accounts, directory);
   await near.init();
   settlement = new RoutedSettlement(near, dev, new Set([publicRoom]));
 }

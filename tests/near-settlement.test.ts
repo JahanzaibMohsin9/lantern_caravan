@@ -4,7 +4,7 @@ import { join } from "node:path";
 import { afterEach, describe, expect, test, vi } from "vitest";
 import { createWorld } from "@lantern/game-core";
 import type { LedgerOp, PreparedAction } from "@lantern/protocol";
-import { agentAccounts, chainHolder, isAccountId } from "../apps/server/src/near/accounts";
+import { agentAccounts, chainHolder, isAccountId, merchantAccounts } from "../apps/server/src/near/accounts";
 import type { CallOutcome, Chain } from "../apps/server/src/near/chain";
 import { custodyOps, deltas } from "../apps/server/src/near/custody";
 import { NearSettlementProvider, RoutedSettlement, settledLedger, tokenIds } from "../apps/server/src/near/provider";
@@ -22,10 +22,23 @@ class FakeChain implements Chain {
   balances = new Map<string, number>();
   settled = new Set<string>();
   agents = new Set<string>();
-  calls: { method: string; id?: string; ops?: number }[] = [];
+  calls: { method: string; id?: string; ops?: number; signer?: string }[] = [];
   failNext = 0;
   private serial = 0;
   explorer = (hash: string) => "https://testnet.nearblocks.io/txns/" + hash;
+  constructor(readonly signers: ReadonlySet<string> = new Set()) {}
+
+  /** `agent_settle`: a registered agent, signing for itself, may only transfer its own balances. */
+  async relay(signer: string, method: string, args: Record<string, unknown>): Promise<CallOutcome> {
+    if (this.failNext > 0) { this.failNext--; throw new Error("RPC timeout"); }
+    if (method !== "agent_settle" || !this.signers.has(signer)) throw new Error("No key for " + signer);
+    const hash = "tx-" + ++this.serial;
+    const ops = args.ops as LedgerOp[];
+    this.calls.push({ method, id: "agent/" + signer + "/" + args.action_id, ops: ops.length, signer });
+    if (!this.agents.has(signer)) return { kind: "failed", hash, reason: "Only a registered agent can sign its own transfers." };
+    if (ops.some(op => op.op !== "transfer" || op.from !== signer)) return { kind: "failed", hash, reason: "Agents can only transfer their own balances." };
+    return this.apply("agent/" + signer + "/" + args.action_id, ops, hash);
+  }
 
   async view<T>(method: string, args: Record<string, unknown>): Promise<T> {
     if (method === "mt_batch_balance_of") return (args.token_ids as string[]).map(token => String(this.balances.get(token + "|" + args.account_id) ?? 0)) as T;
@@ -44,6 +57,10 @@ class FakeChain implements Chain {
     const id = method === "game_settle" ? args.action_id as string : "batch/" + args.batch_id;
     const ops = args.ops as LedgerOp[];
     this.calls.push({ method, id, ops: ops.length });
+    return this.apply(id, ops, hash);
+  }
+
+  private apply(id: string, ops: LedgerOp[], hash: string): CallOutcome {
     if (this.settled.has(id)) return { kind: "ok", hash, applied: false };
     const next = new Map(this.balances);
     const change = (holder: string, token: string, amount: number) => {
@@ -229,6 +246,54 @@ describe("NEAR settlement provider", () => {
     expect(chain.calls.filter(call => call.method === "register_agents")).toHaveLength(1);
   });
 
+  test("a merchant signs its own leg of a trade; the operator settles the player's leg", async () => {
+    const sami = "sami.lantern-caravan.testnet";
+    const { near, chain } = await provider(new FakeChain(new Set([sami])));
+    await near.ensureAgents();
+    await near.settleBatch({ batchId: "stock", roomId: publicRoom, nightId: "n1", effects: [
+      { op: "mint", asset: "oil", amount: "6", to: "m:oil_wharf", memo: "Stock" }, { op: "mint", asset: "coin", amount: "20", to: "p:ari", memo: "Float" }] });
+    await near.prepare(action("buy-oil", [move("oil", 2, "m:oil_wharf", "p:ari"), move("coin", 10, "p:ari", "m:oil_wharf")]));
+    await near.submit("buy-oil");
+    await near.idle();
+    expect(chain.calls.slice(-2)).toEqual([
+      { method: "agent_settle", id: "agent/" + sami + "/buy-oil", ops: 1, signer: sami },
+      { method: "game_settle", id: "buy-oil", ops: 1 }]);
+    const status = await near.status("buy-oil");
+    expect(status).toMatchObject({ state: "confirmed", receipt: { signed: [{ account: sami, url: expect.stringContaining("/txns/tx-") }] } });
+    expect(chain.wallets()[sami]).toEqual({ oil: 4, coin: 10 });
+    expect(chain.wallets()["ari.players.lantern-caravan.testnet"]).toEqual({ oil: 2, coin: 10 });
+    expect(near.info()).toMatchObject({ signers: [sami], agentSigned: 1, lastAgent: { signer: sami } });
+  });
+
+  test("in an agent batch each signing merchant sends its own goods; everything else stays with the operator", async () => {
+    const mira = "mira.lantern-caravan.testnet";
+    const { near, chain } = await provider(new FakeChain(new Set([mira])));
+    await near.ensureAgents();
+    await near.settleBatch({ batchId: "genesis", roomId: publicRoom, nightId: "n1", effects: [
+      { op: "mint", asset: "paper", amount: "5", to: "m:paper_mill", memo: "Stock" }, { op: "mint", asset: "coin", amount: "30", to: "r:juno", memo: "Float" }] });
+    await near.settleBatch({ batchId: "n1-r2", roomId: publicRoom, nightId: "n1", effects: [
+      move("paper", 3, "m:paper_mill", "r:juno"), move("coin", 9, "r:juno", "m:paper_mill"),
+      { op: "mint", asset: "oil", amount: "4", to: "v:ember_falls", memo: "Harvest", source: "sys:harvest" }] });
+    await near.idle();
+    const agentCalls = chain.calls.filter(call => call.method === "agent_settle");
+    expect(agentCalls).toEqual([{ method: "agent_settle", id: "agent/" + mira + "/n1-r2#1", ops: 1, signer: mira }]);
+    expect(chain.wallets()[mira]).toEqual({ paper: 2, coin: 9 });
+    expect(chain.wallets()["juno.lantern-caravan.testnet"]).toEqual({ paper: 3, coin: 21 });
+    expect(near.info().diverged).toBeUndefined();
+  });
+
+  test("when the contract refuses a merchant's leg, the player's leg is never sent", async () => {
+    const sami = "sami.lantern-caravan.testnet";
+    const { near, chain } = await provider(new FakeChain(new Set([sami])));
+    await near.ensureAgents();
+    await near.prepare(action("overdraw-oil", [move("oil", 2, "m:oil_wharf", "p:ari"), move("coin", 10, "sys:rescue", "m:oil_wharf")]));
+    await near.submit("overdraw-oil");
+    await near.idle();
+    expect(await near.status("overdraw-oil")).toMatchObject({ state: "rejected", reason: expect.stringContaining("holds too little oil") });
+    expect(chain.calls.filter(call => call.method === "game_settle")).toEqual([]);
+    expect(near.info()).toMatchObject({ queued: 0, diverged: undefined });
+  });
+
   test("only the public Row goes to the chain; private rooms keep the dev ledger", async () => {
     const dir = await directory();
     const { near, chain } = await provider(new FakeChain(), dir);
@@ -242,16 +307,21 @@ describe("NEAR settlement provider", () => {
   });
 });
 
-test("the live public Row settles a real trade on chain and every balance matches the game afterwards", async () => {
+test.each([
+  ["with the operator signing every leg", [] as string[]],
+  ["with every merchant signing its own legs", merchantAccounts(config)],
+])("the live public Row settles a real trade on chain and every balance matches the game afterwards, %s", async (_, signers) => {
   vi.useFakeTimers({ toFake: ["Date"] });
   vi.stubEnv("LANTERN_PREP_SECONDS", "1");
   const dir = await directory();
   const store = new FileStateStore<Parameters<ConstructorParameters<typeof LiveMarket>[0]["save"]>[1]>(dir);
   await store.init();
-  const chain = new FakeChain();
+  const chain = new FakeChain(new Set(signers));
   const near = new NearSettlementProvider(chain, config, dir, () => 5);
   open.push(near);
   await near.init();
+  await near.ensureAgents();
+  await near.idle();
   const market = new LiveMarket(store, new RoutedSettlement(near, new DevSettlementProvider(dir), new Set([publicRoom])));
   await market.load(publicRoom, true);
   await market.reconcileChain(publicRoom);
@@ -278,6 +348,11 @@ test("the live public Row settles a real trade on chain and every balance matche
   expect(pending).toEqual([]);
   expect(chain.wallets()).toEqual(mapped(world.ledger));
   expect(chain.calls.some(call => call.method === "game_settle_batch" && call.id!.includes("-r"))).toBe(true);
+  // Mira sold the paper, so she signed that leg herself.
+  if (signers.length) {
+    expect(status).toMatchObject({ receipt: { signed: [{ account: "mira.lantern-caravan.testnet" }] } });
+    expect(chain.calls.filter(call => call.method === "agent_settle").every(call => signers.includes(call.signer!))).toBe(true);
+  }
   // After more agent activity, a restart-style reconcile flushes it as a custody batch and finds nothing to repair.
   vi.setSystemTime(Date.now() + 30_000);
   await market.snapshot(publicRoom, "p:ari");

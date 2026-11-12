@@ -65,6 +65,13 @@ export function VerifyPanel({ backend }: { backend: HttpBackend }) {
       <span><b>{chain.settled}</b> transactions settled · <b>{chain.queued}</b> waiting</span>
       {chain.last && <a href={chain.last.url} target="_blank" rel="noreferrer">Latest transaction <ExternalLink size={12}/></a>}
     </div>}
+    {!!chain?.signers?.length && <div className="verify-chain">
+      <span><b>Merchants sign their own trades.</b> {chain.signers.map(account => agentLabel(account).name).join(", ")} each hold a key
+        that can only call <code>agent_settle</code>, which moves only that merchant's own balance. The operator relays it and pays the gas.</span>
+      <span><b>{chain.agentSigned ?? 0}</b> merchant-signed transactions</span>
+      {chain.lastAgent && <a href={chain.lastAgent.url} target="_blank" rel="noreferrer">
+        Latest, signed by {agentLabel(chain.lastAgent.signer).name} <ExternalLink size={12}/></a>}
+    </div>}
     <div className="split"><span className="eyebrow">RECENT PLAYER TRADES</span>
       <button className="text-button" onClick={() => setRefresh(value => value + 1)}><RefreshCw size={13}/> Refresh</button></div>
     {data && !data.receipts.length && <p className="hint">No player trades yet. Join The Row and sell something at the Dock.</p>}
@@ -72,6 +79,9 @@ export function VerifyPanel({ backend }: { backend: HttpBackend }) {
       <div className="split"><strong>{describeTrade(receipt.intent as Intent, receipt.legs) ?? receipt.intent.type}</strong>
         {receipt.url && <a href={receipt.url} target="_blank" rel="noreferrer">Transaction <ExternalLink size={12}/></a>}</div>
       <small>{receipt.actor} · {receipt.night.replace("night-", "Night ")}{receipt.at ? " · " + new Date(receipt.at).toLocaleString() : ""}</small>
+      {receipt.signed?.map(part => <small key={part.url}>
+        <a href={part.url} target="_blank" rel="noreferrer">Signed by {agentLabel(part.account).name} ({agentLabel(part.account).role}) with the merchant's own key <ExternalLink size={11}/></a>
+      </small>)}
       <ul>{receipt.legs.map((leg, index) => <li key={index}>
         <b>{leg.amount} {(items[leg.asset as ItemId]?.name ?? (leg.asset === "coin" ? "coin" : leg.asset)).toLowerCase()}</b>
         <Account party={leg.from}/> <span aria-hidden="true">→</span> <Account party={leg.to}/>

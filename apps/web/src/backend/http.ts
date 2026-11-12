@@ -2,11 +2,14 @@ import type { ActionStatus, AuthClient, Catalog, ChroniclePage, CreateSessionReq
   MarketBackend, MarketHistory, ProfileSummary, Quote, SaveStatus, SessionInfo, Snapshot } from "@lantern/protocol";
 
 export type ChainStatus = { enabled: boolean; network?: string; contract?: string; contractUrl?: string; queued?: number;
-  settled?: number; last?: { id: string; url: string; at: number } };
+  settled?: number; last?: { id: string; url: string; at: number };
+  /** Merchant accounts that sign their own trades, and how many of their signed transactions have landed. */
+  signers?: string[]; agentSigned?: number; lastAgent?: { signer: string; url: string; at: number } };
 type Party = { name: string; account: string };
 /** The public Verify view: chain status, recent player trades with both legs, and the agents' accounts. */
 export type PublicReceipts = { chain: ChainStatus; agents: string[]; receipts: { actionId: string; night: string; at?: number; actor: string;
-  intent: { type: string } & Record<string, unknown>; url?: string; legs: { op: string; asset: string; amount: string; from?: Party; to?: Party }[] }[] };
+  intent: { type: string } & Record<string, unknown>; url?: string; signed?: { account: string; url: string }[];
+  legs: { op: string; asset: string; amount: string; from?: Party; to?: Party }[] }[] };
 
 class RpcError extends Error {
   constructor(readonly code: string, message: string) { super(message); }

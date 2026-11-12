@@ -19,7 +19,8 @@
     "simulate": "tsx tools/simulate/index.ts",
     "schema": "tsx tools/protocol-schema.ts",
     "near:smoke": "tsx tools/near-smoke.ts",
-    "near:verify": "tsx tools/near-verify.ts"
+    "near:verify": "tsx tools/near-verify.ts",
+    "near:agent-keys": "tsx tools/near-agent-keys.ts"
   },
   "devDependencies": {
     "@playwright/test": "^1.64.1",

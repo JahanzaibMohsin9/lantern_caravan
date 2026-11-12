@@ -3190,6 +3190,13 @@
                   "url": {
                     "type": "string",
                     "format": "uri"
+                  },
+                  "signed": {
+                    "maxItems": 8,
+                    "type": "array",
+                    "items": {
+                      "$ref": "#/$defs/__schema17"
+                    }
                   }
                 },
                 "required": [
@@ -3581,6 +3588,23 @@
             "detail"
           ],
           "additionalProperties": false
+        },
+        "__schema17": {
+          "type": "object",
+          "properties": {
+            "account": {
+              "$ref": "#/$defs/__schema0"
+            },
+            "url": {
+              "type": "string",
+              "format": "uri"
+            }
+          },
+          "required": [
+            "account",
+            "url"
+          ],
+          "additionalProperties": false
         }
       }
     },
@@ -3606,6 +3630,13 @@
                 "url": {
                   "type": "string",
                   "format": "uri"
+                },
+                "signed": {
+                  "maxItems": 8,
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/$defs/__schema1"
+                  }
                 }
               },
               "required": [
@@ -3647,6 +3678,23 @@
           "type": "string",
           "minLength": 1,
           "maxLength": 120
+        },
+        "__schema1": {
+          "type": "object",
+          "properties": {
+            "account": {
+              "$ref": "#/$defs/__schema0"
+            },
+            "url": {
+              "type": "string",
+              "format": "uri"
+            }
+          },
+          "required": [
+            "account",
+            "url"
+          ],
+          "additionalProperties": false
         }
       }
     },
@@ -3830,6 +3878,13 @@
             "url": {
               "type": "string",
               "format": "uri"
+            },
+            "signed": {
+              "maxItems": 8,
+              "type": "array",
+              "items": {
+                "$ref": "#/$defs/__schema2"
+              }
             }
           },
           "required": [
@@ -3863,6 +3918,23 @@
           "type": "string",
           "minLength": 1,
           "maxLength": 120
+        },
+        "__schema2": {
+          "type": "object",
+          "properties": {
+            "account": {
+              "$ref": "#/$defs/__schema1"
+            },
+            "url": {
+              "type": "string",
+              "format": "uri"
+            }
+          },
+          "required": [
+            "account",
+            "url"
+          ],
+          "additionalProperties": false
         }
       }
     },
@@ -5227,6 +5299,13 @@
                     "url": {
                       "type": "string",
                       "format": "uri"
+                    },
+                    "signed": {
+                      "maxItems": 8,
+                      "type": "array",
+                      "items": {
+                        "$ref": "#/$defs/__schema17"
+                      }
                     }
                   },
                   "required": [
@@ -5616,6 +5695,23 @@
               "village",
               "item",
               "detail"
+            ],
+            "additionalProperties": false
+          },
+          "__schema17": {
+            "type": "object",
+            "properties": {
+              "account": {
+                "$ref": "#/$defs/__schema0"
+              },
+              "url": {
+                "type": "string",
+                "format": "uri"
+              }
+            },
+            "required": [
+              "account",
+              "url"
             ],
             "additionalProperties": false
           }
@@ -8630,6 +8726,13 @@
                   "url": {
                     "type": "string",
                     "format": "uri"
+                  },
+                  "signed": {
+                    "maxItems": 8,
+                    "type": "array",
+                    "items": {
+                      "$ref": "#/$defs/__schema1"
+                    }
                   }
                 },
                 "required": [
@@ -8671,6 +8774,23 @@
             "type": "string",
             "minLength": 1,
             "maxLength": 120
+          },
+          "__schema1": {
+            "type": "object",
+            "properties": {
+              "account": {
+                "$ref": "#/$defs/__schema0"
+              },
+              "url": {
+                "type": "string",
+                "format": "uri"
+              }
+            },
+            "required": [
+              "account",
+              "url"
+            ],
+            "additionalProperties": false
           }
         }
       }
@@ -8726,6 +8846,13 @@
                   "url": {
                     "type": "string",
                     "format": "uri"
+                  },
+                  "signed": {
+                    "maxItems": 8,
+                    "type": "array",
+                    "items": {
+                      "$ref": "#/$defs/__schema1"
+                    }
                   }
                 },
                 "required": [
@@ -8767,6 +8894,23 @@
             "type": "string",
             "minLength": 1,
             "maxLength": 120
+          },
+          "__schema1": {
+            "type": "object",
+            "properties": {
+              "account": {
+                "$ref": "#/$defs/__schema0"
+              },
+              "url": {
+                "type": "string",
+                "format": "uri"
+              }
+            },
+            "required": [
+              "account",
+              "url"
+            ],
+            "additionalProperties": false
           }
         }
       }
@@ -9852,6 +9996,13 @@
                     "url": {
                       "type": "string",
                       "format": "uri"
+                    },
+                    "signed": {
+                      "maxItems": 8,
+                      "type": "array",
+                      "items": {
+                        "$ref": "#/$defs/__schema17"
+                      }
                     }
                   },
                   "required": [
@@ -10243,6 +10394,23 @@
               "detail"
             ],
             "additionalProperties": false
+          },
+          "__schema17": {
+            "type": "object",
+            "properties": {
+              "account": {
+                "$ref": "#/$defs/__schema0"
+              },
+              "url": {
+                "type": "string",
+                "format": "uri"
+              }
+            },
+            "required": [
+              "account",
+              "url"
+            ],
+            "additionalProperties": false
           }
         }
       }
@@ -10305,6 +10473,13 @@
                     "url": {
                       "type": "string",
                       "format": "uri"
+                    },
+                    "signed": {
+                      "maxItems": 8,
+                      "type": "array",
+                      "items": {
+                        "$ref": "#/$defs/__schema2"
+                      }
                     }
                   },
                   "required": [
@@ -10348,6 +10523,23 @@
             "type": "string",
             "minLength": 1,
             "maxLength": 120
+          },
+          "__schema2": {
+            "type": "object",
+            "properties": {
+              "account": {
+                "$ref": "#/$defs/__schema1"
+              },
+              "url": {
+                "type": "string",
+                "format": "uri"
+              }
+            },
+            "required": [
+              "account",
+              "url"
+            ],
+            "additionalProperties": false
           }
         }
       }

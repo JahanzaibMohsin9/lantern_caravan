@@ -9,7 +9,8 @@ const mode = z.enum(["campaign", "endless", "live"]);
 const phase = z.enum(["preparation", "open", "results"]);
 const range = z.enum(["day", "week", "all"]);
 const amounts = z.record(z.string(), amount);
-const receipt = z.object({ id: text, label: text, url: z.url().optional() });
+const receipt = z.object({ id: text, label: text, url: z.url().optional(),
+  signed: z.array(z.object({ account: text, url: z.url() })).max(8).optional() });
 export const actionStatusSchema = z.discriminatedUnion("state", [
   z.object({ state: z.literal("confirmed"), receipt }),
   z.object({ state: z.enum(["pending", "unknown", "rejected"]), reason: z.string().optional() }),

@@ -99,7 +99,8 @@ export type Intent = z.infer<typeof intentSchema>;
 export type HaggleOffer = z.infer<typeof haggleOfferSchema>;
 export type Quote = z.infer<typeof quoteSchema>;
 export type HaggleResult = { outcome: "accept" | "counter" | "refuse"; quote?: Quote; line: string; retry_after_ms: number };
-export type Receipt = { id: string; label: string; url?: string };
+/** `signed` lists the transactions an agent (a merchant) signed with its own key for its own leg of the action. */
+export type Receipt = { id: string; label: string; url?: string; signed?: { account: string; url: string }[] };
 export type ActionStatus = { state: "confirmed"; receipt: Receipt }
   | { state: "pending" | "unknown" | "rejected"; reason?: string };
 export type Mode = "campaign" | "endless" | "live";

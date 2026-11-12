@@ -16,6 +16,9 @@ const merchants: Record<string, string> = {
 const rivals: Record<string, string> = { pell: "pell", juno: "juno", ren: "ren", freight: "freight" };
 const villages: Record<string, string> = { millbrook: "millbrook", ember_falls: "ember-falls", reedmarsh: "reedmarsh" };
 
+/** The Row's merchants: each signs its own side of its trades with its own function-call key. */
+export const merchantAccounts = (config: AccountConfig) => Object.values(merchants).map(name => name + "." + config.root);
+
 /** Every account that signs as an agent: registered with `register_agents` once. */
 export const agentAccounts = (config: AccountConfig) =>
   [...Object.values(merchants), ...Object.values(rivals), ...Object.values(villages)].map(name => name + "." + config.root);
